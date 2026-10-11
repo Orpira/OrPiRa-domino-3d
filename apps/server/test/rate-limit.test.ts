@@ -3,7 +3,8 @@ import { describe, test } from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { CompetitionManager, createDominoHttpServer, DEFAULT_REQUEST_LIMIT, FixedWindowLimiter, JsonFileMatchStore, RoomRegistry, type HttpServerOptions } from "../src/index.ts";
+import { CompetitionManager, createDominoHttpServer, DEFAULT_REQUEST_LIMIT, FixedWindowLimiter, JsonFileMatchStore, QuickPlayManager, RoomRegistry, type HttpServerOptions } from "../src/index.ts";
+import type { QuickPlayView } from "../../../packages/protocol/src/index.ts";
 
 async function serve(options: Omit<HttpServerOptions, "competitionManager">) {
   const directory = await mkdtemp(join(tmpdir(), "domino-limits-"));
@@ -67,5 +68,41 @@ describe("límites por origen configurables", () => {
       assert.equal((await createIdentity(base, "Cora", { "x-forwarded-for": "198.51.100.7, 203.0.113.2" })).status, 201);
       assert.equal((await createIdentity(base, "Dani", { "x-forwarded-for": "203.0.113.1, 203.0.113.2" })).status, 429);
     } finally { await close(); }
+  });
+  test("una partida completa de cuatro jugadores por HTTP, tras la misma IP y consultando cada segundo, nunca recibe 429", async (context) => {
+    const directory = await mkdtemp(join(tmpdir(), "domino-limits-match-")); const clock = { t: 1_000_000 }; const now = () => clock.t;
+    const store = new JsonFileMatchStore(join(directory, "matches")); const identities = await CompetitionManager.open(join(directory, "economy.json"), store, now);
+    const quick = await QuickPlayManager.open(join(directory, "quick.json"), store, (token) => identities.identify(token), now);
+    const server = createDominoHttpServer(new RoomRegistry(), undefined, { competitionManager: identities, quickPlayManager: quick, requestLimit: DEFAULT_REQUEST_LIMIT, now });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve)); const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+    try {
+      const tokens: string[] = []; for (const name of ["Ana", "Beto", "Cora", "Dani"]) tokens.push((await identities.createIdentity(name)).identityToken);
+      const perMinute = new Map<number, number>(); let total = 0; let limited = 0; let moves = 0;
+      const call = async (path: string, token: string, body?: unknown) => {
+        total++; const minute = Math.floor(clock.t / 60_000); perMinute.set(minute, (perMinute.get(minute) ?? 0) + 1);
+        const response = await fetch(`${base}${path}`, { method: body === undefined ? "GET" : "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+        if (response.status === 429) limited++; return response.json();
+      };
+      for (const token of tokens) await call("/api/quick-play/join", token, {});
+      const thinkingSince = new Map<string, number>(); let ended = false;
+      for (let second = 0; second < 7_200 && !ended; second++) {
+        clock.t += 1_000; await quick.tick();
+        for (const [index, token] of tokens.entries()) {
+          const view = await call("/api/quick-play", token) as QuickPlayView; const match = view.match; if (!match) continue;
+          if (match.status === "ENDED") { ended = true; continue; }
+          if (second % 15 === index) await call("/api/test-account", token);
+          const action = match.legalActions[0];
+          if (!action) { thinkingSince.delete(token); continue; }
+          const since = thinkingSince.get(token) ?? clock.t; thinkingSince.set(token, since);
+          if (clock.t - since >= 2_000) {
+            await call("/api/quick-play/commands", token, { commandId: `h-${moves++}`, expectedRevision: match.game.revision, command: action.type === "PASS" ? { type: "PASS" } : { type: "PLACE", tileId: action.tileId!, ...(action.side ? { side: action.side } : {}) } });
+            thinkingSince.delete(token);
+          }
+        }
+      }
+      const peak = Math.max(...perMinute.values());
+      context.diagnostic(`partida terminada: ${ended}; ${moves} jugadas, ${total} peticiones en ${perMinute.size} minutos; máximo ${peak} por minuto frente a ${DEFAULT_REQUEST_LIMIT.max}`);
+      assert.equal(ended, true); assert.equal(limited, 0); assert.ok(peak < DEFAULT_REQUEST_LIMIT.max / 2, `pico ${peak} demasiado cerca del límite`);
+    } finally { await new Promise((resolve) => server.close(resolve)); await rm(directory, { recursive: true, force: true }); }
   });
 });
