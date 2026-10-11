@@ -186,10 +186,14 @@ npm ci
 npm run android:apk
 ```
 
-Salida de entrega: `artifacts/domino-3d-0.5.0-debug.apk`.
+Salida actual de entrega:
+`artifacts/domino3d-orpira-1.1-debug.apk`.
 
 ```text
-SHA-256: 5f89c0812e10dbf12bda97913d5db467cb68f8a2a1100f70d26d2b5de44abfce
+Version name: 1.1
+Version code: 2
+Application ID: es.orpira.domino3d
+SHA-256: 2130588aaded17529e857342b2e4abaa4029214486d0377293d75c3164760a31
 Firma: Android Debug, APK Signature Scheme v2 verificada
 ```
 
@@ -198,8 +202,11 @@ debug, no una versión publicable. Para instalar con un dispositivo autorizado p
 
 ```bash
 adb devices -l
-adb install -r artifacts/domino-3d-0.5.0-debug.apk
+adb install -r artifacts/domino3d-orpira-1.1-debug.apk
 ```
+
+El `applicationId` y la firma debug se conservan respecto a la APK anterior, por lo
+que `adb install -r` actualiza la aplicación instalada sin borrar su almacenamiento.
 
 La sesión online usa almacenamiento local dentro de la aplicación nativa para poder
 recuperar el asiento tras cerrar y abrir. En web continúa usando `sessionStorage` para

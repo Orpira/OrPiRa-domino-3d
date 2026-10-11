@@ -103,3 +103,13 @@ respaldos anteriores. Incluye únicamente `.env.example` como plantilla pública
 ```text
 e93fec25ae0b76c8487b4ecf6377e74646b8fe156462ba2719fe62b5122f989f  phase5-deployment-apk-prepared-20261011.tar.gz
 ```
+
+## Identidad visual y APK 1.1
+
+`domino3d-orpira-identity-android-1.1-20261011.tar.gz` conserva los tres maestros
+visuales, recursos web, launchers Android, configuración modificada, documentación y
+la APK debug 1.1. No contiene `.git`, dependencias, datos de partidas ni secretos.
+
+```text
+dd49d53f41cec7b27abf594a552bcaea667f78a7466b28489b16637e4a32db6c  domino3d-orpira-identity-android-1.1-20261011.tar.gz
+```

@@ -47,6 +47,11 @@ desplegado en Vercel, backend todavía sin desplegar.
   al cierre de la aplicación; la web conserva aislamiento por `sessionStorage`.
 - Reintento de comandos pendientes con el mismo `commandId`.
 - Persistencia atómica en `.data/` y recuperación tras reiniciar servidor.
+- Identidad visual Domino3D-OrPiRa integrada localmente en web y Android: maestro
+  original, variante simplificada, favicons, manifest web, Apple touch icon y
+  launchers clásicos/redondos/adaptativos en cinco densidades.
+- APK debug 1.1 (`versionCode` 2) preparada con el mismo `applicationId`, firma debug,
+  almacenamiento de sesión y endpoint `https://api-domino.orpira.es`.
 
 ## Comprobación reproducible
 
@@ -60,21 +65,28 @@ npm run replay
 Resultado de referencia: 55 pruebas aprobadas, 0 fallos; TypeScript sin errores;
 build de producción correcto; replay con P0 campeón, marcador final P0=100 y resto=0.
 
+La integración de identidad del 11 de octubre de 2026 repitió `npm run check`,
+`npm run build:web` y `npm run android:apk` con resultado correcto. El APK contiene
+los recursos web y Android esperados y verifica con APK Signature Scheme v2.
+
 ## Límites deliberados
 
 El cliente está desplegado en Vercel, pero la API no está desplegada. No existen
 todavía TLS verificado para el backend, rate limiting, almacenamiento
 gestionado/cifrado ni observabilidad. La APK es debug y no está
 publicada. El volumen Docker mantiene JSON atómico para una única instancia.
+La identidad visual nueva se publica en `main` y Vercel mediante el despliegue
+automático autorizado. La APK 1.1 se instaló correctamente en el Samsung SM-A165F
+con `adb install -r`, conservando el identificador y la firma de pruebas.
 Las evidencias ejecutadas y la aceptación visual manual están en `PHASE_3_QA.md`.
 El QA online con Samsung, iPhone, iPad y portátil está preparado en `ONLINE_QA.md`;
 todas sus comprobaciones manuales siguen pendientes. Los requisitos de una futura
 prueba privada en internet se detallan en
 `PRIVATE_INTERNET_TEST_REQUIREMENTS.md`, sin despliegue autorizado.
 
-GitHub conserva el historial y `origin/main` apunta al commit `1bb95b1`, que incluye
-las fases 3 a 5 y la configuración de despliegue. El repositorio local conserva en
-`main` el commit `d7726a9` de fase 2. El
+GitHub conserva en `origin/main` las fases 3 a 5, la configuración de despliegue y la
+identidad visual. El repositorio local conserva en `main` el commit `d7726a9` de fase
+2. El
 entorno monta únicamente `.git` desde la misma partición ext4 con opción `ro`; los
 permisos, ACL y atributos del índice sí son normales. Por eso Git puede leer el
 historial pero no crear `index.lock` ni registrar fase 3. No se ha borrado ni
@@ -93,6 +105,6 @@ que no se inspeccionó ni modificó el servidor. Consulta `DEPLOYMENT.md`.
 
 ## Siguiente tarea
 
-Desplegar y verificar la API en el VPS, corregir el DNS y configurar el origen exacto
-de Vercel en CORS. Después, ejecutar el QA manual con cuatro navegadores o
-dispositivos externos. No considerar el online habilitado hasta completar esa prueba.
+Revisar visualmente la identidad desplegada en web. En paralelo sigue pendiente
+desplegar y verificar la API en el VPS, corregir DNS y ejecutar el QA externo de
+cuatro clientes. No considerar el online habilitado hasta completar esa prueba.

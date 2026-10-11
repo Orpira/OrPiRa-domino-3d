@@ -1,0 +1,30 @@
+{
+  "name": "Domino3D-OrPiRa",
+  "short_name": "Domino3D",
+  "description": "Dominó visual 3D local y online",
+  "lang": "es",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#082c27",
+  "theme_color": "#006b4f",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
