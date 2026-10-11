@@ -3,13 +3,14 @@ import LocalApp from "./LocalApp.tsx";
 import { OnlineApp } from "./OnlineApp.tsx";
 import { TablesView } from "./CompetitionApp.tsx";
 import { QuickPlayApp } from "./QuickPlayApp.tsx";
+import { LeagueApp } from "./LeagueApp.tsx";
 import { AccountView, HistoryView, HomeView } from "./AppViews.tsx";
 import { useConditions, useTestAccount } from "./use-test-account.ts";
 
-type View = "HOME" | "QUICK" | "PRACTICE" | "ONLINE" | "TABLES" | "HISTORY" | "ACCOUNT";
-type Tab = "HOME" | "TABLES" | "HISTORY" | "ACCOUNT";
+type View = "HOME" | "QUICK" | "PRACTICE" | "ONLINE" | "TABLES" | "LEAGUE" | "HISTORY" | "ACCOUNT";
+type Tab = "HOME" | "TABLES" | "LEAGUE" | "HISTORY" | "ACCOUNT";
 const VIEW_KEY = "orpira-domino-3d:view:v1";
-const VIEWS: readonly View[] = ["HOME", "QUICK", "PRACTICE", "ONLINE", "TABLES", "HISTORY", "ACCOUNT"];
+const VIEWS: readonly View[] = ["HOME", "QUICK", "PRACTICE", "ONLINE", "TABLES", "LEAGUE", "HISTORY", "ACCOUNT"];
 function initialView(): View { try { const saved = window.sessionStorage.getItem(VIEW_KEY) as View | null; return saved && VIEWS.includes(saved) ? saved : "HOME"; } catch { return "HOME"; } }
 const tabOf = (view: View): Tab => view === "PRACTICE" || view === "ONLINE" || view === "QUICK" ? "HOME" : view;
 
@@ -17,6 +18,7 @@ const icon = (path: ReactNode) => <svg viewBox="0 0 24 24" width="24" height="24
 const TABS: ReadonlyArray<{ readonly tab: Tab; readonly label: string; readonly icon: ReactNode }> = [
   { tab: "HOME", label: "Inicio", icon: icon(<><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/></>) },
   { tab: "TABLES", label: "Mesas", icon: icon(<><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3.5 19c.6-3.4 2.8-5 5.5-5s4.9 1.6 5.5 5"/><path d="M15 14.2c2.6-.4 4.8 1 5.5 4.3"/></>) },
+  { tab: "LEAGUE", label: "Liga", icon: icon(<><path d="M8 4h8v5a4 4 0 0 1-8 0V4z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M9 20h6"/></>) },
   { tab: "HISTORY", label: "Historial", icon: icon(<><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></>) },
   { tab: "ACCOUNT", label: "Cuenta", icon: icon(<><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1-4 4-5.6 7.5-5.6s6.5 1.6 7.5 5.6"/></>) },
 ];
@@ -46,6 +48,7 @@ export default function App() {
       {view === "PRACTICE" && <LocalApp/>}
       {view === "ONLINE" && <OnlineApp/>}
       {view === "TABLES" && <TablesView account={account} conditions={conditions} onOpenOnline={() => go("ONLINE")} onOpenPractice={() => go("PRACTICE")}/>}
+      {view === "LEAGUE" && <LeagueApp account={account} onQuickPlay={() => go("QUICK")} onAccount={() => go("ACCOUNT")}/>}
       {view === "HISTORY" && <HistoryView account={account} onAccount={() => go("ACCOUNT")}/>}
       {view === "ACCOUNT" && <AccountView account={account}/>}
     </div>

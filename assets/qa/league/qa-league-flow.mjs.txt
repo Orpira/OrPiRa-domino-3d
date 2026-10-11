@@ -1,0 +1,59 @@
+import { chromium } from "/home/orpira/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs";
+import { spawn } from "node:child_process";
+import { mkdtempSync } from "node:fs";
+import { join } from "node:path";
+const REPO = "/home/orpira/OrPiRa/Desarrollos/OrPiRa-domino-3d-reparado"; const BASE = "http://localhost:5174"; const API = "http://127.0.0.1:8788";
+const OUT = process.argv[2]; const label = process.argv[3] ?? "mobile"; const data = mkdtempSync(join(process.argv[4], `league-${label}-`));
+const viewport = label === "mobile" ? { width: 412, height: 915 } : { width: 1440, height: 960 };
+const log = (...args) => console.log(`[${label}]`, ...args); const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const server = spawn("node", ["apps/server/src/main.ts"], { cwd: REPO, env: { ...process.env, DOMINO_DATA_DIR: data, PORT: "8788", HOST: "127.0.0.1", DOMINO_ALLOWED_ORIGINS: "http://localhost:5174", DOMINO_RATE_LIMIT_MAX: "0", DOMINO_IDENTITY_LIMIT_MAX: "0", DOMINO_QUICK_PLAY_FILL_SECONDS: "600" }, stdio: ["ignore", "inherit", "inherit"] });
+let exited = false; server.once("exit", () => { exited = true; });
+for (let i = 0; i < 50; i++) { await sleep(100); if (exited) throw new Error("el servidor de QA no arrancó (¿puerto ocupado?)"); try { if ((await fetch(`${API}/health`)).ok) break; } catch {} }
+if (exited) throw new Error("el servidor de QA no arrancó");
+const api = async (path, token, body) => { const response = await fetch(`${API}${path}`, { method: body === undefined ? "GET" : "POST", headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); return response.json(); };
+const identity = (name) => api("/api/test-identities", null, { displayName: name });
+let commandId = 0;
+// Juega una partida pública completa por API con la primera acción legal de cada turno.
+async function playOut(tokens) {
+  for (let guard = 0; guard < 5000; guard++) {
+    const view = (await api("/api/quick-play", tokens[0])).match; if (!view || view.status === "ENDED") return view;
+    const game = view.game;
+    if (game.phase === "ROUND_ENDED") { await api("/api/quick-play/commands", tokens[0], { commandId: `n-${commandId++}`, expectedRevision: game.revision, command: { type: "NEXT_ROUND" } }); continue; }
+    for (const token of tokens) {
+      const own = (await api("/api/quick-play", token)).match; const action = own?.legalActions?.[0]; if (!action) continue;
+      await api("/api/quick-play/commands", token, { commandId: `p-${commandId++}`, expectedRevision: own.game.revision, command: action.type === "PASS" ? { type: "PASS" } : { type: "PLACE", tileId: action.tileId, ...(action.side ? { side: action.side } : {}) } }); break;
+    }
+  }
+  throw new Error("partida sin terminar");
+}
+const browser = await chromium.launch({ executablePath: "/usr/bin/google-chrome" });
+const context = await browser.newContext({ viewport, deviceScaleFactor: label === "mobile" ? 2 : 1, isMobile: label === "mobile", hasTouch: label === "mobile", locale: "es-CO", reducedMotion: "reduce" });
+const page = await context.newPage(); const errors = []; page.on("pageerror", (error) => errors.push(error.message));
+const shot = async (name, full = true) => { await sleep(400); await page.screenshot({ path: `${OUT}/${label}-league-${name}.png`, fullPage: full }); log("captura", name); };
+const nav = (name) => page.getByRole("navigation", { name: "Navegación principal" }).getByRole("button", { name });
+try {
+  const names = ["Valentina", "Mateo", "Camila", "Santiago", "Isabella", "Sebastián", "Mariana", "Nicolás"]; const seeds = []; for (const name of names) seeds.push(await identity(name));
+  for (let round = 0; round < 3; round++) for (const group of [seeds.slice(0, 4), seeds.slice(4, 8)]) { const ordered = round % 2 ? [...group].reverse() : group; for (const grant of ordered) await api("/api/quick-play/join", grant.identityToken, {}); await playOut(ordered.map((grant) => grant.identityToken)); for (const grant of ordered) await api("/api/quick-play/dismiss", grant.identityToken, {}); }
+  log("clasificación sembrada");
+  await page.goto(BASE); await nav("Liga").click(); await page.getByText("Clasificación", { exact: true }).waitFor(); await shot("01-liga-sin-cuenta");
+  await nav("Cuenta").click(); await page.getByLabel("Nombre visible").fill(label === "mobile" ? "Lucía" : "Andrés"); await page.getByRole("button", { name: "Crear cuenta de prueba" }).click();
+  await page.getByText("Saldo disponible").first().waitFor();
+  const me = JSON.parse(await page.evaluate(() => localStorage.getItem("orpira-domino-3d:test-identity:v1")));
+  await nav("Inicio").click(); await page.locator(".quick-cta").click();
+  let promotedShot = false; let pointsShot = false; let tableShot = false;
+  for (let match = 0; match < 15 && !promotedShot; match++) {
+    if (match === 0) await page.getByRole("button", { name: /Buscar partida/ }).click(); else await page.getByRole("button", { name: "Jugar otra" }).click();
+    await page.getByText("Buscando jugadores…").waitFor(); const rivals = seeds.slice((match * 3) % 6, (match * 3) % 6 + 3); for (const grant of rivals) await api("/api/quick-play/join", grant.identityToken, {});
+    await page.getByText("Objetivo: 100 puntos").waitFor({ timeout: 10_000 });
+    if (match >= 1 && !tableShot) { await sleep(1500); await shot("02-mesa-rangos", false); tableShot = true; }
+    const ended = await playOut([me.identityToken, ...rivals.map((grant) => grant.identityToken)]); for (const grant of rivals) await api("/api/quick-play/dismiss", grant.identityToken, {});
+    const award = (await api("/api/quick-play", me.identityToken)).match.league; log(`partida ${match + 1}: ${award.position}.º +${award.points}${award.promoted ? " ascenso" : ""}`);
+    await page.getByRole("button", { name: "Jugar otra" }).waitFor({ timeout: 15_000 }); await page.locator(".league-award").scrollIntoViewIfNeeded();
+    if (award.promoted) { await page.getByText(/¡Asciendes a/).waitFor(); await shot("04-resultado-ascenso"); promotedShot = true; }
+    else if (!pointsShot && award.points > 0) { await shot("03-resultado-puntos"); pointsShot = true; }
+    void ended;
+  }
+  await page.getByRole("button", { name: "Volver al inicio" }).click(); await nav("Liga").click(); await page.getByText("Tu rango").waitFor(); await shot("05-liga");
+  await nav("Historial").click(); await page.getByText("Puntos por partida").waitFor(); await shot("06-historial");
+  log("errores de página", errors.length ? errors : "ninguno");
+} finally { await browser.close(); server.kill("SIGTERM"); }

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { legalActions, shuffledDeal, type Deal, type Seat } from "../../../packages/rules/src/index.ts";
-import type { CommandEnvelope, CommandResponse, QuickPlayHistoryEntry, QuickPlayMatchView, QuickPlayView } from "../../../packages/protocol/src/index.ts";
+import type { CommandEnvelope, CommandResponse, LeagueAwardView, LeagueRankId, QuickPlayHistoryEntry, QuickPlayMatchView, QuickPlayView } from "../../../packages/protocol/src/index.ts";
 import { AuthoritativeRoom, DEFAULT_TURN_CLOCK, type MatchStore, type TurnClockConfig } from "./authoritative-room.ts";
 
 export interface QuickPlayConfig { readonly fillAfterMs: number }
@@ -10,6 +10,11 @@ export interface QuickPlayConfig { readonly fillAfterMs: number }
 export const DEFAULT_QUICK_PLAY: QuickPlayConfig = Object.freeze({ fillAfterMs: 45_000 });
 export interface PlayerIdentity { readonly identityId: string; readonly displayName: string }
 type Identify = (token: string) => PlayerIdentity | null;
+/** Puente hacia la liga: concede puntos de partidas terminadas y aporta rangos y desgloses a las vistas. */
+export interface LeagueBridge {
+  sync(entries: readonly QuickPlayHistoryEntry[]): Promise<unknown>;
+  rankOf(identityId: string): LeagueRankId; awardFor(matchId: string, identityId: string): LeagueAwardView | null;
+}
 
 interface Ticket { readonly ticketId: string; readonly identityId: string; readonly displayName: string; readonly token: string; readonly joinedAt: number }
 interface MatchSeat { readonly playerId: string; readonly displayName: string; readonly seat: Seat; readonly bot: boolean; readonly sessionId: string }
@@ -79,6 +84,9 @@ export class QuickPlayManager {
     }
   }); }
   queueSize() { return this.queue.length; }
+  historyEntries(): readonly QuickPlayHistoryEntry[] { return this.history; }
+  attachLeague(league: LeagueBridge) { this.league = league; }
+  private league: LeagueBridge | null = null;
 
   private async formFullTables() { while (this.queue.length >= 4) await this.startMatch(this.queue.splice(0, 4)); }
   private async startMatch(tickets: readonly Ticket[]) {
@@ -95,6 +103,8 @@ export class QuickPlayManager {
     this.history.push({ matchId: match.matchId, startedAt: match.startedAt, endedAt: match.endedAt, championPlayerId: result.championId,
       participants: match.seats.map(({ playerId, displayName, seat, bot }) => ({ playerId, displayName, seat, bot, score: result.finalScores[playerId] ?? 0, endedAutomatic: automatic.has(playerId) })) });
     this.rooms.delete(match.matchId); this.endedRooms.set(match.matchId, room); await this.persist();
+    // Si el proceso cae aquí, la reconciliación al arrancar concede los puntos pendientes desde este historial.
+    await this.league?.sync([this.history.at(-1)!]);
   }
   private activeMatch(identityId: string) { for (const match of this.matches.values()) if (match.endedAt === null && match.seats.some((seat) => seat.playerId === identityId)) return match; return null; }
   private viewFor(player: PlayerIdentity): QuickPlayView {
@@ -111,7 +121,9 @@ export class QuickPlayManager {
     const room = this.rooms.get(match.matchId) ?? this.endedRooms.get(match.matchId); const seat = match.seats.find((entry) => entry.playerId === player.identityId)!;
     if (!room) return null; const game = room.connect(seat.sessionId)!;
     return { matchId: match.matchId, status: match.endedAt === null ? "PLAYING" : "ENDED", viewerPlayerId: seat.playerId, seats: match.seats.map(({ playerId, displayName, seat: index, bot }) => ({ playerId, displayName, seat: index, bot })),
-      game, legalActions: game.currentPlayerId === seat.playerId && game.phase === "ROUND_ACTIVE" ? legalActions(room.state, seat.playerId) : [], clock: room.clockView() };
+      game, legalActions: game.currentPlayerId === seat.playerId && game.phase === "ROUND_ACTIVE" ? legalActions(room.state, seat.playerId) : [], clock: room.clockView(),
+      ranks: Object.fromEntries(match.seats.filter((entry) => !entry.bot).map((entry) => [entry.playerId, this.league?.rankOf(entry.playerId) ?? "DOUBLE_0"])),
+      league: match.endedAt !== null ? this.league?.awardFor(match.matchId, seat.playerId) ?? null : null };
   }
   private player(token: string) { const player = this.identify(token); if (!player) throw new Error("UNAUTHENTICATED"); return player; }
   private deal(match: PublicMatch): Deal { const hands = shuffledDeal(); return Object.fromEntries(match.seats.map((seat, index) => [seat.playerId, hands[index]!])); }

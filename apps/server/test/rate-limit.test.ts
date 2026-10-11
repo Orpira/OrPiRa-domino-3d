@@ -3,7 +3,7 @@ import { describe, test } from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { CompetitionManager, createDominoHttpServer, FixedWindowLimiter, JsonFileMatchStore, RoomRegistry, type HttpServerOptions } from "../src/index.ts";
+import { CompetitionManager, createDominoHttpServer, DEFAULT_REQUEST_LIMIT, FixedWindowLimiter, JsonFileMatchStore, RoomRegistry, type HttpServerOptions } from "../src/index.ts";
 
 async function serve(options: Omit<HttpServerOptions, "competitionManager">) {
   const directory = await mkdtemp(join(tmpdir(), "domino-limits-"));
@@ -24,6 +24,16 @@ describe("límites por origen configurables", () => {
     assert.deepEqual(limiter.take("a"), { allowed: false, retryAfterSeconds: 10 }); assert.equal(limiter.take("b").allowed, true);
     clock = 9_500; assert.deepEqual(limiter.check("a"), { allowed: false, retryAfterSeconds: 1 });
     clock = 10_000; assert.equal(limiter.take("a").allowed, true);
+  });
+
+  test("el límite por defecto no corta una partida normal: cuatro clientes tras la misma IP consultando cada segundo", () => {
+    // Cada cliente: consulta de mesa cada 1 s, cuenta cada 15 s, una jugada cada 4 s y algún reintento.
+    let clock = 0; const limiter = new FixedWindowLimiter(DEFAULT_REQUEST_LIMIT, () => clock); let requests = 0;
+    for (clock = 0; clock < 10 * 60_000; clock += 250) {
+      const perTick = (clock % 1_000 === 0 ? 4 : 0) + (clock % 15_000 === 0 ? 4 : 0) + (clock % 4_000 === 0 ? 4 : 0) + (clock % 30_000 === 0 ? 2 : 0);
+      for (let index = 0; index < perTick; index++) { requests++; assert.equal(limiter.take("203.0.113.5").allowed, true, `bloqueada en t=${clock}`); }
+    }
+    assert.ok(requests > 3_000); assert.ok(requests / 10 < DEFAULT_REQUEST_LIMIT.max / 1.5, "margen holgado por minuto");
   });
 
   test("responde 429 con Retry-After al superar el límite de peticiones y no limita /health", async () => {

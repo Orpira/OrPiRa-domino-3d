@@ -60,7 +60,7 @@ export function competitionRecords(movements: readonly SimulatedMovement[]): rea
 
 const ERRORS: Readonly<Record<string, string>> = {
   NETWORK: "Sin conexión con el servidor. Comprueba la red y vuelve a intentarlo.",
-  NOT_AVAILABLE: "El servidor conectado todavía no ofrece la competición de prueba.",
+  NOT_AVAILABLE: "El servidor conectado todavía no ofrece esta función.",
   UNAUTHENTICATED: "Esta cuenta de prueba no existe en el servidor actual. Crea una nueva.",
   INVALID_NAME: "Escribe un nombre visible de 1 a 24 caracteres.",
   INSUFFICIENT_BALANCE: "Saldo simulado insuficiente para reservar la entrada.",

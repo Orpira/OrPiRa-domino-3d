@@ -8,7 +8,9 @@ import { formatCountdown } from "./turn-clock-presentation.ts";
 import { useCommandChannel } from "./use-command-channel.ts";
 import { useReducedMotion } from "./use-reduced-motion.ts";
 import type { TestAccount } from "./use-test-account.ts";
-import { DominoArt, IdentityForm, StateCard } from "./ui.tsx";
+import { DominoArt, IdentityForm, RankTile, StateCard } from "./ui.tsx";
+import { awardBreakdown, RANK_NAMES } from "./league-presentation.ts";
+import type { QuickPlayMatchView } from "../../../packages/protocol/src/index.ts";
 
 type Connection = "CONNECTING" | "CONNECTED" | "DISCONNECTED";
 const codeOf = (error: unknown) => error instanceof CompetitionApiError ? error.code : "NETWORK";
@@ -55,9 +57,10 @@ function QuickPlaySession({ token, identityId, onHome }: { token: string; identi
     const context = <p className="quick-strip"><span>Práctica gratuita · sin saldo</span>{bots > 0 && <span>{bots} {bots === 1 ? "bot" : "bots"} del servidor en la mesa</span>}</p>;
     const finaleActions = <div className="finale-actions"><button className="primary" disabled={busy} onClick={() => void run(() => quickPlayApi.join(token))}>{busy ? "Buscando…" : "Jugar otra"}</button>
       <button className="secondary" disabled={busy} onClick={() => void run(() => quickPlayApi.dismiss(token)).then(onHome)}>Volver al inicio</button></div>;
+    const decorations = Object.fromEntries(Object.entries(match.ranks).map(([playerId, rank]) => [playerId, <RankTile key={playerId} rank={rank}/>]));
     return <main className="view online-shell quick-game">{connectionBadge}
       <GameBoard game={match.game} actions={match.legalActions} names={names} viewerId={match.viewerPlayerId} sending={channel.sending} message={channel.message} reducedMotion={reducedMotion}
-        celebrationStorage={persistentStorage()} onCommand={(command) => void channel.send(command)} onLeave={onHome} context={context} clock={match.clock} finaleActions={finaleActions}/>
+        celebrationStorage={persistentStorage()} onCommand={(command) => void channel.send(command)} onLeave={onHome} context={context} clock={match.clock} finaleActions={finaleActions} nameDecorations={decorations} finaleDetails={<LeagueAward match={match}/>}/>
       {error && <p className="field-error" role="alert">{error}</p>}</main>;
   }
 
@@ -79,4 +82,13 @@ function QuickPlaySession({ token, identityId, onHome }: { token: string; identi
       <p className="muted">Te emparejamos por orden de llegada con otras tres personas. Cada turno tiene un tiempo límite; si se agota, el servidor juega por ti.</p>
       <button className="primary wide" disabled={busy} onClick={() => void run(() => quickPlayApi.join(token))}>{busy ? "Entrando en la cola…" : "Buscar partida"} <span aria-hidden="true">›</span></button>
       {error && <p className="field-error" role="alert">{error}</p>}</section><FreePlayNote/></main>;
+}
+
+function LeagueAward({ match }: { match: QuickPlayMatchView }) {
+  const award = match.league;
+  if (!award) return <section className="league-award" aria-label="Puntos de liga"><h3>Puntos de liga</h3><StateCard tone="warning" title="Puntos de liga pendientes">El servidor todavía no ha confirmado la concesión de esta partida.</StateCard></section>;
+  return <section className="league-award" aria-label="Puntos de liga"><h3>Puntos de liga</h3>
+    {award.promoted && <div className="promotion" role="status"><RankTile rank={award.newRank} size="medium"/><div><strong>¡Asciendes a {RANK_NAMES[award.newRank]}!</strong><span>Antes: {RANK_NAMES[award.previousRank]}</span></div></div>}
+    <dl className="amounts">{awardBreakdown(award).map((line, index, lines) => <div key={line.label} className={`amount-row ${index === lines.length - 1 ? "strong" : ""}`}><dt>{line.label}</dt><dd>{line.value}</dd></div>)}</dl>
+    <p className="muted">Temporada {award.seasonId}. Los puntos de liga no son saldo y no se canjean.</p></section>;
 }

@@ -4,10 +4,11 @@ import { AuthoritativeRoom } from "./authoritative-room.ts";
 import type { LobbyManager } from "./lobby.ts";
 import type { CompetitionManager } from "./competition.ts";
 import type { QuickPlayManager } from "./quick-play.ts";
+import type { LeagueManager } from "./league.ts";
 import { FixedWindowLimiter, requestSource, type WindowLimit } from "./rate-limit.ts";
 
 export interface HttpServerOptions {
-  readonly allowedOrigins?: readonly string[]; readonly competitionManager?: CompetitionManager; readonly quickPlayManager?: QuickPlayManager;
+  readonly allowedOrigins?: readonly string[]; readonly competitionManager?: CompetitionManager; readonly quickPlayManager?: QuickPlayManager; readonly leagueManager?: LeagueManager;
   // Límites por origen (IP); `max: 0` o ausencia los desactiva. `trustProxy` solo con un proxy propio delante.
   readonly requestLimit?: WindowLimit; readonly identityLimit?: WindowLimit; readonly trustProxy?: boolean; readonly now?: () => number;
 }
@@ -52,6 +53,15 @@ export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: Lo
       }
       if (competitionManager && request.method === "POST" && request.url === "/api/competitions") {
         const identityToken = session(request); if (!identityToken) return send(401, { code: "UNAUTHENTICATED" }); return send(201, await competitionManager.create(identityToken));
+      }
+      const league = options.leagueManager; const leagueRoute = request.url?.match(/^\/api\/league(?:\/(history))?$/);
+      if (league && leagueRoute) {
+        // Solo lectura: no existe ninguna ruta que acepte puntos, rangos ni posiciones del cliente.
+        if (request.method !== "GET") return send(405, { code: "METHOD_NOT_ALLOWED" });
+        const token = session(request); const viewer = token ? options.competitionManager?.identify(token) ?? null : null;
+        if (leagueRoute[1] === "history") { if (!viewer) return send(401, { code: "UNAUTHENTICATED" }); return send(200, await league.historyFor(viewer.identityId)); }
+        if (token && !viewer) return send(401, { code: "UNAUTHENTICATED" });
+        return send(200, await league.view(viewer?.identityId ?? null));
       }
       const quickPlay = options.quickPlayManager; const quickRoute = request.url?.match(/^\/api\/quick-play(?:\/(join|cancel|dismiss|commands|history))?$/);
       if (quickPlay && quickRoute) {

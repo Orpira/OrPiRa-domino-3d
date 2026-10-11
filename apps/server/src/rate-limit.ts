@@ -1,6 +1,9 @@
 import type { IncomingMessage } from "node:http";
 
 export interface WindowLimit { readonly max: number; readonly windowMs: number }
+// Por defecto: holgura para varias personas tras una misma IP que consultan la mesa cada segundo.
+export const DEFAULT_REQUEST_LIMIT: WindowLimit = Object.freeze({ max: 600, windowMs: 60_000 });
+export const DEFAULT_IDENTITY_LIMIT: WindowLimit = Object.freeze({ max: 20, windowMs: 86_400_000 });
 export interface LimitDecision { readonly allowed: boolean; readonly retryAfterSeconds: number }
 
 // Ventana fija en memoria por origen: suficiente para una única instancia; se reinicia con el proceso.

@@ -1,11 +1,12 @@
 import { useEffect, useId, useState } from "react";
-import type { QuickPlayHistoryEntry } from "../../../packages/protocol/src/index.ts";
-import { quickPlayApi } from "./competition-api.ts";
+import type { LeagueHistoryView, QuickPlayHistoryEntry } from "../../../packages/protocol/src/index.ts";
+import { leagueApi, quickPlayApi } from "./competition-api.ts";
+import { RANK_NAMES } from "./league-presentation.ts";
 import { competitionRecords, formatCop, formatDateTime, formatSignedCop, MOVEMENT_LABELS, RECORD_LABELS } from "./competition-presentation.ts";
 import type { Conditions, TestAccount } from "./use-test-account.ts";
-import { BalanceSummary, DominoArt, IdentityForm, SimulatedNotice, StateCard } from "./ui.tsx";
+import { BalanceSummary, DominoArt, IdentityForm, RankTile, SimulatedNotice, StateCard } from "./ui.tsx";
 
-export const APP_VERSION = "1.4";
+export const APP_VERSION = "1.5";
 
 interface HomeProps { readonly account: TestAccount; readonly conditions: Conditions; readonly onQuickPlay: () => void; readonly onPractice: () => void; readonly onOnline: () => void; readonly onTables: () => void }
 export function HomeView({ account, conditions, onQuickPlay, onPractice, onOnline, onTables }: HomeProps) {
@@ -23,8 +24,8 @@ export function HomeView({ account, conditions, onQuickPlay, onPractice, onOnlin
       <article className="mode-card"><DominoArt variant="trio"/><div><h2>Partida online</h2><p>Mesa entre amigos por código privado. Sin saldo ni importes.</p><button className="secondary wide" onClick={onOnline}>Jugar online <span aria-hidden="true">›</span></button></div></article>
       <article className="mode-card featured"><DominoArt/><div><p className="chip">Competición de prueba</p><h2>Mesas con saldo simulado</h2><p>Entrada, bolsa y premio en {conditions.data ? "COP simulados" : "saldo simulado"}, sin valor monetario. Requiere aceptación expresa de los cuatro.</p><button className="primary wide" onClick={onTables}>Ver mesas <span aria-hidden="true">›</span></button></div></article>
     </div>
-    {account.identity && <><p className="section-label">Tu cuenta de prueba</p><BalanceSummary account={account.account} compact/></>}
-    <SimulatedNotice/>
+    {/* La tarjeta de saldo ya lleva el aviso; sin cuenta se muestra suelto para la tarjeta de competición. */}
+    {account.identity ? <><p className="section-label">Tu cuenta de prueba</p><BalanceSummary account={account.account} compact/></> : <SimulatedNotice/>}
   </main>;
 }
 
@@ -37,6 +38,7 @@ export function HistoryView({ account, onAccount }: { account: TestAccount; onAc
   return <main className="view history-view"><header className="view-header"><h1>Historial</h1></header>
     {!data && account.account.status === "LOADING" && <div className="skeleton-block" role="status" aria-busy="true"><span className="skeleton wide"/><span className="skeleton wide"/><span className="sr-only">Cargando historial…</span></div>}
     {!data && account.account.status !== "LOADING" && <StateCard tone="error" title="No se pudo cargar el historial" action={<button className="secondary" onClick={() => void account.refresh()}>Reintentar</button>}>{account.account.error}</StateCard>}
+    <LeagueHistory token={account.identity.identityToken}/>
     <PublicHistory token={account.identity.identityToken}/>
     {data && <>
       <section className="panel"><h2>Competición de prueba</h2><SimulatedNotice compact/>{records.length === 0 ? <p className="muted">Aún no has participado en ninguna competición de prueba.</p> :
@@ -81,4 +83,18 @@ function PublicHistory({ token }: { token: string }) {
         return <li key={entry.matchId}><div><strong>Campeón: {champion?.displayName ?? "—"}{champion?.bot ? " (bot)" : ""}</strong><small>{formatDateTime(entry.endedAt)} · {entry.participants.map((participant) => `${participant.displayName}${participant.bot ? " [Bot]" : ""} ${participant.score}`).join(" · ")}</small>
           {entry.participants.some((participant) => participant.endedAutomatic) && <small className="auto-record">Terminaron en modo automático: {entry.participants.filter((participant) => participant.endedAutomatic).map((participant) => participant.displayName).join(", ")}</small>}</div>
           <span className="amount">Sin saldo</span></li>; })}</ul>}</section>;
+}
+
+function LeagueHistory({ token }: { token: string }) {
+  const [history, setHistory] = useState<LeagueHistoryView | null>(null); const [failed, setFailed] = useState(false);
+  useEffect(() => { let alive = true; leagueApi.history(token).then((value) => { if (alive) setHistory(value); }, () => { if (alive) setFailed(true); }); return () => { alive = false; }; }, [token]);
+  return <section className="panel"><h2>Liga</h2>
+    {failed ? <p className="muted">Historial de liga no disponible en este servidor.</p> : !history ? <p className="muted" role="status">Cargando…</p> : <>
+      <h3>Temporadas anteriores</h3>
+      {history.seasons.length === 0 ? <p className="muted">Todavía no ha cerrado ninguna temporada en la que hayas puntuado.</p> :
+        <ul className="record-list">{history.seasons.map((season) => <li key={season.seasonId}><div><strong className="rank-cell"><RankTile rank={season.rank} decorative/>{season.label}</strong><small>{RANK_NAMES[season.rank]} · posición {season.position} de {season.totalPlayers}</small></div><span className="amount">{season.points} pts</span></li>)}</ul>}
+      <h3>Puntos por partida</h3>
+      {history.awards.length === 0 ? <p className="muted">Aún no has puntuado en la liga.</p> :
+        <ul className="record-list">{history.awards.map((award) => <li key={award.matchId}><div><strong>{award.position}.º puesto · {award.humans} de 4 humanos{award.automatic ? " · modo automático" : ""}</strong><small>{formatDateTime(award.awardedAt)} · temporada {award.seasonId}{award.promoted ? ` · ascenso a ${RANK_NAMES[award.newRank]}` : ""}</small></div><span className={`amount ${award.points > 0 ? "positive" : ""}`}>+{award.points} pts</span></li>)}</ul>}
+    </>}</section>;
 }

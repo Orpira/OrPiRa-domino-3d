@@ -4,8 +4,9 @@ Fecha: 11 de octubre de 2026. Fase 4 ejecutable; cliente web de fase 5
 desplegado en Vercel, backend todavía sin desplegar. En la rama
 `feature/interface-redesign` (commit `30a1c60`, sin publicar): competición de prueba con
 COP simulados y rediseño de interfaz. Contrato completo en `COMPETITION_CONTRACT.md`.
-Sobre ella, la rama `feature/quick-play` (sin commit ni publicar) añade «Jugar ahora» y
-el reloj de turno con jugada automática (`QUICK_PLAY.md`).
+Sobre ella, `feature/quick-play` (commit `1493992`) añade «Jugar ahora» y el reloj de
+turno con jugada automática (`QUICK_PLAY.md`), y `feature/league` (sin commit ni
+publicar) añade la liga por temporadas (`LEAGUE.md`).
 
 ## Implementado
 
@@ -91,6 +92,12 @@ el reloj de turno con jugada automática (`QUICK_PLAY.md`).
   de partidas públicas con bots, marcador y asientos automáticos. Nunca bots en
   competición.
 
+- Liga: solo puntúan las partidas terminadas de «Jugar ahora»; 40/20/10/4 por posición
+  × humanos/4 con redondeo hacia abajo, 0 en modo automático y sin bots. Concesión única
+  por `matchId`, reconciliada al arrancar. Temporada mensual en America/Bogota con
+  cierre único y archivo; siete rangos de Doble blanca a Doble seis. Pestaña Liga,
+  puntos y ascenso en el resultado, ficha de rango en la mesa e historial de temporadas.
+
 ## Comprobación reproducible
 
 ```bash
@@ -100,7 +107,7 @@ npm run build
 npm run replay
 ```
 
-Resultado de referencia: 95 pruebas aprobadas, 0 fallos; TypeScript sin errores;
+Resultado de referencia: 105 pruebas aprobadas, 0 fallos; TypeScript sin errores;
 build de producción correcto; replay con P0 campeón, marcador final P0=100 y resto=0.
 
 La mesa 3D usa ahora una distribución serpenteante reproducible. El 6–6 permanece
@@ -147,7 +154,13 @@ reducido): buscando, mesa con reloj, jugada automática anunciada, resultado con
 historial, en `assets/qa/quick-play/`. El resultado se alcanzó reiniciando el servidor
 con reloj acelerado sobre los mismos datos, lo que también ejercitó la restauración del
 reloj. APK debug 1.4 (`versionCode` 5, mismo `applicationId` y firma debug), SHA-256
-`8d52f6196e05c2f80c3e7358ffbf9c39938dd4e9a7eb4203cdaaf3ae5cfa3111`; no instalada.
+`8d52f6196e05c2f80c3e7358ffbf9c39938dd4e9a7eb4203cdaaf3ae5cfa3111`, instalada en el Samsung. APK debug 1.5 de la liga (`versionCode` 6), SHA-256
+`8d6bca2d3f944a21965cbda627e415ddfa0a97c82602f20362b5a08e4d2bc6de`; no instalada.
+
+QA de liga (Chrome móvil y escritorio, servidor local aislado): Liga sin cuenta y con
+rango, mesa con fichas de rango, resultado con puntos, ascenso real a Doble uno e
+historial, en `assets/qa/league/`. La APK 1.4 se instaló en el Samsung el 12 de
+octubre de 2026; capturas `assets/qa/device/samsung-1.4-*`.
 
 ## Límites deliberados
 
@@ -196,7 +209,7 @@ publicado no tiene esas rutas; se recorrieron en Chrome contra un servidor local
 
 ## Siguiente tarea
 
-Revisar `feature/quick-play` (sin commit); validar en dispositivo el reloj y Jugar
+Revisar `feature/league` (sin commit); validar en dispositivo el reloj y Jugar
 ahora con personas reales; revisar y fusionar `feature/interface-redesign`; desplegar el
 servidor nuevo y ejecutar la prueba de cuatro dispositivos de
 `COMPETITION_CONTRACT.md`. Revisar visualmente la identidad desplegada en web. En paralelo sigue pendiente

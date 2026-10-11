@@ -16,7 +16,7 @@ interface GameBoardProps {
   readonly game: PlayerView; readonly actions: readonly LegalAction[]; readonly names: Readonly<Record<string, string>>; readonly viewerId: string;
   readonly sending: boolean; readonly message: string; readonly reducedMotion: boolean; readonly celebrationStorage: StorageLike;
   readonly onCommand: (command: ClientCommand) => void; readonly onLeave: () => void;
-  readonly context?: ReactNode; readonly finaleDetails?: ReactNode; readonly clock?: TurnClockView | null; readonly finaleActions?: ReactNode;
+  readonly context?: ReactNode; readonly finaleDetails?: ReactNode; readonly clock?: TurnClockView | null; readonly finaleActions?: ReactNode; readonly nameDecorations?: Readonly<Record<string, ReactNode>>;
 }
 
 // Cuenta atrás local hacia la hora límite recibida; el servidor decide cuándo vence.
@@ -28,7 +28,7 @@ function useCountdown(clock: TurnClockView | null | undefined): number | null {
 }
 
 // Mesa autoritativa compartida por la sala online y la competición de prueba: solo muestra la mano propia y recuentos rivales.
-export function GameBoard({ game, actions, names, viewerId, sending, message, reducedMotion, celebrationStorage, onCommand, onLeave, context, finaleDetails, clock, finaleActions }: GameBoardProps) {
+export function GameBoard({ game, actions, names, viewerId, sending, message, reducedMotion, celebrationStorage, onCommand, onLeave, context, finaleDetails, clock, finaleActions, nameDecorations }: GameBoardProps) {
   const [selection, setSelection] = useState<PlacementSelection | null>(null);
   useEffect(() => { if (selection && game.revision !== selection.revision) setSelection(null); }, [game.revision, selection]);
   useEffect(() => { if (!sending) setSelection(null); }, [sending]);
@@ -48,7 +48,7 @@ export function GameBoard({ game, actions, names, viewerId, sending, message, re
     {context}
     {mySeat?.automatic && <div className="auto-banner" role="status"><div><strong>Modo automático</strong><span>{mySeat.resumeRequested ? "Recuperarás el control en tu próximo turno." : "El servidor juega por ti tras agotar el tiempo o perder la conexión."}</span></div>
       {!mySeat.resumeRequested && <button className="primary" disabled={sending} onClick={() => onCommand({ type: "RESUME_CONTROL" })}>Retomar el control</button>}</div>}
-    <section className="scoreboard online-scoreboard" aria-label="Marcador">{game.players.map((player) => <div key={player.playerId} className={game.currentPlayerId === player.playerId ? "active-player" : ""}><span>{names[player.playerId]}{player.playerId === viewerId ? " (tú)" : ""}{seatBadges(seatOf(player.playerId)).map((badge) => <em key={badge} className={`seat-badge ${badge === "Bot" ? "bot" : badge === "Automático" ? "auto" : "offline"}`}>{badge}</em>)}</span><strong>{player.score}<small> / {TARGET_SCORE}</small></strong><progress max={TARGET_SCORE} value={Math.min(player.score, TARGET_SCORE)} aria-label={`Progreso de ${names[player.playerId]} hacia 100 puntos`}/><small>{dominationsRemaining(player.score)} {dominationsRemaining(player.score) === 1 ? "dominada" : "dominadas"} para ganar · {game.handCounts[player.playerId]} fichas</small></div>)}</section>
+    <section className="scoreboard online-scoreboard" aria-label="Marcador">{game.players.map((player) => <div key={player.playerId} className={game.currentPlayerId === player.playerId ? "active-player" : ""}><span className="seat-name">{nameDecorations?.[player.playerId]}{names[player.playerId]}{player.playerId === viewerId ? " (tú)" : ""}{seatBadges(seatOf(player.playerId)).map((badge) => <em key={badge} className={`seat-badge ${badge === "Bot" ? "bot" : badge === "Automático" ? "auto" : "offline"}`}>{badge}</em>)}</span><strong>{player.score}<small> / {TARGET_SCORE}</small></strong><progress max={TARGET_SCORE} value={Math.min(player.score, TARGET_SCORE)} aria-label={`Progreso de ${names[player.playerId]} hacia 100 puntos`}/><small>{dominationsRemaining(player.score)} {dominationsRemaining(player.score) === 1 ? "dominada" : "dominadas"} para ganar · {game.handCounts[player.playerId]} fichas</small></div>)}</section>
     <section className="table" aria-label="Mesa de dominó"><div className="table-status"><span>Ronda {game.roundNumber}</span><strong>{myTurn ? "Tu turno" : game.currentPlayerId ? `Turno de ${names[game.currentPlayerId]}` : "Ronda terminada"}</strong><span>{game.leftEnd === null ? "Apertura" : `Extremos ${game.leftEnd} · ${game.rightEnd}`}</span></div>
       {clock && remaining !== null && <div className={`turn-clock ${urgent ? "urgent" : ""} ${myTurn ? "mine" : ""}`} role="timer" aria-label={clock.deadlineKind === "ROUND_BREAK" ? `Siguiente ronda en ${formatCountdown(remaining)}` : `${myTurn ? "Tu tiempo" : "Tiempo del turno"}: ${formatCountdown(remaining)}`}>
         <span>{clock.deadlineKind === "ROUND_BREAK" ? "Siguiente ronda en" : myTurn ? "Tu tiempo" : `Tiempo de ${names[game.currentPlayerId ?? ""] ?? "turno"}`}</span><strong>{formatCountdown(remaining)}</strong>

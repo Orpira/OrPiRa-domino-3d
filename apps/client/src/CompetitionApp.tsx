@@ -7,7 +7,7 @@ import { GameBoard } from "./GameBoard.tsx";
 import { useCommandChannel } from "./use-command-channel.ts";
 import { useReducedMotion } from "./use-reduced-motion.ts";
 import type { Conditions, TestAccount } from "./use-test-account.ts";
-import { AmountRow, BalanceSummary, DominoArt, IdentityForm, SimulatedNotice, StateCard } from "./ui.tsx";
+import { AmountRow, BalanceSummary, DominoArt, IdentityForm, RankTile, SimulatedNotice, StateCard } from "./ui.tsx";
 
 const roomKey = (identityId: string) => `orpira-domino-3d:competition-room:v1:${identityId}`;
 const pendingKey = (identityId: string) => `orpira-domino-3d:competition-pending:v1:${identityId}`;
@@ -172,7 +172,8 @@ function CompetitionRoom({ code, identity, account, onClose }: { code: string; i
       : <StateCard tone="warning" title="Liquidación pendiente">El servidor todavía no ha confirmado la liquidación. No se muestra ningún importe hasta entonces.</StateCard>}<SimulatedNotice compact/></section>;
   return <main className="view online-shell competition-game">{connectionBadge}
     <GameBoard game={game} actions={view.legalActions} names={names} viewerId={view.viewerIdentityId} sending={channel.sending} message={channel.message} reducedMotion={reducedMotion}
-      celebrationStorage={persistentStorage()} onCommand={(command) => void channel.send(command)} onLeave={() => onClose()} context={context} finaleDetails={finale} clock={view.clock}/>
+      celebrationStorage={persistentStorage()} onCommand={(command) => void channel.send(command)} onLeave={() => onClose()} context={context} finaleDetails={finale} clock={view.clock}
+      nameDecorations={Object.fromEntries(Object.entries(view.ranks ?? {}).map(([playerId, rank]) => [playerId, <RankTile key={playerId} rank={rank}/>]))}/>
     {view.status === "ENDED" && game.phase !== "MATCH_ENDED" && <StateCard title="Competición finalizada" action={<button className="primary" onClick={() => onClose()}>Volver al lobby</button>}/>}
     <p className="meta">Sala creada {formatDateTime(view.createdAt)}</p>
   </main>;

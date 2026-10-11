@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from "react";
-import type { TestAccountView } from "../../../packages/protocol/src/index.ts";
+import type { LeagueRankId, TestAccountView } from "../../../packages/protocol/src/index.ts";
+import { RANK_NAMES, rankPips } from "./league-presentation.ts";
 import { formatCop, SIMULATED_NOTICE } from "./competition-presentation.ts";
 import type { Loadable, TestAccount } from "./use-test-account.ts";
 
@@ -60,4 +61,16 @@ export function IdentityForm({ account, intro }: { account: TestAccount; intro?:
 
 export function AmountRow({ label, value, strong = false, hint }: { label: string; value: string; strong?: boolean; hint?: string }) {
   return <div className={`amount-row ${strong ? "strong" : ""}`}><dt>{label}{hint && <small>{hint}</small>}</dt><dd>{value}</dd></div>;
+}
+
+/** Ficha doble del rango de liga: la doble blanca no tiene puntos; la doble seis lleva seis por mitad. */
+export function RankTile({ rank, size = "small", decorative = false }: { rank: LeagueRankId; size?: "small" | "medium" | "large"; decorative?: boolean }) {
+  const pips = rankPips(rank); const id = useId().replace(/:/g, "");
+  return <svg className={`rank-tile ${size}`} viewBox="0 0 64 116" {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": `Rango ${RANK_NAMES[rank]}` })} focusable="false">
+    <defs><linearGradient id={`rank${id}`} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#fffaf0"/><stop offset="1" stopColor="#e3d6b4"/></linearGradient></defs>
+    <rect x="2" y="2" width="60" height="112" rx="11" fill={`url(#rank${id})`} stroke={pips >= 4 ? "#d6ad3f" : "#bdb08b"} strokeWidth={pips >= 4 ? 4 : 2}/>
+    <line x1="11" y1="58" x2="53" y2="58" stroke="#a1946c" strokeWidth="2.5"/><circle cx="32" cy="58" r="3.4" fill="#d6ad3f"/>
+    {PIPS[pips]!.map(([px, py], index) => <circle key={`t${index}`} cx={8 + px * 48} cy={6 + py * 48} r="5" fill="#16221f"/>)}
+    {PIPS[pips]!.map(([px, py], index) => <circle key={`b${index}`} cx={8 + px * 48} cy={62 + py * 48} r="5" fill="#16221f"/>)}
+  </svg>;
 }

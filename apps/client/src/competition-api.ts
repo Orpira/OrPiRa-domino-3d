@@ -1,4 +1,4 @@
-import type { CompetitionView, QuickPlayHistoryEntry, QuickPlayView, SimulatedConditions, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
+import type { CompetitionView, LeagueHistoryView, LeagueView, QuickPlayHistoryEntry, QuickPlayView, SimulatedConditions, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
 import { apiUrl } from "./api.ts";
 
 export class CompetitionApiError extends Error {
@@ -42,3 +42,8 @@ export const quickPlayApi = {
   history: (token: string) => request<readonly QuickPlayHistoryEntry[]>("/api/quick-play/history", { token }),
 };
 export const QUICK_PLAY_COMMANDS = "/api/quick-play/commands";
+
+export const leagueApi = {
+  view: (token: string | null, signal?: AbortSignal) => request<LeagueView>("/api/league", { ...(token ? { token } : {}), ...(signal ? { signal } : {}) }),
+  history: (token: string) => request<LeagueHistoryView>("/api/league/history", { token }),
+};

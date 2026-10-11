@@ -25,8 +25,7 @@ premio. No es la Competición de prueba y nunca la alimenta.
 
 Cada partida pública terminada se guarda en `.data/quick-play.json` con identificador,
 inicio, fin, campeón y participantes (nombre, asiento, bot, puntuación final y si terminó
-en modo automático). Queda preparado para las ligas de la fase siguiente, que no se han
-implementado.
+en modo automático). Ese historial alimenta la liga (`LEAGUE.md`).
 
 ## HTTP (Bearer con el token de la identidad de prueba)
 

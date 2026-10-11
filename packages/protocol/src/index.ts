@@ -73,7 +73,7 @@ export interface CompetitionView {
   readonly competitionId: string; readonly code: string; readonly status: "WAITING" | "PLAYING" | "ENDED" | "CANCELLED" | "EXPIRED";
   readonly conditions: SimulatedConditions; readonly createdAt: number; readonly expiresAt: number; readonly cancellationReason: string | null;
   readonly viewerIdentityId: string; readonly members: readonly CompetitionMemberView[]; readonly game: PlayerView | null;
-  readonly legalActions: readonly LegalAction[]; readonly clock: TurnClockView | null;
+  readonly legalActions: readonly LegalAction[]; readonly clock: TurnClockView | null; readonly ranks?: Readonly<Record<string, LeagueRankId>>;
   readonly settlement: null | { readonly championIdentityId: string; readonly matchId: string; readonly settledAt: number; readonly automaticIdentityIds: readonly string[]; readonly entry: number; readonly grossPrize: number; readonly commission: number; readonly netPrize: number };
 }
 
@@ -88,9 +88,31 @@ export interface QuickPlayTicket { readonly ticketId: string; readonly joinedAt:
 export interface QuickPlayMatchView {
   readonly matchId: string; readonly status: "PLAYING" | "ENDED"; readonly viewerPlayerId: string; readonly seats: readonly QuickPlaySeat[];
   readonly game: PlayerView; readonly legalActions: readonly LegalAction[]; readonly clock: TurnClockView;
+  // Rango de liga de cada asiento humano (los bots no tienen) y puntos concedidos al espectador al terminar.
+  readonly ranks: Readonly<Record<string, LeagueRankId>>; readonly league: LeagueAwardView | null;
 }
 export interface QuickPlayView { readonly ticket: QuickPlayTicket | null; readonly match: QuickPlayMatchView | null }
 export interface QuickPlayHistoryEntry {
   readonly matchId: string; readonly startedAt: number; readonly endedAt: number; readonly championPlayerId: string;
   readonly participants: readonly { readonly playerId: string; readonly displayName: string; readonly seat: Seat; readonly bot: boolean; readonly score: number; readonly endedAutomatic: boolean }[];
 }
+
+// Liga: puntos de temporada sin valor monetario, alimentados solo por partidas de «Jugar ahora».
+export type LeagueRankId = "DOUBLE_0" | "DOUBLE_1" | "DOUBLE_2" | "DOUBLE_3" | "DOUBLE_4" | "DOUBLE_5" | "DOUBLE_6";
+export interface LeagueRankView { readonly id: LeagueRankId; readonly name: string; readonly pips: number; readonly minPoints: number }
+export interface LeagueAwardView {
+  readonly matchId: string; readonly seasonId: string; readonly position: number; readonly basePoints: number; readonly humans: number;
+  readonly automatic: boolean; readonly points: number; readonly previousRank: LeagueRankId; readonly newRank: LeagueRankId; readonly promoted: boolean; readonly awardedAt: number;
+}
+export interface LeagueStandingRow { readonly position: number; readonly alias: string; readonly rank: LeagueRankId; readonly points: number; readonly viewer: boolean }
+export interface LeagueViewerStanding {
+  readonly alias: string; readonly points: number; readonly rank: LeagueRankId; readonly nextRank: LeagueRankId | null; readonly pointsToNext: number | null;
+  readonly position: number | null; readonly matches: number;
+}
+export interface LeagueSeasonView { readonly id: string; readonly label: string; readonly startsAt: number; readonly endsAt: number; readonly timeZone: string }
+export interface LeagueView {
+  readonly season: LeagueSeasonView; readonly serverNow: number; readonly daysLeft: number; readonly ranks: readonly LeagueRankView[];
+  readonly positionPoints: readonly number[]; readonly top: readonly LeagueStandingRow[]; readonly totalPlayers: number; readonly viewer: LeagueViewerStanding | null;
+}
+export interface LeagueArchivedSeason { readonly seasonId: string; readonly label: string; readonly points: number; readonly position: number; readonly rank: LeagueRankId; readonly totalPlayers: number }
+export interface LeagueHistoryView { readonly awards: readonly LeagueAwardView[]; readonly seasons: readonly LeagueArchivedSeason[] }

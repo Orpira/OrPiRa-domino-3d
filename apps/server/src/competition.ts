@@ -2,7 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { legalActions, shuffledDeal, type Deal, type Seat } from "../../../packages/rules/src/index.ts";
-import type { CommandEnvelope, CommandResponse, CompetitionResultSummary, CompetitionView, SimulatedConditions, SimulatedMovement, SimulatedMovementKind, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
+import type { CommandEnvelope, CommandResponse, CompetitionResultSummary, CompetitionView, LeagueRankId, SimulatedConditions, SimulatedMovement, SimulatedMovementKind, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
 import { AuthoritativeRoom, DEFAULT_TURN_CLOCK, type MatchStore, type SessionPlayer, type TurnClockConfig } from "./authoritative-room.ts";
 
 export const SIMULATED_CONDITIONS: SimulatedConditions = Object.freeze({
@@ -62,6 +62,9 @@ export class CompetitionManager {
     this.movement(identity, null, "INITIAL_CREDIT", this.terms.initialCredit, 0); await this.persist();
     return { identityId: identity.identityId, identityToken: identity.token, displayName };
   }); }
+  /** Rango de liga para mostrar junto al nombre; la competición no concede puntos de liga. */
+  attachRanks(rankOf: (identityId: string) => LeagueRankId) { this.rankOf = rankOf; }
+  private rankOf: ((identityId: string) => LeagueRankId) | null = null;
   conditions(): SimulatedConditions { return this.terms; }
   /** Identidad de prueba asociada a un token, para modalidades sin saldo como «Jugar ahora». */
   identify(token: string): { identityId: string; displayName: string } | null { const id = this.tokens.get(token); const identity = id ? this.identities.get(id) : null; return identity ? { identityId: identity.identityId, displayName: identity.displayName } : null; }
@@ -182,7 +185,7 @@ export class CompetitionManager {
       members: competition.members.map((member) => ({ identityId: member.identityId, displayName: this.identities.get(member.identityId)!.displayName, seat: member.seat,
         accepted: member.accepted, annulmentAccepted: member.annulmentAccepted, connected: this.now() - member.lastSeen < 5_000 })), game,
       legalActions: game && game.currentPlayerId === identity.identityId && competition.status === "PLAYING" ? legalActions(room!.state, identity.identityId) : [],
-      clock: room && competition.status === "PLAYING" ? room.clockView() : null, settlement: competition.settlement ? { ...competition.settlement, automaticIdentityIds: competition.settlement.automaticIdentityIds ?? [] } : null };
+      clock: room && competition.status === "PLAYING" ? room.clockView() : null, ...(this.rankOf ? { ranks: Object.fromEntries(competition.members.map((member) => [member.identityId, this.rankOf!(member.identityId)])) } : {}), settlement: competition.settlement ? { ...competition.settlement, automaticIdentityIds: competition.settlement.automaticIdentityIds ?? [] } : null };
   }
   private uniqueCode() { let code = ""; do { const bytes = randomBytes(6); code = [...bytes].map((value) => alphabet[value % alphabet.length]).join(""); } while (this.competitions.has(code)); return code; }
   private async persist() { await mkdir(dirname(this.path), { recursive: true }); const temporary = `${this.path}.tmp`; const snapshot: Snapshot = { identities: [...this.identities.values()], competitions: [...this.competitions.values()], movements: this.movements }; await writeFile(temporary, JSON.stringify(snapshot), { encoding: "utf8", mode: 0o600 }); await rename(temporary, this.path); }
