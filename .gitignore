@@ -15,3 +15,4 @@ artifacts/*.apk
 .vercel/
 backups/*.tar.gz
 .data/
+artifacts/*.tar.gz

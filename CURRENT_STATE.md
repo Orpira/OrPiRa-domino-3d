@@ -1,7 +1,10 @@
 # Estado actual
 
-Fecha: 11 de octubre de 2026. Fase 4 ejecutable; cliente web de fase 5
-desplegado en Vercel, backend todavía sin desplegar. En la rama
+Fecha: 12 de octubre de 2026. En producción: web de `main` (`f0dddf1`) en Vercel y API
+0.5.0 en `https://api-domino.orpira.es` (VPS 167.233.139.93 tras Nginx Proxy Manager,
+certificado Let's Encrypt hasta el 9 de enero de 2027; verificado desde fuera). Candidata
+`v1.5-rc1` (`2240f70`, rama `feature/league`) preparada y **no desplegada**: plan en
+`DEPLOY_PLAN.md`, pendiente de aprobación y de acceso SSH al VPS. En la rama
 `feature/interface-redesign` (commit `30a1c60`, sin publicar): competición de prueba con
 COP simulados y rediseño de interfaz. Contrato completo en `COMPETITION_CONTRACT.md`.
 Sobre ella, `feature/quick-play` (commit `1493992`) añade «Jugar ahora» y el reloj de
