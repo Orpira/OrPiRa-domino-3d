@@ -7,5 +7,10 @@ coverage/
 !.env.example
 *.pem
 *.key
+*.jks
+*.keystore
+artifacts/*.apk
 .DS_Store
 .openai/
+backups/*.tar.gz
+.data/

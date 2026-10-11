@@ -1,6 +1,6 @@
 {
   "name": "orpira-domino-3d",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,23 +8,36 @@
   },
   "scripts": {
     "dev": "vite apps/client",
+    "dev:server": "node apps/server/src/main.ts",
     "build": "vite build apps/client",
+    "build:web": "VITE_API_BASE_URL=https://api-domino.orpira.es vite build apps/client",
+    "build:server": "esbuild apps/server/src/main.ts --bundle --platform=node --format=esm --target=node24 --outfile=dist/server/main.mjs",
+    "build:android:web": "VITE_API_BASE_URL=https://api-domino.orpira.es vite build apps/client --mode android",
+    "android:sync": "npm run build:android:web && cap sync android",
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "preview": "vite preview apps/client",
-    "test": "node packages/rules/test/acceptance.test.ts && node packages/bots/test/bots.test.ts && node apps/client/test/local-game.test.ts",
+    "test": "node packages/rules/test/acceptance.test.ts && node packages/bots/test/bots.test.ts && node apps/client/test/local-game.test.ts && node apps/client/test/session-storage.test.ts && node apps/client/test/placement-interaction.test.ts && node apps/client/test/online-presentation.test.ts && node apps/server/test/online.test.ts",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test",
     "replay": "node packages/rules/replays/full-match.ts"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/core": "8.5.3",
     "@vitejs/plugin-react": "5.0.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "three": "^0.180.0",
     "vite": "^7.3.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.3",
     "@types/node": "24.7.2",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
+    "@types/three": "^0.180.0",
+    "@webgpu/types": "^0.1.64",
+    "esbuild": "0.25.11",
     "typescript": "5.9.3"
   }
 }

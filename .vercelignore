@@ -1,0 +1,15 @@
+.data/
+android/
+artifacts/
+backups/
+coverage/
+dist/
+node_modules/
+*.log
+*.jks
+*.keystore
+*.pem
+*.key
+.env
+.env.*
+!.env.example

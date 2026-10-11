@@ -1,10 +1,11 @@
 import { chooseBotAction } from "../../../packages/bots/src/index.ts";
 import {
-  getPlayerView, legalActions, nextRound, shuffledDeal, startMatch, transition,
+  DOUBLE_SIX_SET, getPlayerView, legalActions, nextRound, RULES_VERSION, shuffledDeal, startMatch, transition,
   type Deal, type GameState, type LegalAction, type PlayerInput, type Side, type TileId,
 } from "../../../packages/rules/src/index.ts";
 
 export const HUMAN_ID = "jugador";
+export type LocalMode = "BOTS" | "PASS_AND_PLAY";
 export const LOCAL_PLAYERS: readonly PlayerInput[] = [
   { playerId: HUMAN_ID, seat: 0 }, { playerId: "bot-izquierda", seat: 1 },
   { playerId: "bot-frente", seat: 2 }, { playerId: "bot-derecha", seat: 3 },
@@ -12,6 +13,12 @@ export const LOCAL_PLAYERS: readonly PlayerInput[] = [
 export const PLAYER_NAMES: Readonly<Record<string, string>> = {
   [HUMAN_ID]: "Tú", "bot-izquierda": "Luna", "bot-frente": "Bruno", "bot-derecha": "Vera",
 };
+export const LOCAL_HUMAN_NAMES: Readonly<Record<string, string>> = {
+  [HUMAN_ID]: "Jugador 1", "bot-izquierda": "Jugador 2", "bot-frente": "Jugador 3", "bot-derecha": "Jugador 4",
+};
+export function playerName(playerId: string, mode: LocalMode): string {
+  return (mode === "BOTS" ? PLAYER_NAMES : LOCAL_HUMAN_NAMES)[playerId] ?? playerId;
+}
 
 export type DealFactory = () => Deal;
 export function randomDeal(): Deal {
@@ -23,13 +30,18 @@ export class LocalGame {
   private matchCounter = 0;
   private _state: GameState;
   private readonly dealFactory: DealFactory;
-  constructor(dealFactory: DealFactory = randomDeal) {
+  readonly mode: LocalMode;
+  constructor(dealFactory: DealFactory = randomDeal, mode: LocalMode = "BOTS", restoredState?: GameState) {
     this.dealFactory = dealFactory;
-    this._state = this.createMatch();
+    this.mode = mode;
+    if (restoredState && !isRestorableState(restoredState)) throw new Error("Checkpoint local inválido");
+    this._state = restoredState ?? this.createMatch();
   }
   get state(): GameState { return this._state; }
+  get currentActions(): readonly LegalAction[] { return this._state.currentPlayerId ? legalActions(this._state, this._state.currentPlayerId) : []; }
   get humanActions(): readonly LegalAction[] { return legalActions(this._state, HUMAN_ID); }
-  get isHumanTurn(): boolean { return this._state.phase === "ROUND_ACTIVE" && this._state.currentPlayerId === HUMAN_ID; }
+  get isHumanTurn(): boolean { return this.mode === "PASS_AND_PLAY" ? this._state.phase === "ROUND_ACTIVE" : this._state.phase === "ROUND_ACTIVE" && this._state.currentPlayerId === HUMAN_ID; }
+  get isBotTurn(): boolean { return this.mode === "BOTS" && this._state.phase === "ROUND_ACTIVE" && this._state.currentPlayerId !== HUMAN_ID; }
 
   private createMatch(): GameState {
     this.matchCounter += 1;
@@ -42,23 +54,26 @@ export class LocalGame {
     this._state = result.state;
     return this._state;
   }
-  placeHuman(tileId: TileId, side?: Side): GameState {
+  placeCurrent(tileId: TileId, side?: Side): GameState {
     if (!this.isHumanTurn) throw new Error("No es tu turno");
-    const command = { type: "PLACE" as const, actorId: HUMAN_ID, tileId, ...(side ? { side } : {}), expectedRevision: this._state.revision };
+    const actorId = this._state.currentPlayerId!;
+    const command = { type: "PLACE" as const, actorId, tileId, ...(side ? { side } : {}), expectedRevision: this._state.revision };
     const result = transition(this._state, command);
     if (!result.ok) throw new Error(result.error.message);
     this._state = result.state;
     return this._state;
   }
-  passHuman(): GameState {
+  passCurrent(): GameState {
     if (!this.isHumanTurn) throw new Error("No es tu turno");
-    const result = transition(this._state, { type: "PASS", actorId: HUMAN_ID, expectedRevision: this._state.revision });
+    const result = transition(this._state, { type: "PASS", actorId: this._state.currentPlayerId!, expectedRevision: this._state.revision });
     if (!result.ok) throw new Error(result.error.message);
     this._state = result.state;
     return this._state;
   }
+  placeHuman(tileId: TileId, side?: Side): GameState { return this.placeCurrent(tileId, side); }
+  passHuman(): GameState { return this.passCurrent(); }
   playOneBotTurn(): GameState {
-    if (this._state.phase !== "ROUND_ACTIVE" || this._state.currentPlayerId === HUMAN_ID) return this._state;
+    if (!this.isBotTurn) return this._state;
     const actorId = this._state.currentPlayerId!;
     const action = chooseBotAction({ view: getPlayerView(this._state, actorId), legalActions: legalActions(this._state, actorId) });
     const result = action.type === "PASS"
@@ -68,4 +83,26 @@ export class LocalGame {
     this._state = result.state;
     return this._state;
   }
+}
+
+export function isRestorableState(state: GameState): boolean {
+  if (!state || state.rulesVersion !== RULES_VERSION || state.players.length !== 4 || state.revision < 1) return false;
+  if (new Set(state.players.map((p) => p.playerId)).size !== 4 ||
+      !LOCAL_PLAYERS.every((p) => state.players.some((candidate) => candidate.playerId === p.playerId && candidate.seat === p.seat))) return false;
+  if (state.players.some((p) => p.score < 0 || p.score > 100 || p.score % 20 !== 0)) return false;
+  if (!["ROUND_ACTIVE", "ROUND_ENDED", "MATCH_ENDED"].includes(state.phase) || state.consecutivePasses < 0 || state.consecutivePasses > 4) return false;
+  const playerIds = new Set(state.players.map((player) => player.playerId));
+  if (Object.keys(state.hands).length !== 4 || Object.keys(state.hands).some((id) => !playerIds.has(id))) return false;
+  if (state.phase === "ROUND_ACTIVE" ? !state.currentPlayerId || !playerIds.has(state.currentPlayerId) : state.currentPlayerId !== null) return false;
+  if (state.chain.length === 0 ? state.leftEnd !== null || state.rightEnd !== null :
+      state.leftEnd !== state.chain[0]!.left || state.rightEnd !== state.chain.at(-1)!.right) return false;
+  for (let index = 0; index < state.chain.length; index += 1) {
+    const oriented = state.chain[index]!; const canonical = DOUBLE_SIX_SET.find((tile) => tile.id === oriented.id);
+    if (!canonical || !playerIds.has(oriented.playedBy) ||
+        !((oriented.left === canonical.a && oriented.right === canonical.b) || (oriented.left === canonical.b && oriented.right === canonical.a))) return false;
+    if (index > 0 && state.chain[index - 1]!.right !== oriented.left) return false;
+  }
+  const known = new Set(DOUBLE_SIX_SET.map((tile) => tile.id));
+  const ids = [...Object.values(state.hands).flat(), ...state.chain.map((tile) => tile.id)];
+  return ids.length === 28 && new Set(ids).size === 28 && ids.every((id) => known.has(id));
 }

@@ -10,7 +10,7 @@
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "noEmit": true,
-    "types": ["node"]
+    "types": ["node", "vite/client", "@webgpu/types"]
   },
-  "include": ["packages/**/*.ts"]
+  "include": ["packages/**/*.ts", "apps/**/*.ts", "apps/**/*.tsx", "capacitor.config.ts"]
 }

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dominó 3D</string>
+    <string name="title_activity_main">Dominó 3D</string>
+    <string name="package_name">es.orpira.domino3d</string>
+    <string name="custom_url_scheme">es.orpira.domino3d</string>
+</resources>

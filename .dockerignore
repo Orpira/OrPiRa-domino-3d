@@ -1,0 +1,11 @@
+.git
+.data
+.env
+.env.*
+!.env.example
+android
+backups
+coverage
+dist
+node_modules
+*.log
