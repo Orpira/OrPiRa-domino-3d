@@ -50,7 +50,7 @@ desplegado en Vercel, backend todavía sin desplegar.
 - Identidad visual Domino3D-OrPiRa integrada localmente en web y Android: maestro
   original, variante simplificada, favicons, manifest web, Apple touch icon y
   launchers clásicos/redondos/adaptativos en cinco densidades.
-- APK debug 1.1 (`versionCode` 2) preparada con el mismo `applicationId`, firma debug,
+- APK debug 1.2 (`versionCode` 3) preparada con el mismo `applicationId`, firma debug,
   almacenamiento de sesión y endpoint `https://api-domino.orpira.es`.
 
 ## Comprobación reproducible
@@ -62,12 +62,25 @@ npm run build
 npm run replay
 ```
 
-Resultado de referencia: 55 pruebas aprobadas, 0 fallos; TypeScript sin errores;
+Resultado de referencia: 59 pruebas aprobadas, 0 fallos; TypeScript sin errores;
 build de producción correcto; replay con P0 campeón, marcador final P0=100 y resto=0.
+
+La mesa 3D usa ahora una distribución serpenteante reproducible. El 6–6 permanece
+vertical en el centro durante toda la ronda; LEFT y RIGHT crecen desde esa ancla
+por brazos independientes, sin recentrar las fichas ya colocadas. Los dobles cruzan
+el tramo, los objetivos táctiles se proyectan sobre los extremos reales y la escala
+se adapta uniformemente hasta alojar las 28 fichas. Las fichas nuevas se animan solo
+al incorporarse al estado observado; restaurar, reconectar, redimensionar o activar
+movimiento reducido aplica directamente la geometría estable.
+El ajuste posterior compacta los centros consecutivos y hace que cada ficha nueva
+parta visualmente desde su vecina interior antes de asentarse, reforzando la lectura
+secuencial de la cadena sin desplazar el resto.
 
 La integración de identidad del 11 de octubre de 2026 repitió `npm run check`,
 `npm run build:web` y `npm run android:apk` con resultado correcto. El APK contiene
 los recursos web y Android esperados y verifica con APK Signature Scheme v2.
+La revisión de cadena compacta se empaquetó como APK debug 1.2 (`versionCode` 3),
+SHA-256 `63980772c5b2aa5b7c0c2d1c83cc143208c96b57e1bb6cf6af606d4e55140f43`.
 
 ## Límites deliberados
 

@@ -16,7 +16,7 @@
     "android:sync": "npm run build:android:web && cap sync android",
     "android:apk": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "preview": "vite preview apps/client",
-    "test": "node packages/rules/test/acceptance.test.ts && node packages/bots/test/bots.test.ts && node apps/client/test/local-game.test.ts && node apps/client/test/session-storage.test.ts && node apps/client/test/placement-interaction.test.ts && node apps/client/test/online-presentation.test.ts && node apps/server/test/online.test.ts",
+    "test": "node packages/rules/test/acceptance.test.ts && node packages/bots/test/bots.test.ts && node apps/client/test/local-game.test.ts && node apps/client/test/session-storage.test.ts && node apps/client/test/placement-interaction.test.ts && node apps/client/test/table-layout.test.ts && node apps/client/test/online-presentation.test.ts && node apps/server/test/online.test.ts",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test",
     "replay": "node packages/rules/replays/full-match.ts"

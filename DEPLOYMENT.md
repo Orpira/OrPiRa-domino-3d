@@ -187,13 +187,13 @@ npm run android:apk
 ```
 
 Salida actual de entrega:
-`artifacts/domino3d-orpira-1.1-debug.apk`.
+`artifacts/domino3d-orpira-1.2-debug.apk`.
 
 ```text
-Version name: 1.1
-Version code: 2
+Version name: 1.2
+Version code: 3
 Application ID: es.orpira.domino3d
-SHA-256: 2130588aaded17529e857342b2e4abaa4029214486d0377293d75c3164760a31
+SHA-256: 63980772c5b2aa5b7c0c2d1c83cc143208c96b57e1bb6cf6af606d4e55140f43
 Firma: Android Debug, APK Signature Scheme v2 verificada
 ```
 
@@ -202,7 +202,7 @@ debug, no una versión publicable. Para instalar con un dispositivo autorizado p
 
 ```bash
 adb devices -l
-adb install -r artifacts/domino3d-orpira-1.1-debug.apk
+adb install -r artifacts/domino3d-orpira-1.2-debug.apk
 ```
 
 El `applicationId` y la firma debug se conservan respecto a la APK anterior, por lo

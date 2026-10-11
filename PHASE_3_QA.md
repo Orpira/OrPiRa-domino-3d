@@ -45,6 +45,28 @@ recomendadas para futuras versiones, no bloqueos de fase 3:
 Cuando se comunique un defecto futuro, debe registrarse aquí con dispositivo,
 navegador, pasos y resultado esperado.
 
+## Regresión de cadena serpenteante — 11 de octubre de 2026
+
+- Prueba pura de geometría en escritorio y móvil: 6–6 exactamente en `(0, 0)`,
+  vertical y estable; crecimiento LEFT/RIGHT independiente sin mover posiciones
+  anteriores; 28 fichas con posiciones únicas; dobles perpendiculares al tramo.
+- Captura automatizada con Chrome nativo y la mesa 3D real, cadena legal completa:
+  `assets/qa/serpentine-desktop.png` y `assets/qa/serpentine-mobile.png`.
+- Los blancos táctiles de extremos proceden de la proyección de las posiciones 3D;
+  los botones accesibles permanecen disponibles. La legalidad sigue procediendo
+  exclusivamente de `legalActions`.
+- Verificados TypeScript, 59 pruebas y build web de producción.
+
+Pendiente de comprobación manual, sin marcar como aprobado: fluidez temporal de la
+animación en un dispositivo móvil real, toque sobre ambos blancos durante una
+elección y WebGL en Safari/iOS. Las capturas automatizadas validan composición,
+anclaje, escala y ausencia visual de recortes, pero no sustituyen esas interacciones.
+
+Tras la revisión visual del usuario se compactó la separación: cada posición queda
+a menos de 1,35 longitudes escaladas de la anterior y la llegada comienza sobre la
+ficha vecina interior. La animación dura 520 ms y conserva inmóviles las fichas ya
+confirmadas.
+
 ## Bloqueo de Git y recuperación
 
 `findmnt -T .git` confirma que `.git` es un punto de montaje independiente `ext4`
