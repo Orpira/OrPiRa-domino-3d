@@ -50,6 +50,19 @@ siguientes hayan sido aprobados.
 - La desconexión está cubierta a nivel de sala: `disconnect` y `connect` no cambian
   el estado. La comprobación perceptible en los cuatro dispositivos sigue pendiente.
 
+## Celebración de partida completa
+
+- Automatizado: solo `MATCH_ENDED` con `matchResult` puede reclamar la celebración;
+  `ROUND_ENDED`, cierre +0 y dominada sin llegar a 100 no la activan.
+- Automatizado: la marca por `matchId` impide repetición tras recarga/reconexión y
+  movimiento reducido registra el final sin animarlo.
+- Chrome local: composición validada a 1440×1000 y 390×844; la capa es fija,
+  no recibe eventos, termina a los 2,1 segundos y se desmonta.
+- Evidencias: `assets/qa/match-celebration-desktop.png` y
+  `assets/qa/match-celebration-mobile.png`.
+- Pendiente manual: confirmar simultáneamente en los cuatro dispositivos que todos
+  reciben del servidor el mismo `championId`; no marcar aprobado hasta comunicarlo.
+
 ## Registro de incidencias
 
 Anotar por incidencia: dispositivo, navegador y versión, asiento, ronda/revisión,

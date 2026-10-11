@@ -15,6 +15,12 @@ services:
       PORT: 8787
       DOMINO_DATA_DIR: /app/data
       DOMINO_ALLOWED_ORIGINS: ${DOMINO_ALLOWED_ORIGINS:?Define los orígenes HTTPS exactos en .env}
+      # Solo Nginx Proxy Manager alcanza el contenedor (sin puertos publicados), por eso se confía en X-Forwarded-For.
+      DOMINO_TRUST_PROXY: ${DOMINO_TRUST_PROXY:-true}
+      DOMINO_RATE_LIMIT_MAX: ${DOMINO_RATE_LIMIT_MAX:-600}
+      DOMINO_RATE_LIMIT_WINDOW_SECONDS: ${DOMINO_RATE_LIMIT_WINDOW_SECONDS:-60}
+      DOMINO_IDENTITY_LIMIT_MAX: ${DOMINO_IDENTITY_LIMIT_MAX:-20}
+      DOMINO_IDENTITY_LIMIT_WINDOW_SECONDS: ${DOMINO_IDENTITY_LIMIT_WINDOW_SECONDS:-86400}
     expose:
       - "8787"
     volumes:

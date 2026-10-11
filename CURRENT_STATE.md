@@ -1,7 +1,9 @@
 # Estado actual
 
 Fecha: 11 de octubre de 2026. Fase 4 ejecutable; cliente web de fase 5
-desplegado en Vercel, backend todavía sin desplegar.
+desplegado en Vercel, backend todavía sin desplegar. En la rama
+`feature/interface-redesign` (sin publicar): competición de prueba con COP simulados
+y rediseño de interfaz. Contrato completo en `COMPETITION_CONTRACT.md`.
 
 ## Implementado
 
@@ -53,6 +55,26 @@ desplegado en Vercel, backend todavía sin desplegar.
 - APK debug 1.2 (`versionCode` 3) preparada con el mismo `applicationId`, firma debug,
   almacenamiento de sesión y endpoint `https://api-domino.orpira.es`.
 
+- Competición de prueba (COP simulados · sin valor monetario): identidad de prueba
+  persistente y recuperable, crédito inicial único, reserva atómica al aceptar, inicio
+  solo con cuatro aceptaciones, salida/cancelación/caducidad con devolución única,
+  anulación unánime sin campeón y liquidación idempotente vinculada a `matchId`,
+  recuperable tras reinicio. Condiciones fijadas por sala; un cambio de versión
+  invalida aceptaciones. Consulta pública `GET /api/simulated-conditions`.
+- Comisión configurable con redondeo a pesos enteros y validación al arrancar.
+  Límite de peticiones y tope de identidades por IP, configurables por entorno
+  (`DOMINO_RATE_LIMIT_*`, `DOMINO_IDENTITY_LIMIT_*`, `DOMINO_TRUST_PROXY`).
+- Rediseño de interfaz: navegación Inicio · Mesas · Historial · Cuenta (barra inferior
+  en móvil con áreas seguras de Android, raíl lateral en escritorio), tokens de color y
+  espaciado, controles de 48 px, foco visible, ilustraciones SVG en línea y
+  `viewport-fit=cover`. Mesas, condiciones, sala de espera con aceptaciones, indicador
+  de bolsa durante la partida, liquidación (premio bruto, comisión, premio recibido y
+  neto individual) o «Liquidación pendiente», historial y cuenta de prueba.
+- La mesa online se extrajo a `GameBoard.tsx` y la cola de comandos a
+  `use-command-channel.ts`, compartidas por la sala entre amigos y la competición.
+  Práctica (bots y relevo) y online sin saldo siguen accesibles desde Inicio. Three.js
+  solo se descarga al mostrar una mesa.
+
 ## Comprobación reproducible
 
 ```bash
@@ -62,7 +84,7 @@ npm run build
 npm run replay
 ```
 
-Resultado de referencia: 59 pruebas aprobadas, 0 fallos; TypeScript sin errores;
+Resultado de referencia: 82 pruebas aprobadas, 0 fallos; TypeScript sin errores;
 build de producción correcto; replay con P0 campeón, marcador final P0=100 y resto=0.
 
 La mesa 3D usa ahora una distribución serpenteante reproducible. El 6–6 permanece
@@ -76,16 +98,39 @@ El ajuste posterior compacta los centros consecutivos y hace que cada ficha nuev
 parta visualmente desde su vecina interior antes de asentarse, reforzando la lectura
 secuencial de la cadena sin desplazar el resto.
 
+El final confirmado `MATCH_ENDED` presenta un trofeo, el texto explícito
+«¡[Nombre] ganó la partida!», la puntuación del campeón y la clasificación completa.
+Una capa breve de confeti y serpentinas doradas/verdes se reclama una sola vez por
+`matchId` y sesión del dispositivo; recargar o reconectar conserva el final sin
+repetirla. Con `prefers-reduced-motion` solo se presenta el resultado estático.
+
 La integración de identidad del 11 de octubre de 2026 repitió `npm run check`,
 `npm run build:web` y `npm run android:apk` con resultado correcto. El APK contiene
 los recursos web y Android esperados y verifica con APK Signature Scheme v2.
 La revisión de cadena compacta se empaquetó como APK debug 1.2 (`versionCode` 3),
 SHA-256 `63980772c5b2aa5b7c0c2d1c83cc143208c96b57e1bb6cf6af606d4e55140f43`.
 
+La rama de rediseño corrigió además dos fallos del servidor de competición previo,
+que no estaba en ningún commit: `competition.ts` usaba parameter properties (Node en
+modo strip no las admite, por lo que el servidor no arrancaba) y la prueba tenía un
+error de sintaxis. QA de navegador automatizado (Chrome, 412×915 y 1440×960, movimiento
+reducido) contra servidor local: 18 pantallas por tamaño en `assets/qa/redesign/`,
+incluidos estados no disponible, saldo insuficiente, sala completa, cancelación con
+devolución y reconexión. APK debug 1.3 (`versionCode` 4, mismo `applicationId` y firma
+debug, v2 verificada), SHA-256
+`e5f0ff2c0794a6fa16e334b175db7a7af69dfc64aeede9bb5fb7fd7395f49051`, instalada con
+`adb install -r` sobre la 1.1 en el Samsung SM-A165F (1080×2340, densidad 450),
+conservando la partida local guardada. En el dispositivo se comprobaron barra de
+estado, barra inferior sobre los botones del sistema, navegación entre las cuatro
+pestañas y acceso a la práctica; capturas en `assets/qa/device/`. Esa revisión detectó
+y corrigió que el contenido se mezclaba con la barra de estado al desplazarse y que el
+404 del backend publicado se mostraba como error genérico en vez de «no disponible».
+
 ## Límites deliberados
 
 El cliente está desplegado en Vercel, pero la API no está desplegada. No existen
-todavía TLS verificado para el backend, rate limiting, almacenamiento
+todavía TLS verificado para el backend, rate limiting distribuido (solo hay límites
+en memoria por instancia), almacenamiento
 gestionado/cifrado ni observabilidad. La APK es debug y no está
 publicada. El volumen Docker mantiene JSON atómico para una única instancia.
 La identidad visual nueva se publica en `main` y Vercel mediante el despliegue
@@ -116,8 +161,19 @@ El DNS de `api-domino.orpira.es` devuelve actualmente `64.29.17.65` y `64.29.17.
 no el VPS `167.233.139.93`. SSH rechazó por clave tanto `orpira` como `root`, por lo
 que no se inspeccionó ni modificó el servidor. Consulta `DEPLOYMENT.md`.
 
+Competición de prueba: el backend desplegado no tiene todavía estas rutas, así que web
+y APK muestran «Competición no disponible» hasta desplegar este servidor. No hay mesas
+públicas ni emparejamiento: la ocupación solo se ve dentro de cada sala privada. El
+servidor no lista las salas activas de una identidad; el cliente recuerda la sala en el
+dispositivo y, si se pierde, se vuelve a entrar con el código. Límites por IP solo en
+memoria (una instancia). Abandono no recuperable tras el inicio: decisión pendiente.
+Los flujos de competición no se pudieron recorrer en el Samsung porque el backend
+publicado no tiene esas rutas; se recorrieron en Chrome contra un servidor local.
+
 ## Siguiente tarea
 
-Revisar visualmente la identidad desplegada en web. En paralelo sigue pendiente
+Revisar y fusionar `feature/interface-redesign`; desplegar el servidor nuevo y
+ejecutar la prueba de cuatro dispositivos de
+`COMPETITION_CONTRACT.md`. Revisar visualmente la identidad desplegada en web. En paralelo sigue pendiente
 desplegar y verificar la API en el VPS, corregir DNS y ejecutar el QA externo de
 cuatro clientes. No considerar el online habilitado hasta completar esa prueba.

@@ -1,0 +1,75 @@
+import { chromium } from "/home/orpira/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs";
+const BASE = "http://localhost:5174"; const API = "http://127.0.0.1:8787";
+const OUT = process.argv[2]; const label = process.argv[3] ?? "mobile";
+const viewport = label === "mobile" ? { width: 412, height: 915 } : { width: 1440, height: 960 };
+const log = (...args) => console.log(`[${label}]`, ...args);
+const api = async (path, token, body) => { const response = await fetch(`${API}${path}`, { method: body === undefined ? "GET" : "POST", headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); const value = await response.json(); if (!response.ok) throw new Error(`${path} ${JSON.stringify(value)}`); return value; };
+
+const browser = await chromium.launch({ executablePath: "/usr/bin/google-chrome" });
+const context = await browser.newContext({ viewport, deviceScaleFactor: label === "mobile" ? 2 : 1, isMobile: label === "mobile", hasTouch: label === "mobile", locale: "es-CO", reducedMotion: "reduce" });
+const page = await context.newPage(); const errors = [];
+page.on("pageerror", (error) => errors.push(error.message)); page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+const shot = async (name, full = true) => { await page.waitForTimeout(400); await page.screenshot({ path: `${OUT}/${label}-${name}.png`, fullPage: full }); log("captura", name); };
+const nav = (name) => page.getByRole("navigation", { name: "Navegación principal" }).getByRole("button", { name });
+
+await page.goto(BASE); await page.getByRole("heading", { name: /Domino3D-/ }).waitFor(); await shot("01-inicio");
+// Estado de error honesto si el servidor no ofrece condiciones.
+await page.route("**/api/simulated-conditions", (route) => route.fulfill({ status: 404, body: "" }));
+await page.reload(); await nav("Mesas").click(); await page.getByText("Competición no disponible").waitFor(); await shot("02-mesas-no-disponible", false);
+await page.unroute("**/api/simulated-conditions"); await page.reload(); await page.getByText("Entrada individual").waitFor(); await shot("03-mesas-sin-cuenta");
+await page.getByLabel("Nombre visible").fill(label === "mobile" ? "Lucía" : "Andrés"); await page.getByRole("button", { name: "Crear cuenta de prueba" }).click();
+await page.getByText("Saldo disponible").waitFor(); await page.getByText("100.000 COP").first().waitFor(); await shot("04-mesas");
+await page.getByRole("button", { name: /Ver condiciones/ }).click(); await page.getByText("Desglose económico").waitFor(); await shot("05-condiciones");
+await page.getByRole("button", { name: "Crear sala privada" }).click(); await page.getByRole("heading", { name: "Aceptaciones" }).waitFor();
+const code = (await page.getByRole("heading", { level: 1 }).textContent()).replace("Sala ", "").trim(); log("sala", code);
+const others = []; for (const name of ["Marta", "Julián", "Sofía"]) others.push(await api("/api/test-identities", null, { displayName: name }));
+for (const other of others) await api(`/api/competitions/${code}/join`, other.identityToken, {});
+await api(`/api/competitions/${code}/accept`, others[0].identityToken, { conditionsVersion: 1 }); await api(`/api/competitions/${code}/accept`, others[1].identityToken, { conditionsVersion: 1 });
+await page.getByText("2 de 4", { exact: true }).waitFor(); await shot("06-sala-espera");
+await page.getByRole("checkbox").check(); await page.getByRole("button", { name: /Aceptar y reservar/ }).click(); await page.getByText("Has aceptado").waitFor();
+await page.getByText("3 de 4", { exact: true }).waitFor(); await shot("07-sala-aceptada", false);
+await api(`/api/competitions/${code}/accept`, others[2].identityToken, { conditionsVersion: 1 });
+await page.getByText("Objetivo: 100 puntos").waitFor(); await page.waitForTimeout(1500); await shot("08-partida");
+const me = JSON.parse(await page.evaluate(() => localStorage.getItem("orpira-domino-3d:test-identity:v1")));
+const tokens = new Map([[me.identityId, me.identityToken], ...others.map((other) => [other.identityId, other.identityToken])]);
+let view = await api(`/api/competitions/${code}`, me.identityToken); let guard = 8000; let n = 0;
+while (view.status === "PLAYING" && guard-- > 0) {
+  const game = view.game; let token; let command;
+  if (game.phase === "ROUND_ENDED") { token = me.identityToken; command = { type: "NEXT_ROUND" }; }
+  else { token = tokens.get(game.currentPlayerId); const current = await api(`/api/competitions/${code}`, token); const action = current.legalActions[0]; command = action.type === "PASS" ? { type: "PASS" } : { type: "PLACE", tileId: action.tileId, ...(action.side ? { side: action.side } : {}) }; }
+  const fresh = await api(`/api/competitions/${code}`, token);
+  await fetch(`${API}/api/competitions/${code}/commands`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` }, body: JSON.stringify({ commandId: `qa-${label}-${n++}`, expectedRevision: fresh.game.revision, command }) });
+  view = await api(`/api/competitions/${code}`, me.identityToken);
+}
+log("final", view.status, view.settlement?.championIdentityId === me.identityId ? "campeón: yo" : "campeón: otro");
+await page.getByText("Liquidación simulada").waitFor({ timeout: 15000 }); await page.waitForTimeout(800); await shot("09-resultado");
+await page.getByRole("button", { name: "Volver al lobby" }).click(); await page.getByText("Elige tu mesa").waitFor(); await shot("10-mesas-tras-partida", false);
+// Cancelación con devolución: crear sala, aceptar y cancelar.
+await page.getByRole("button", { name: "Crear sala privada" }).click(); await page.getByRole("heading", { name: "Aceptaciones" }).waitFor();
+await page.getByRole("checkbox").check(); await page.getByRole("button", { name: /Aceptar y reservar/ }).click(); await page.getByText("Has aceptado").waitFor();
+page.once("dialog", (dialog) => dialog.accept()); await page.getByRole("button", { name: "Cancelar sala para todos" }).click();
+await page.getByText("Competición cancelada").waitFor(); await page.getByText(/Devolución confirmada/).waitFor({ timeout: 8000 }); await shot("11-cancelada-devolucion", false);
+await page.getByRole("button", { name: "Volver a mesas" }).click();
+// Saldo insuficiente: reservar el saldo restante en otras salas desde el servidor.
+let account = await api("/api/test-account", me.identityToken);
+while (account.available >= 5000) { const room = await api("/api/competitions", me.identityToken, {}); await api(`/api/competitions/${room.code}/accept`, me.identityToken, { conditionsVersion: 1 }); account = await api("/api/test-account", me.identityToken); }
+const host = others[0]; const blocked = await api("/api/competitions", host.identityToken, {});
+await page.getByPlaceholder("Código de 6 caracteres").fill(blocked.code); await page.getByRole("button", { name: "Entrar con código" }).click();
+await page.getByText("Saldo insuficiente").first().waitFor(); await shot("12-saldo-insuficiente");
+// Sala completa.
+page.once("dialog", (dialog) => dialog.accept()); await page.getByRole("button", { name: "Salir de la sala" }).click(); await page.getByText("Elige tu mesa").waitFor();
+const full = await api("/api/competitions", host.identityToken, {}); const extra = [];
+for (const name of ["Ana", "Beto", "Cora"]) { const grant = await api("/api/test-identities", null, { displayName: name }); extra.push(grant); await api(`/api/competitions/${full.code}/join`, grant.identityToken, {}); }
+await page.getByPlaceholder("Código de 6 caracteres").fill(full.code); await page.getByRole("button", { name: "Entrar con código" }).click(); await page.getByText(/sala está completa/).waitFor(); await shot("13-sala-completa", false);
+await nav("Historial").click(); await page.getByRole("heading", { name: "Movimientos" }).waitFor(); await shot("14-historial");
+await nav("Cuenta").click(); await page.getByText("Esta es una cuenta de prueba").waitFor(); await shot("15-cuenta");
+// Reconexión: el servidor deja de responder mientras se ve una sala.
+await nav("Mesas").click(); await page.getByRole("button", { name: "Crear sala privada" }).click(); await page.getByRole("heading", { name: "Aceptaciones" }).waitFor();
+await page.route("**/api/competitions/**", (route) => route.abort()); await page.getByText("Sin conexión · reconectando").waitFor({ timeout: 8000 }); await shot("16-reconexion", false);
+await page.unroute("**/api/competitions/**"); await page.getByText("Conectado al servidor").waitFor({ timeout: 8000 });
+// Modalidades anteriores siguen accesibles.
+await nav("Inicio").click(); await page.getByRole("button", { name: /^Practicar/ }).first().click(); await page.getByText("1 persona + 3 bots").waitFor(); await page.waitForTimeout(1500); await shot("17-practica");
+await page.getByRole("button", { name: "4 personas · relevo" }).isVisible();
+await page.getByRole("button", { name: "← Inicio" }).click(); await page.getByRole("button", { name: /Jugar online/ }).click(); await page.getByRole("heading", { name: "Mesa entre amigos" }).waitFor(); await shot("18-online-amigos");
+log("errores de página", errors.length ? errors : "ninguno");
+await browser.close();

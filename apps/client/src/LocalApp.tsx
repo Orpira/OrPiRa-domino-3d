@@ -3,6 +3,8 @@ import { TILE_BY_ID, type GameState, type Side, type TileId } from "../../../pac
 import { HUMAN_ID, LocalGame, playerName, randomDeal, type LocalMode } from "./local-game.ts";
 import { loadSession, saveSession } from "./session-storage.ts";
 import { currentSelection, placementDecision, SubmissionGate, type PlacementSelection } from "./placement-interaction.ts";
+import { MatchCelebration } from "./MatchCelebration.tsx";
+import { finalRanking } from "./online-presentation.ts";
 const Table3D = lazy(() => import("./Table3D.tsx").then((module) => ({ default: module.Table3D })));
 
 function Tile({ id, selected = false, disabled = false, onClick }: { id: TileId; selected?: boolean; disabled?: boolean; onClick?: () => void }) {
@@ -59,6 +61,8 @@ export default function App() {
   const canPass = !handoff && actions.length === 1 && actions[0]?.type === "PASS";
   const roundResult = state.roundResult;
   const winnerName = roundResult?.winnerId ? playerName(roundResult.winnerId, mode) : null;
+  const names = Object.fromEntries(state.players.map((player) => [player.playerId, playerName(player.playerId, mode)]));
+  const championName = state.matchResult ? names[state.matchResult.championId] : null;
 
   const switchMode = (nextMode: LocalMode) => {
     if (nextMode === mode) return;
@@ -113,11 +117,12 @@ export default function App() {
       <div className="hand">{state.hands[visibleHandId]!.map((id) => <Tile key={id} id={id} selected={selected === id} disabled={!actions.some((action) => action.tileId === id)} onClick={() => selectTile(id)} />)}</div>
       {selected && <button className="cancel" onClick={() => setSelection(null)}>Cancelar selección</button>}
     </section>}
-    {state.phase !== "ROUND_ACTIVE" && roundResult && <section className="result" role="dialog" aria-label="Resultado de ronda">
+    {state.phase === "MATCH_ENDED" && <MatchCelebration matchId={state.matchId} phase={state.phase} result={state.matchResult} reducedMotion={reducedMotion} storage={window.localStorage}/>}
+    {state.phase !== "ROUND_ACTIVE" && roundResult && <section className={`result ${state.phase === "MATCH_ENDED" ? "match-finale" : ""}`} role="dialog" aria-label={state.phase === "MATCH_ENDED" ? "Resultado final de la partida" : "Resultado de ronda"}>
       <p className="eyebrow">{roundResult.reason === "DOMINO" ? "Dominada" : "Cierre"}</p><h2>{winnerName ? `${winnerName} gana la ronda` : "Empate en el mínimo"}</h2>
       <p>{roundResult.reason === "DOMINO" ? `${winnerName} suma 20 puntos.` : "El cierre no concede puntos."}</p>
       <div className="totals">{state.players.map((player) => <span key={player.playerId}>{playerName(player.playerId, mode)}: {roundResult.handPipTotals[player.playerId]}</span>)}</div>
-      {state.phase === "ROUND_ENDED" ? <button className="primary" onClick={() => update(game.startNextRound(), "Nueva ronda: busca el 6–6", mode === "PASS_AND_PLAY")}>Siguiente ronda</button> : <><p className="champion">Campeón: {playerName(state.matchResult!.championId, mode)}</p><button className="primary" onClick={restart}>Nueva partida</button></>}
+      {state.phase === "ROUND_ENDED" ? <button className="primary" onClick={() => update(game.startNextRound(), "Nueva ronda: busca el 6–6", mode === "PASS_AND_PLAY")}>Siguiente ronda</button> : <><div className="champion-callout"><span className="champion-trophy" aria-hidden="true">🏆</span><strong>¡{championName} ganó la partida!</strong><span>{state.matchResult!.finalScores[state.matchResult!.championId]} puntos</span></div><p>Clasificación final</p><ol className="final-ranking">{finalRanking(state.players, names, state.matchResult!).map((player) => <li key={player.playerId}><span>{player.rank}.º · {player.name}{player.tied ? " · empate" : ""}</span><strong>{player.score} puntos</strong></li>)}</ol><button className="primary" onClick={restart}>Nueva partida</button></>}
     </section>}
     {handoff && state.phase === "ROUND_ACTIVE" && <section className="handoff" role="dialog" aria-modal="true" aria-label="Relevo de jugador">
       <div><p className="eyebrow">Relevo privado</p><h2>Entrega el dispositivo a {playerName(activeId!, mode)}</h2><p>La mano anterior está oculta. Solo la siguiente persona debe continuar.</p><button autoFocus className="primary" onClick={() => setHandoff(false)}>Soy {playerName(activeId!, mode)} · mostrar mi mano</button></div>

@@ -45,6 +45,10 @@ Las rutas privadas requieren `Authorization: Bearer <sessionId>`. Las respuestas
 usan `cache-control: no-store`. Crear o entrar concede únicamente la sesión del
 asiento solicitado, nunca las credenciales de los demás.
 
+Competición de prueba (COP simulados): rutas `/api/simulated-conditions`,
+`/api/test-identities`, `/api/test-account` y `/api/competitions/...`, descritas en
+`COMPETITION_CONTRACT.md`. Usan el mismo sobre de comandos idempotente.
+
 ## Continuidad
 
 `MatchStore` guarda estado, sesiones y resultados idempotentes. `JsonFileMatchStore`
