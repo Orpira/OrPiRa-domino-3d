@@ -12,5 +12,6 @@ coverage/
 artifacts/*.apk
 .DS_Store
 .openai/
+.vercel/
 backups/*.tar.gz
 .data/

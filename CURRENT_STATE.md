@@ -1,6 +1,7 @@
 # Estado actual
 
-Fecha: 11 de octubre de 2026. Fase 4 ejecutable; fase 5 preparada localmente, sin despliegue.
+Fecha: 11 de octubre de 2026. Fase 4 ejecutable; cliente web de fase 5
+desplegado en Vercel, backend todavía sin desplegar.
 
 ## Implementado
 
@@ -39,6 +40,8 @@ Fecha: 11 de octubre de 2026. Fase 4 ejecutable; fase 5 preparada localmente, si
 - Backend de producción compilado en imagen Docker, proceso UID 1000, healthcheck,
   CORS por lista exacta, volumen exclusivo y Compose sin puertos publicados.
 - Cliente Vercel preparado desde la raíz del monorepo y API HTTPS configurable.
+- Cliente publicado en `https://orpira-domino-3d.vercel.app`, con HTTPS verificado y
+  repositorio privado de GitHub conectado a Vercel.
 - Capacitor 8.5.3 y proyecto Android API 36; APK debug firmada y verificada.
 - En Android, sesión y comando pendiente usan almacenamiento local para sobrevivir
   al cierre de la aplicación; la web conserva aislamiento por `sessionStorage`.
@@ -59,8 +62,9 @@ build de producción correcto; replay con P0 campeón, marcador final P0=100 y r
 
 ## Límites deliberados
 
-La API y Vercel no están desplegados. No existen todavía TLS verificado, rate limiting,
-almacenamiento gestionado/cifrado ni observabilidad. La APK es debug y no está
+El cliente está desplegado en Vercel, pero la API no está desplegada. No existen
+todavía TLS verificado para el backend, rate limiting, almacenamiento
+gestionado/cifrado ni observabilidad. La APK es debug y no está
 publicada. El volumen Docker mantiene JSON atómico para una única instancia.
 Las evidencias ejecutadas y la aceptación visual manual están en `PHASE_3_QA.md`.
 El QA online con Samsung, iPhone, iPad y portátil está preparado en `ONLINE_QA.md`;
@@ -68,7 +72,9 @@ todas sus comprobaciones manuales siguen pendientes. Los requisitos de una futur
 prueba privada en internet se detallan en
 `PRIVATE_INTERNET_TEST_REQUIREMENTS.md`, sin despliegue autorizado.
 
-El repositorio es válido y conserva en `main` el commit `d7726a9` de fase 2. El
+GitHub conserva el historial y `origin/main` apunta al commit `1bb95b1`, que incluye
+las fases 3 a 5 y la configuración de despliegue. El repositorio local conserva en
+`main` el commit `d7726a9` de fase 2. El
 entorno monta únicamente `.git` desde la misma partición ext4 con opción `ro`; los
 permisos, ACL y atributos del índice sí son normales. Por eso Git puede leer el
 historial pero no crear `index.lock` ni registrar fase 3. No se ha borrado ni
@@ -87,6 +93,6 @@ que no se inspeccionó ni modificó el servidor. Consulta `DEPLOYMENT.md`.
 
 ## Siguiente tarea
 
-QA manual con cuatro navegadores o dispositivos de la misma red. Después, elegir
-infraestructura y política de acceso antes de desplegar. No crear cuentas, contratar
-servicios ni publicar sin autorización específica.
+Desplegar y verificar la API en el VPS, corregir el DNS y configurar el origen exacto
+de Vercel en CORS. Después, ejecutar el QA manual con cuatro navegadores o
+dispositivos externos. No considerar el online habilitado hasta completar esa prueba.

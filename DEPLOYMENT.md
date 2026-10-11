@@ -34,8 +34,15 @@ certificado hasta que todos los resolutores devuelvan `167.233.139.93`.
 
 ## Vercel
 
-Importar el repositorio como proyecto Vite usando la raíz del monorepo, no
-`apps/client`, porque el cliente importa `packages/rules` y `packages/protocol`.
+El proyecto `orpira-domino-3d` está conectado al repositorio privado
+`Orpira/OrPiRa-domino-3d` y publicado en:
+
+```text
+https://orpira-domino-3d.vercel.app
+```
+
+Usa la raíz del monorepo, no `apps/client`, porque el cliente importa
+`packages/rules` y `packages/protocol`.
 `vercel.json` deja fijados:
 
 ```text
@@ -44,10 +51,10 @@ Build Command: npm run build:web
 Output Directory: dist/client
 ```
 
-El build incrusta `https://api-domino.orpira.es`. Cuando Vercel asigne el dominio de
-producción, copiar su origen exacto, sin ruta ni barra final, a
-`DOMINO_ALLOWED_ORIGINS`. No autorizar `*.vercel.app`: cada preview que vaya a probarse
-se añade explícitamente o se prueba desde el dominio estable elegido.
+El build incrusta `https://api-domino.orpira.es`. Configurar el backend con
+`DOMINO_ALLOWED_ORIGINS=https://orpira-domino-3d.vercel.app,https://localhost`.
+No autorizar `*.vercel.app`: cada preview que vaya a probarse se añade explícitamente
+o se prueba desde el dominio estable elegido.
 
 ## Preparación en el VPS
 
