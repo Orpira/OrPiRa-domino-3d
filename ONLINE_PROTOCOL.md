@@ -49,12 +49,19 @@ Competición de prueba (COP simulados): rutas `/api/simulated-conditions`,
 `/api/test-identities`, `/api/test-account` y `/api/competitions/...`, descritas en
 `COMPETITION_CONTRACT.md`. Usan el mismo sobre de comandos idempotente.
 
+Jugar ahora (práctica pública): rutas `/api/quick-play/...`, descritas en `QUICK_PLAY.md`.
+
+Reloj de turno: todas las vistas online incluyen `clock` (`turnDeadline`, `serverNow`,
+asientos con `bot`/`automatic`/`connected` y `automaticMoves`). `RESUME_CONTROL` viaja en
+el mismo sobre de comandos. Detalle en `COMPETITION_CONTRACT.md`.
+
 ## Continuidad
 
 `MatchStore` guarda estado, sesiones y resultados idempotentes. `JsonFileMatchStore`
 escribe snapshots atómicos con modo 0600 bajo `.data/matches`; el lobby guarda sus
 metadatos en `.data/lobbies.json`. Las pruebas reconstruyen el administrador desde
-disco y reintentan el mismo comando tras reiniciar. Desconectar no muta el estado.
+disco y reintentan el mismo comando tras reiniciar. Desconectar no muta el estado; el
+reloj de turno decide cuándo juega el servidor por un asiento ausente.
 
 ## Pendiente antes de producción
 

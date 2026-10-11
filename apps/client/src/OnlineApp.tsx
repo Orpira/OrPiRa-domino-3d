@@ -55,6 +55,6 @@ export function OnlineApp() {
     <section className="online-seats">{[0,1,2,3].map((seat) => { const player = lobby.players.find((candidate) => candidate.seat === seat); return <div key={seat} className={player?.playerId === lobby.viewerPlayerId ? "me" : ""}><strong>{player?.name ?? "Esperando…"}</strong><span>{player ? `Asiento P${seat}` : "Libre"}</span>{player && <small>{player.connected ? "Conectado" : "Desconectado"}</small>}</div>; })}</section>
     {lobby.status === "WAITING" && <><section className="victory-rules compact" aria-label="Condiciones de victoria"><strong>Objetivo: 100 puntos</strong><span>Dominada +20 · Cierre +0 · Sin equipos</span></section><section className="waiting"><p className="eyebrow">Código de invitación</p><strong>{lobby.code}</strong><p>{lobby.players.length}/4 jugadores. La partida comienza al ocupar los cuatro asientos.</p></section></>}
     {game && <GameBoard game={game} actions={lobby.legalActions} names={names} viewerId={lobby.viewerPlayerId} sending={channel.sending} message={channel.message} reducedMotion={reducedMotion}
-      celebrationStorage={deviceStorage()} onCommand={(command) => void channel.send(command)} onLeave={leave}/>}
+      celebrationStorage={deviceStorage()} onCommand={(command) => void channel.send(command)} onLeave={leave} clock={lobby.clock}/>}
   </main>;
 }

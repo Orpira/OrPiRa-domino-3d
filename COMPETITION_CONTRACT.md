@@ -41,18 +41,48 @@ retenida queda registrada en `settlement.commission`; la conservación contable 
 4. Cada sala guarda una copia de las condiciones con las que se creó. Si el servidor
    arranca con otra versión, las salas en espera se cancelan con devolución y las
    aceptaciones anteriores quedan invalidadas.
-5. `PLAYING`: no se puede salir ni retirar la entrada. Una desconexión no es pase, bot,
-   penalización ni derrota; se reconecta con el mismo asiento, mano y reserva. La sala
-   muestra quién lleva más de 5 s sin conexión y la partida queda pendiente.
+5. `PLAYING`: no se puede salir ni retirar la entrada. Se aplica el reloj de turno
+   (sección siguiente): al agotarse un turno el servidor juega por ese asiento, y tras
+   2 turnos agotados seguidos o 60 s sin conexión el asiento pasa a modo automático.
+   Se reconecta con el mismo asiento, mano y reserva. Nunca hay bots en la competición:
+   el modo automático solo actúa en asientos de personas que aceptaron y reservaron.
 6. Anulación: solo con la aceptación de los cuatro. Devuelve las entradas, estado
    `CANCELLED`, sin campeón ni liquidación.
 7. Liquidación: solo cuando el servidor confirma `MATCH_ENDED`. Consume las cuatro
    reservas (`ENTRY_CONSUMED`), abona el premio (`PRIZE_AWARDED`) y guarda
-   `settlement` con `matchId` y `settledAt`. Un cierre +0 o una dominada que no llega
-   a 100 no liquidan. `settle` es idempotente: reintentos o reinicios no duplican.
+   `settlement` con `matchId`, `settledAt` y `automaticIdentityIds` (asientos que
+   terminaron en modo automático, también visibles en el historial de la cuenta). Un
+   cierre +0 o una dominada que no llega a 100 no liquidan. `settle` es idempotente:
+   reintentos, reinicios o finales alcanzados por jugadas automáticas no duplican.
 
-Decisión pendiente para una fase futura: abandono no recuperable después del inicio.
-Hoy la partida queda pendiente indefinidamente salvo anulación unánime.
+## Reloj de turno (todas las modalidades online)
+
+Sustituye a la regla anterior de «desconexión sin bot»: toda partida iniciada termina.
+
+| Parámetro | Valor provisional | Variable |
+| --- | --- | --- |
+| Tiempo por turno | 30 s | `DOMINO_TURN_SECONDS` |
+| Turnos agotados seguidos para modo automático | 2 | — |
+| Ausencia para modo automático | 60 s sin consultar la mesa | — |
+| Pausa de jugadas en modo automático y bots | 1,2 s | `DOMINO_AUTOMATIC_DELAY_SECONDS` |
+| Pausa del resumen de ronda | 10 s | `DOMINO_ROUND_BREAK_SECONDS` |
+| Frecuencia del reloj del servidor | 500 ms | `DOMINO_CLOCK_TICK_MS` |
+
+- El servidor es la única autoridad. Cada vista incluye `clock.turnDeadline` y
+  `serverNow`; el cliente solo dibuja la cuenta atrás.
+- Al vencer, `chooseAutomaticAction` (único jugador automático del servidor; reutiliza
+  la estrategia de los bots locales sobre la vista privada y las acciones legales del
+  motor, determinista con semilla) juega o pasa por el asiento. La jugada queda en
+  `clock.automaticMoves` con el motivo `TIMEOUT`, `AUTO_MODE` o `BOT`, visible para todos.
+- Antes de procesar cualquier comando se resuelve lo vencido: una jugada que llega
+  tarde se rechaza y nadie puede alargar su turno ni jugar fuera de él.
+- Recuperar el control es una petición explícita (`RESUME_CONTROL`), que se aplica desde
+  el siguiente turno del asiento. Reconectar no basta, porque un cliente inactivo pero
+  abierto sigue consultando la mesa.
+- La hora límite se guarda con la partida. Tras un reinicio se respeta; si venció durante
+  la caída se juega una vez al restaurar, y el reinicio no cuenta como desconexión.
+- El resumen de ronda avanza solo tras la pausa si nadie pulsa «Siguiente ronda».
+- La anulación por acuerdo de los cuatro se mantiene.
 
 ## HTTP
 
@@ -166,8 +196,10 @@ o el VPS cuando esté desplegado). No hay backend público disponible todavía.
 6. En el cuarto, intentar aceptar dos veces seguidas: solo una reserva.
 7. Al aceptar el cuarto empieza la partida; comprobar indicador de bolsa y objetivo,
    y que cada dispositivo ve solo su mano.
-8. Cortar la red de uno: los demás ven «sin conexión reciente» y la partida espera.
-   Recuperar la red y recargar: mismo asiento, mano y reserva.
+8. Cortar la red de uno: los demás ven «Sin conexión»; al agotarse su turno el servidor
+   juega por él y lo anuncia. A los 60 s su asiento pasa a «Automático». Recuperar la red,
+   recargar y pulsar «Retomar el control»: mismo asiento, mano y reserva, con control
+   desde su siguiente turno.
 9. Jugar hasta 100. Comprobar campeón, clasificación y liquidación: campeón +15.000 neto
    (premio recibido 20.000), resto −5.000. Historial con movimientos confirmados.
 10. Repetir con una sala cancelada antes del inicio y con una anulación unánime:

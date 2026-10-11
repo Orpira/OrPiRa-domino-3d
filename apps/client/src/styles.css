@@ -150,7 +150,28 @@ input:focus-visible { box-shadow: var(--focus); }
   .member-list li { grid-template-columns: auto 1fr; }.member-list .badge { grid-column: 2; width: fit-content; }
   .join-code > .primary { width: 100%; }.room-actions > * { flex: 1 1 100%; }
 }
-@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; }.match-celebration { display: none !important; }.skeleton { animation: none; } }
+
+/* Reloj de turno, modo automático y Jugar ahora */
+.turn-clock { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px var(--space-3); margin: var(--space-2) auto 0; width: min(420px, 100%); padding: 8px 14px; border: 1px solid var(--c-line); border-radius: var(--radius-s); background: #041b18b3; color: var(--c-muted); font-size: .9rem; }
+.turn-clock strong { color: var(--c-text); font-size: 1.35rem; font-variant-numeric: tabular-nums; }.turn-clock progress { grid-column: 1 / -1; width: 100%; height: 6px; accent-color: var(--c-gold); }
+.turn-clock.mine { border-color: var(--c-gold); }.turn-clock.mine strong { color: var(--c-gold); }
+.turn-clock.urgent { border-color: #ff8b7b; }.turn-clock.urgent strong { color: var(--c-danger); }.turn-clock.urgent progress { accent-color: #ff8b7b; }
+.seat-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: var(--radius-pill); font-size: .68rem; font-style: normal; font-weight: 800; letter-spacing: .03em; vertical-align: middle; }
+.seat-badge.bot { color: #d9e8ff; background: #2f4c7a; }.seat-badge.auto { color: var(--c-warn); background: var(--c-warn-bg); }.seat-badge.offline { color: var(--c-danger); background: var(--c-danger-bg); }
+.auto-notice { display: flex; justify-content: center; align-items: center; gap: var(--space-2); width: fit-content; max-width: 100%; margin: var(--space-3) auto 0; padding: 8px 14px; border: 1px solid #c79a3a; border-radius: var(--radius-pill); color: #ffe3a0; background: #3d2c0fcc; font-weight: 600; text-align: center; animation: notice-in .35s ease-out; }
+@keyframes notice-in { from { opacity: 0; transform: translateY(-4px); } }
+.auto-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-2) 0; padding: var(--space-3) var(--space-4); border: 1px solid #c79a3a; border-radius: var(--radius-s); background: #3d2c0fcc; }.auto-banner div { display: grid; }.auto-banner strong { color: var(--c-gold); }.auto-banner span { color: var(--c-muted); }
+.quick-hero { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-5); border: 1.5px solid var(--c-gold); border-radius: var(--radius-m); background: radial-gradient(circle at 85% 30%, #eac56a2e, transparent 55%), linear-gradient(135deg, #116a52, #0a3c32); box-shadow: 0 14px 36px #00120f66; }
+.quick-hero > div { display: grid; gap: var(--space-2); flex: 1 1 280px; }.quick-hero h2 { margin: 0; font-size: clamp(1.7rem, 5vw, 2.4rem); }.quick-hero p:not(.chip) { margin: 0; color: var(--c-muted); }
+.quick-cta { min-height: 56px; padding-inline: 32px; font-size: 1.15rem; }
+.quick-start { justify-items: center; text-align: center; }.quick-start .domino-art { max-width: 260px; }.free-note { text-align: center; font-size: .9rem; }
+.searching { justify-items: stretch; }.searching h2 { text-align: center; }.search-pulse { justify-self: center; width: 200px; animation: search-pulse 1.8s ease-in-out infinite; }
+@keyframes search-pulse { 50% { transform: scale(1.05); opacity: .85; } }
+.quick-strip { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: var(--space-2) 0; color: var(--c-muted); font-size: .9rem; }.quick-strip span:first-child { color: var(--c-gold); font-weight: 700; }
+.finale-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); }.result .finale-actions .secondary { color: var(--c-ivory-ink); border-color: #0c684f; }
+.auto-record { color: var(--c-warn) !important; }
+@media (max-width: 600px) { .quick-hero { padding: var(--space-4); }.quick-cta { width: 100%; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; }.match-celebration { display: none !important; }.skeleton, .search-pulse, .auto-notice { animation: none; } }
 @media (max-width: 700px) {
   .movements thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
   .movements, .movements tbody, .movements tr, .movements td { display: block; }

@@ -3,10 +3,11 @@ import type { CommandEnvelope } from "../../../packages/protocol/src/index.ts";
 import { AuthoritativeRoom } from "./authoritative-room.ts";
 import type { LobbyManager } from "./lobby.ts";
 import type { CompetitionManager } from "./competition.ts";
+import type { QuickPlayManager } from "./quick-play.ts";
 import { FixedWindowLimiter, requestSource, type WindowLimit } from "./rate-limit.ts";
 
 export interface HttpServerOptions {
-  readonly allowedOrigins?: readonly string[]; readonly competitionManager?: CompetitionManager;
+  readonly allowedOrigins?: readonly string[]; readonly competitionManager?: CompetitionManager; readonly quickPlayManager?: QuickPlayManager;
   // Límites por origen (IP); `max: 0` o ausencia los desactiva. `trustProxy` solo con un proxy propio delante.
   readonly requestLimit?: WindowLimit; readonly identityLimit?: WindowLimit; readonly trustProxy?: boolean; readonly now?: () => number;
 }
@@ -51,6 +52,17 @@ export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: Lo
       }
       if (competitionManager && request.method === "POST" && request.url === "/api/competitions") {
         const identityToken = session(request); if (!identityToken) return send(401, { code: "UNAUTHENTICATED" }); return send(201, await competitionManager.create(identityToken));
+      }
+      const quickPlay = options.quickPlayManager; const quickRoute = request.url?.match(/^\/api\/quick-play(?:\/(join|cancel|dismiss|commands|history))?$/);
+      if (quickPlay && quickRoute) {
+        const action = quickRoute[1]; const identityToken = session(request); if (!identityToken) return send(401, { code: "UNAUTHENTICATED" });
+        if (request.method === "GET" && !action) return send(200, await quickPlay.view(identityToken));
+        if (request.method === "GET" && action === "history") return send(200, await quickPlay.historyFor(identityToken));
+        if (request.method === "POST" && action === "join") return send(200, await quickPlay.join(identityToken));
+        if (request.method === "POST" && action === "cancel") return send(200, await quickPlay.cancel(identityToken));
+        if (request.method === "POST" && action === "dismiss") return send(200, await quickPlay.dismiss(identityToken));
+        if (request.method === "POST" && action === "commands") { const result = await quickPlay.command(identityToken, await body(request) as CommandEnvelope); return send(result.ok ? 200 : 409, result); }
+        return send(405, { code: "METHOD_NOT_ALLOWED" });
       }
       const competitionRoute = request.url?.match(/^\/api\/competitions\/([A-Za-z0-9]+)(?:\/(join|accept|leave|cancel|annul|commands))?$/);
       if (competitionManager && competitionRoute) {

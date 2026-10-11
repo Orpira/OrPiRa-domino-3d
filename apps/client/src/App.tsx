@@ -2,15 +2,16 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import LocalApp from "./LocalApp.tsx";
 import { OnlineApp } from "./OnlineApp.tsx";
 import { TablesView } from "./CompetitionApp.tsx";
+import { QuickPlayApp } from "./QuickPlayApp.tsx";
 import { AccountView, HistoryView, HomeView } from "./AppViews.tsx";
 import { useConditions, useTestAccount } from "./use-test-account.ts";
 
-type View = "HOME" | "PRACTICE" | "ONLINE" | "TABLES" | "HISTORY" | "ACCOUNT";
+type View = "HOME" | "QUICK" | "PRACTICE" | "ONLINE" | "TABLES" | "HISTORY" | "ACCOUNT";
 type Tab = "HOME" | "TABLES" | "HISTORY" | "ACCOUNT";
 const VIEW_KEY = "orpira-domino-3d:view:v1";
-const VIEWS: readonly View[] = ["HOME", "PRACTICE", "ONLINE", "TABLES", "HISTORY", "ACCOUNT"];
+const VIEWS: readonly View[] = ["HOME", "QUICK", "PRACTICE", "ONLINE", "TABLES", "HISTORY", "ACCOUNT"];
 function initialView(): View { try { const saved = window.sessionStorage.getItem(VIEW_KEY) as View | null; return saved && VIEWS.includes(saved) ? saved : "HOME"; } catch { return "HOME"; } }
-const tabOf = (view: View): Tab => view === "PRACTICE" || view === "ONLINE" ? "HOME" : view;
+const tabOf = (view: View): Tab => view === "PRACTICE" || view === "ONLINE" || view === "QUICK" ? "HOME" : view;
 
 const icon = (path: ReactNode) => <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{path}</svg>;
 const TABS: ReadonlyArray<{ readonly tab: Tab; readonly label: string; readonly icon: ReactNode }> = [
@@ -39,8 +40,9 @@ export default function App() {
       <p className="nav-note">COP simulados · sin valor monetario</p>
     </nav>
     <div className="app-content" id="contenido" ref={content} tabIndex={-1}>
-      {(view === "PRACTICE" || view === "ONLINE") && <div className="subnav"><button className="ghost back" onClick={() => go("HOME")}>← Inicio</button><span>{view === "PRACTICE" ? "Práctica sin conexión" : "Partida online · sin saldo"}</span></div>}
-      {view === "HOME" && <HomeView account={account} conditions={conditions} onPractice={() => go("PRACTICE")} onOnline={() => go("ONLINE")} onTables={() => go("TABLES")}/>}
+      {(view === "PRACTICE" || view === "ONLINE" || view === "QUICK") && <div className="subnav"><button className="ghost back" onClick={() => go("HOME")}>← Inicio</button><span>{view === "PRACTICE" ? "Práctica sin conexión" : view === "QUICK" ? "Jugar ahora · práctica gratuita" : "Partida online · sin saldo"}</span></div>}
+      {view === "HOME" && <HomeView account={account} conditions={conditions} onQuickPlay={() => go("QUICK")} onPractice={() => go("PRACTICE")} onOnline={() => go("ONLINE")} onTables={() => go("TABLES")}/>}
+      {view === "QUICK" && <QuickPlayApp account={account} onHome={() => go("HOME")}/>}
       {view === "PRACTICE" && <LocalApp/>}
       {view === "ONLINE" && <OnlineApp/>}
       {view === "TABLES" && <TablesView account={account} conditions={conditions} onOpenOnline={() => go("ONLINE")} onOpenPractice={() => go("PRACTICE")}/>}

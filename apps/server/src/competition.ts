@@ -2,8 +2,8 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { legalActions, shuffledDeal, type Deal, type Seat } from "../../../packages/rules/src/index.ts";
-import type { CommandEnvelope, CommandResponse, CompetitionView, SimulatedConditions, SimulatedMovement, SimulatedMovementKind, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
-import { AuthoritativeRoom, type MatchStore, type SessionPlayer } from "./authoritative-room.ts";
+import type { CommandEnvelope, CommandResponse, CompetitionResultSummary, CompetitionView, SimulatedConditions, SimulatedMovement, SimulatedMovementKind, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
+import { AuthoritativeRoom, DEFAULT_TURN_CLOCK, type MatchStore, type SessionPlayer, type TurnClockConfig } from "./authoritative-room.ts";
 
 export const SIMULATED_CONDITIONS: SimulatedConditions = Object.freeze({
   currencyLabel: "COP simulados · sin valor monetario", initialCredit: 100000, entry: 5000,
@@ -19,7 +19,7 @@ export function settlementAmounts(terms: SimulatedConditions) {
 
 interface Identity { readonly identityId: string; readonly token: string; readonly displayName: string; available: number; reserved: number }
 interface Member { readonly identityId: string; readonly seat: Seat; accepted: boolean; annulmentAccepted: boolean; lastSeen: number }
-interface Settlement { readonly championIdentityId: string; readonly matchId: string; readonly settledAt: number; readonly entry: number; readonly grossPrize: number; readonly commission: number; readonly netPrize: number }
+interface Settlement { readonly championIdentityId: string; readonly matchId: string; readonly settledAt: number; readonly automaticIdentityIds: readonly string[]; readonly entry: number; readonly grossPrize: number; readonly commission: number; readonly netPrize: number }
 interface Competition {
   readonly competitionId: string; readonly code: string; readonly matchId: string; readonly createdAt: number; readonly expiresAt: number;
   status: CompetitionView["status"]; cancellationReason: string | null; readonly members: Member[]; settlement: Settlement | null;
@@ -33,11 +33,11 @@ export class CompetitionManager {
   private readonly identities = new Map<string, Identity>(); private readonly tokens = new Map<string, string>();
   private readonly competitions = new Map<string, Competition>(); private readonly rooms = new Map<string, AuthoritativeRoom>();
   private readonly movements: SimulatedMovement[] = []; private queue: Promise<void> = Promise.resolve();
-  private readonly path: string; private readonly roomStore: MatchStore; private readonly now: () => number; private readonly terms: SimulatedConditions;
-  private constructor(path: string, roomStore: MatchStore, now: () => number, terms: SimulatedConditions) { this.path = path; this.roomStore = roomStore; this.now = now; this.terms = terms; }
+  private readonly path: string; private readonly roomStore: MatchStore; private readonly now: () => number; private readonly terms: SimulatedConditions; private readonly clock: TurnClockConfig;
+  private constructor(path: string, roomStore: MatchStore, now: () => number, terms: SimulatedConditions, clock: TurnClockConfig) { this.path = path; this.roomStore = roomStore; this.now = now; this.terms = terms; this.clock = clock; }
 
-  static async open(path: string, roomStore: MatchStore, now: () => number = Date.now, terms: SimulatedConditions = SIMULATED_CONDITIONS) {
-    settlementAmounts(terms); const manager = new CompetitionManager(path, roomStore, now, terms); let recovered = false;
+  static async open(path: string, roomStore: MatchStore, now: () => number = Date.now, terms: SimulatedConditions = SIMULATED_CONDITIONS, clock: TurnClockConfig = DEFAULT_TURN_CLOCK) {
+    settlementAmounts(terms); const manager = new CompetitionManager(path, roomStore, now, terms, clock); let recovered = false;
     try {
       const saved = JSON.parse(await readFile(path, "utf8")) as Snapshot;
       for (const identity of saved.identities) { manager.identities.set(identity.identityId, identity); manager.tokens.set(identity.token, identity.identityId); }
@@ -45,7 +45,7 @@ export class CompetitionManager {
       for (const competition of saved.competitions) {
         manager.competitions.set(competition.code, competition);
         if (competition.status === "PLAYING" || competition.status === "ENDED") {
-          const room = await AuthoritativeRoom.restore(competition.matchId, () => manager.deal(competition), roomStore); if (room) manager.rooms.set(competition.code, room);
+          const room = await AuthoritativeRoom.restore(competition.matchId, () => manager.deal(competition), roomStore, { clock, now }); if (room) manager.rooms.set(competition.code, room);
           // Recupera una liquidación interrumpida entre el guardado de la partida y el del registro económico.
           if (room && room.state.phase === "MATCH_ENDED" && !competition.settlement) { manager.settle(competition, room.state.matchResult!.championId); recovered = true; }
         }
@@ -63,6 +63,8 @@ export class CompetitionManager {
     return { identityId: identity.identityId, identityToken: identity.token, displayName };
   }); }
   conditions(): SimulatedConditions { return this.terms; }
+  /** Identidad de prueba asociada a un token, para modalidades sin saldo como «Jugar ahora». */
+  identify(token: string): { identityId: string; displayName: string } | null { const id = this.tokens.get(token); const identity = id ? this.identities.get(id) : null; return identity ? { identityId: identity.identityId, displayName: identity.displayName } : null; }
   account(token: string): Promise<TestAccountView> { return this.serial(async () => { this.expireDue(); await this.persist(); const identity = this.identity(token); return this.accountView(identity); }); }
   create(token: string): Promise<CompetitionView> { return this.serial(async () => {
     this.expireDue(); const identity = this.identity(token); const createdAt = this.now(); const code = this.uniqueCode();
@@ -89,7 +91,7 @@ export class CompetitionManager {
       this.movement(identity, competition, "ENTRY_RESERVED", -terms.entry, terms.entry);
     }
     if (competition.members.length === terms.playerCount && new Set(competition.members.map((entry) => entry.identityId)).size === terms.playerCount && competition.members.every((entry) => entry.accepted)) {
-      const room = await AuthoritativeRoom.create(competition.matchId, this.sessions(competition), () => this.deal(competition), this.roomStore);
+      const room = await AuthoritativeRoom.create(competition.matchId, this.sessions(competition), () => this.deal(competition), this.roomStore, { clock: this.clock, now: this.now });
       this.rooms.set(competition.code, room); competition.status = "PLAYING";
     }
     await this.persist(); return this.viewFor(competition, identity);
@@ -120,8 +122,20 @@ export class CompetitionManager {
     const identity = this.identity(token); const competition = this.competition(codeInput); this.member(competition, identity);
     if (competition.status !== "PLAYING" && competition.status !== "ENDED") throw new Error("COMPETITION_NOT_PLAYING"); const room = this.rooms.get(competition.code); if (!room) throw new Error("MATCH_NOT_FOUND");
     const response = await room.submit(token, envelope);
-    if (response.ok && room.state.phase === "MATCH_ENDED" && !competition.settlement) this.settle(competition, room.state.matchResult!.championId);
+    // El final puede llegar por la jugada del cliente o por una jugada automática vencida antes de procesarla.
+    if (room.state.phase === "MATCH_ENDED" && !competition.settlement) this.settle(competition, room.state.matchResult!.championId);
     await this.persist(); return response;
+  }); }
+
+  /** Pasada del reloj: turnos vencidos y asientos automáticos; liquida si la partida terminó así. Nunca añade bots. */
+  tick(): Promise<void> { return this.serial(async () => {
+    let changed = this.expireDue();
+    for (const competition of this.competitions.values()) {
+      if (competition.status !== "PLAYING") continue; const room = this.rooms.get(competition.code); if (!room) continue;
+      await room.advance();
+      if (room.state.phase === "MATCH_ENDED" && !competition.settlement) { this.settle(competition, room.state.matchResult!.championId); changed = true; }
+    }
+    if (changed) await this.persist();
   }); }
 
   private serial<T>(operation: () => Promise<T>): Promise<T> {
@@ -150,16 +164,25 @@ export class CompetitionManager {
     if (competition.settlement) return; const terms = this.termsOf(competition); const { pool, commission } = settlementAmounts(terms);
     for (const member of competition.members) { const identity = this.identities.get(member.identityId)!; identity.reserved -= terms.entry; member.accepted = false; this.movement(identity, competition, "ENTRY_CONSUMED", 0, -terms.entry); }
     const champion = this.identities.get(championIdentityId)!; champion.available += terms.prize; this.movement(champion, competition, "PRIZE_AWARDED", terms.prize, 0);
-    competition.settlement = { championIdentityId, matchId: competition.matchId, settledAt: this.now(), entry: terms.entry, grossPrize: pool, commission, netPrize: terms.prize }; competition.status = "ENDED";
+    competition.settlement = { championIdentityId, matchId: competition.matchId, settledAt: this.now(), automaticIdentityIds: [...(this.rooms.get(competition.code)?.automaticPlayerIds() ?? [])], entry: terms.entry, grossPrize: pool, commission, netPrize: terms.prize }; competition.status = "ENDED";
   }
-  private accountView(identity: Identity): TestAccountView { return { identityId: identity.identityId, displayName: identity.displayName, available: identity.available, reserved: identity.reserved, currencyLabel: this.terms.currencyLabel, movements: this.movements.filter((entry) => entry.identityId === identity.identityId).slice().reverse() }; }
+  private accountView(identity: Identity): TestAccountView { return { identityId: identity.identityId, displayName: identity.displayName, available: identity.available, reserved: identity.reserved, currencyLabel: this.terms.currencyLabel, movements: this.movements.filter((entry) => entry.identityId === identity.identityId).slice().reverse(), results: this.resultsFor(identity) }; }
+  private resultsFor(identity: Identity): CompetitionResultSummary[] {
+    const name = (identityId: string) => this.identities.get(identityId)?.displayName ?? "—";
+    return [...this.competitions.values()].filter((competition) => (competition.status === "ENDED" || competition.status === "CANCELLED" || competition.status === "EXPIRED") && this.movements.some((entry) => entry.competitionId === competition.competitionId && entry.identityId === identity.identityId))
+      .map((competition) => { const automatic = competition.settlement?.automaticIdentityIds ?? [];
+        return { competitionId: competition.competitionId, endedAt: competition.settlement?.settledAt ?? competition.expiresAt, status: competition.status as CompetitionResultSummary["status"],
+          championName: competition.settlement ? name(competition.settlement.championIdentityId) : null, automaticNames: automatic.map(name), viewerAutomatic: automatic.includes(identity.identityId) }; })
+      .sort((left, right) => right.endedAt - left.endedAt);
+  }
   private viewFor(competition: Competition, identity: Identity): CompetitionView {
     const room = this.rooms.get(competition.code); const game = room?.connect(identity.token) ?? null;
     return { competitionId: competition.competitionId, code: competition.code, status: competition.status, conditions: this.termsOf(competition),
       createdAt: competition.createdAt, expiresAt: competition.expiresAt, cancellationReason: competition.cancellationReason, viewerIdentityId: identity.identityId,
       members: competition.members.map((member) => ({ identityId: member.identityId, displayName: this.identities.get(member.identityId)!.displayName, seat: member.seat,
         accepted: member.accepted, annulmentAccepted: member.annulmentAccepted, connected: this.now() - member.lastSeen < 5_000 })), game,
-      legalActions: game && game.currentPlayerId === identity.identityId && competition.status === "PLAYING" ? legalActions(room!.state, identity.identityId) : [], settlement: competition.settlement };
+      legalActions: game && game.currentPlayerId === identity.identityId && competition.status === "PLAYING" ? legalActions(room!.state, identity.identityId) : [],
+      clock: room && competition.status === "PLAYING" ? room.clockView() : null, settlement: competition.settlement ? { ...competition.settlement, automaticIdentityIds: competition.settlement.automaticIdentityIds ?? [] } : null };
   }
   private uniqueCode() { let code = ""; do { const bytes = randomBytes(6); code = [...bytes].map((value) => alphabet[value % alphabet.length]).join(""); } while (this.competitions.has(code)); return code; }
   private async persist() { await mkdir(dirname(this.path), { recursive: true }); const temporary = `${this.path}.tmp`; const snapshot: Snapshot = { identities: [...this.identities.values()], competitions: [...this.competitions.values()], movements: this.movements }; await writeFile(temporary, JSON.stringify(snapshot), { encoding: "utf8", mode: 0o600 }); await rename(temporary, this.path); }

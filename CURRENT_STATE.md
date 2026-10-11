@@ -2,8 +2,10 @@
 
 Fecha: 11 de octubre de 2026. Fase 4 ejecutable; cliente web de fase 5
 desplegado en Vercel, backend todavía sin desplegar. En la rama
-`feature/interface-redesign` (sin publicar): competición de prueba con COP simulados
-y rediseño de interfaz. Contrato completo en `COMPETITION_CONTRACT.md`.
+`feature/interface-redesign` (commit `30a1c60`, sin publicar): competición de prueba con
+COP simulados y rediseño de interfaz. Contrato completo en `COMPETITION_CONTRACT.md`.
+Sobre ella, la rama `feature/quick-play` (sin commit ni publicar) añade «Jugar ahora» y
+el reloj de turno con jugada automática (`QUICK_PLAY.md`).
 
 ## Implementado
 
@@ -75,6 +77,20 @@ y rediseño de interfaz. Contrato completo en `COMPETITION_CONTRACT.md`.
   Práctica (bots y relevo) y online sin saldo siguen accesibles desde Inicio. Three.js
   solo se descarga al mostrar una mesa.
 
+- Reloj de turno autoritativo en todas las modalidades online (30 s provisional): al
+  agotarse, el jugador automático único del servidor (`auto-player.ts`, estrategia de los
+  bots locales con desempate por semilla) juega una acción legal y lo anuncia a todos.
+  Tras 2 turnos agotados seguidos o 60 s sin conexión el asiento pasa a modo automático;
+  el jugador recupera el control con «Retomar el control» desde su siguiente turno. La
+  hora límite se guarda y se respeta tras reiniciar. Sustituye a «desconexión sin bot»:
+  toda partida iniciada termina; en competición liquida una sola vez y registra los
+  asientos que terminaron en modo automático.
+- «Jugar ahora»: botón principal en Inicio; cola pública por orden de llegada, mesa al
+  reunir cuatro o, tras 45 s, completada con bots del servidor rotulados «Bot»; búsqueda
+  cancelable, una identidad por cola o partida, resultado con «Jugar otra» e historial
+  de partidas públicas con bots, marcador y asientos automáticos. Nunca bots en
+  competición.
+
 ## Comprobación reproducible
 
 ```bash
@@ -84,7 +100,7 @@ npm run build
 npm run replay
 ```
 
-Resultado de referencia: 82 pruebas aprobadas, 0 fallos; TypeScript sin errores;
+Resultado de referencia: 95 pruebas aprobadas, 0 fallos; TypeScript sin errores;
 build de producción correcto; replay con P0 campeón, marcador final P0=100 y resto=0.
 
 La mesa 3D usa ahora una distribución serpenteante reproducible. El 6–6 permanece
@@ -126,6 +142,13 @@ pestañas y acceso a la práctica; capturas en `assets/qa/device/`. Esa revisió
 y corrigió que el contenido se mezclaba con la barra de estado al desplazarse y que el
 404 del backend publicado se mostraba como error genérico en vez de «no disponible».
 
+QA de «Jugar ahora» (Chrome 412×915 y 1440×960 contra servidor local, movimiento
+reducido): buscando, mesa con reloj, jugada automática anunciada, resultado con bots e
+historial, en `assets/qa/quick-play/`. El resultado se alcanzó reiniciando el servidor
+con reloj acelerado sobre los mismos datos, lo que también ejercitó la restauración del
+reloj. APK debug 1.4 (`versionCode` 5, mismo `applicationId` y firma debug), SHA-256
+`8d52f6196e05c2f80c3e7358ffbf9c39938dd4e9a7eb4203cdaaf3ae5cfa3111`; no instalada.
+
 ## Límites deliberados
 
 El cliente está desplegado en Vercel, pero la API no está desplegada. No existen
@@ -166,14 +189,16 @@ y APK muestran «Competición no disponible» hasta desplegar este servidor. No 
 públicas ni emparejamiento: la ocupación solo se ve dentro de cada sala privada. El
 servidor no lista las salas activas de una identidad; el cliente recuerda la sala en el
 dispositivo y, si se pierde, se vuelve a entrar con el código. Límites por IP solo en
-memoria (una instancia). Abandono no recuperable tras el inicio: decisión pendiente.
+memoria (una instancia). La cola de «Jugar ahora» vive en memoria y se vacía al
+reiniciar; las partidas en curso sí se restauran.
 Los flujos de competición no se pudieron recorrer en el Samsung porque el backend
 publicado no tiene esas rutas; se recorrieron en Chrome contra un servidor local.
 
 ## Siguiente tarea
 
-Revisar y fusionar `feature/interface-redesign`; desplegar el servidor nuevo y
-ejecutar la prueba de cuatro dispositivos de
+Revisar `feature/quick-play` (sin commit); validar en dispositivo el reloj y Jugar
+ahora con personas reales; revisar y fusionar `feature/interface-redesign`; desplegar el
+servidor nuevo y ejecutar la prueba de cuatro dispositivos de
 `COMPETITION_CONTRACT.md`. Revisar visualmente la identidad desplegada en web. En paralelo sigue pendiente
 desplegar y verificar la API en el VPS, corregir DNS y ejecutar el QA externo de
 cuatro clientes. No considerar el online habilitado hasta completar esa prueba.

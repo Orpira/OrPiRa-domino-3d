@@ -204,7 +204,7 @@ describe("competición económica simulada autoritativa", () => {
       const code = (await state.manager.create(grants[0]!.identityToken)).code; for (const grant of grants.slice(1)) await state.manager.join(code, grant.identityToken);
       for (const grant of grants) await state.manager.accept(code, grant.identityToken, 5);
       const view = await playToEnd(state.manager, grants, code); assert.equal(view.status, "ENDED");
-      assert.deepEqual({ ...view.settlement!, championIdentityId: "", matchId: "", settledAt: 0 }, { championIdentityId: "", matchId: "", settledAt: 0, entry: 5001, grossPrize: 20004, commission: 1000, netPrize: 19004 });
+      assert.deepEqual({ ...view.settlement!, championIdentityId: "", matchId: "", settledAt: 0 }, { championIdentityId: "", matchId: "", settledAt: 0, automaticIdentityIds: [], entry: 5001, grossPrize: 20004, commission: 1000, netPrize: 19004 });
       const manager = await CompetitionManager.open(state.metadata, new JsonFileMatchStore(state.matches), Date.now, terms);
       const accounts = await Promise.all(grants.map((grant) => manager.account(grant.identityToken)));
       for (const account of accounts) assert.equal(account.available, account.identityId === view.settlement!.championIdentityId ? 100000 - 5001 + 19004 : 100000 - 5001);

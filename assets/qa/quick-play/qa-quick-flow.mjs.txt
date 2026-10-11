@@ -1,0 +1,41 @@
+import { chromium } from "/home/orpira/.npm/_npx/e41f203b7505f1fb/node_modules/playwright/index.mjs";
+import { spawn } from "node:child_process";
+import { mkdtempSync } from "node:fs";
+import { join } from "node:path";
+const REPO = "/home/orpira/OrPiRa/Desarrollos/OrPiRa-domino-3d-reparado"; const BASE = "http://localhost:5174"; const API = "http://127.0.0.1:8787";
+const OUT = process.argv[2]; const label = process.argv[3] ?? "mobile"; const data = mkdtempSync(join(process.argv[4], `quick-${label}-`));
+const viewport = label === "mobile" ? { width: 412, height: 915 } : { width: 1440, height: 960 };
+const log = (...args) => console.log(`[${label}]`, ...args);
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+let server;
+async function startServer(extra) {
+  server = spawn("node", ["apps/server/src/main.ts"], { cwd: REPO, env: { ...process.env, DOMINO_DATA_DIR: data, PORT: "8787", HOST: "127.0.0.1", DOMINO_ALLOWED_ORIGINS: "http://localhost:5174", DOMINO_QUICK_PLAY_FILL_SECONDS: "8", ...extra }, stdio: ["ignore", "inherit", "inherit"] });
+  for (let i = 0; i < 50; i++) { try { if ((await fetch(`${API}/health`)).ok) return; } catch {} await sleep(100); }
+  throw new Error("servidor no arrancó");
+}
+async function stopServer() { server.kill("SIGTERM"); await new Promise((resolve) => server.once("exit", resolve)); }
+const api = async (path, token, body) => { const response = await fetch(`${API}${path}`, { method: body === undefined ? "GET" : "POST", headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); return response.json(); };
+
+await startServer({});
+const browser = await chromium.launch({ executablePath: "/usr/bin/google-chrome" });
+const context = await browser.newContext({ viewport, deviceScaleFactor: label === "mobile" ? 2 : 1, isMobile: label === "mobile", hasTouch: label === "mobile", locale: "es-CO", reducedMotion: "reduce" });
+const page = await context.newPage(); const errors = [];
+page.on("pageerror", (error) => errors.push(error.message));
+const shot = async (name, full = false) => { await sleep(300); await page.screenshot({ path: `${OUT}/${label}-quick-${name}.png`, fullPage: full }); log("captura", name); };
+try {
+  await page.goto(BASE); await page.getByRole("heading", { name: "Jugar ahora" }).waitFor(); await shot("00-inicio");
+  await page.locator(".quick-cta").click(); await page.getByLabel("Nombre visible").fill(label === "mobile" ? "Lucía" : "Andrés");
+  await page.getByRole("button", { name: "Crear cuenta de prueba" }).click(); await page.getByRole("button", { name: /Buscar partida/ }).click();
+  await page.getByText("Buscando jugadores…").waitFor();
+  const marta = await api("/api/test-identities", null, { displayName: "Marta" }); await api("/api/quick-play/join", marta.identityToken, {});
+  await page.getByText("2 de 4").waitFor(); await shot("01-buscando", true);
+  await page.getByText("Objetivo: 100 puntos").waitFor({ timeout: 20_000 }); log("mesa formada");
+  await page.getByText("Tu tiempo").waitFor({ timeout: 90_000 }); await sleep(2500); await shot("02-mesa-reloj", true);
+  // Marta nunca juega: al agotar su turno el servidor juega por ella y lo anuncia.
+  await page.locator(".auto-notice").filter({ hasText: "Marta" }).waitFor({ timeout: 120_000 }); await page.locator(".auto-notice").scrollIntoViewIfNeeded(); await shot("03-jugada-automatica", true);
+  await stopServer(); await startServer({ DOMINO_TURN_SECONDS: "0.3", DOMINO_AUTOMATIC_DELAY_SECONDS: "0.03", DOMINO_ROUND_BREAK_SECONDS: "0.3", DOMINO_CLOCK_TICK_MS: "25" });
+  await page.getByRole("button", { name: "Jugar otra" }).waitFor({ timeout: 240_000 }); await sleep(1000); await shot("04-resultado", true);
+  await page.getByRole("button", { name: "Volver al inicio" }).click(); await page.getByRole("navigation", { name: "Navegación principal" }).getByRole("button", { name: "Historial" }).click();
+  await page.getByText(/Campeón:/).first().waitFor({ timeout: 10_000 }); await shot("05-historial", true);
+  log("errores de página", errors.length ? errors : "ninguno");
+} finally { await browser.close(); await stopServer(); }

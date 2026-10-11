@@ -4,7 +4,7 @@ import type { CompetitionMemberView, SimulatedConditions, SimulatedMovement } fr
 import { acceptanceSummary, competitionErrorMessage, competitionRecords, conditionsBreakdown, economicOutcome, formatCop, formatSignedCop } from "../src/competition-presentation.ts";
 
 const conditions: SimulatedConditions = { currencyLabel: "COP simulados · sin valor monetario", initialCredit: 100000, entry: 5000, playerCount: 4, commissionPercent: 0, prize: 20000, targetScore: 100, expiresAfterMinutes: 15, version: 1 };
-const settlement = { championIdentityId: "A", matchId: "M", settledAt: 1, entry: 5000, grossPrize: 20000, commission: 0, netPrize: 20000 };
+const settlement = { championIdentityId: "A", matchId: "M", settledAt: 1, automaticIdentityIds: [], entry: 5000, grossPrize: 20000, commission: 0, netPrize: 20000 };
 let sequence = 0;
 const movement = (kind: SimulatedMovement["kind"], availableDelta: number, reservedDelta: number, competitionId: string | null = "C1"): SimulatedMovement =>
   ({ movementId: `m${sequence}`, identityId: "A", competitionId, kind, availableDelta, reservedDelta, createdAt: 1_000 + sequence++ });

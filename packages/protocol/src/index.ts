@@ -3,7 +3,9 @@ import type { DomainEvent, ErrorCode, LegalAction, PlayerView, Seat, Side, TileI
 export type ClientCommand =
   | { readonly type: "PLACE"; readonly tileId: TileId; readonly side?: Side }
   | { readonly type: "PASS" }
-  | { readonly type: "NEXT_ROUND" };
+  | { readonly type: "NEXT_ROUND" }
+  // Pide recuperar el control de un asiento en modo automático; se aplica desde su siguiente turno.
+  | { readonly type: "RESUME_CONTROL" };
 
 export interface CommandEnvelope {
   readonly commandId: string;
@@ -11,10 +13,25 @@ export interface CommandEnvelope {
   readonly command: ClientCommand;
 }
 
-export type ServerErrorCode = ErrorCode | "UNAUTHENTICATED" | "MATCH_NOT_FOUND" | "COMMAND_ID_CONFLICT";
+export type ServerErrorCode = ErrorCode | "UNAUTHENTICATED" | "MATCH_NOT_FOUND" | "COMMAND_ID_CONFLICT" | "NOT_AUTOMATIC";
 export type CommandResponse =
   | { readonly ok: true; readonly commandId: string; readonly view: PlayerView; readonly events: readonly DomainEvent[] }
   | { readonly ok: false; readonly commandId: string; readonly code: ServerErrorCode; readonly message: string; readonly view?: PlayerView };
+
+export type AutomaticReason = "TIMEOUT" | "AUTO_MODE" | "BOT";
+export interface AutomaticMove {
+  readonly revision: number; readonly playerId: string; readonly reason: AutomaticReason;
+  readonly action: "PLACE" | "PASS"; readonly tileId?: TileId; readonly side?: Side; readonly at: number;
+}
+export interface SeatControlView {
+  readonly playerId: string; readonly bot: boolean; readonly automatic: boolean;
+  readonly consecutiveTimeouts: number; readonly resumeRequested: boolean; readonly connected: boolean;
+}
+// El servidor es la única autoridad del reloj; el cliente solo dibuja la cuenta atrás hasta `turnDeadline`.
+export interface TurnClockView {
+  readonly turnDeadline: number | null; readonly deadlineKind: "TURN" | "ROUND_BREAK" | null; readonly serverNow: number;
+  readonly turnSeconds: number; readonly seats: readonly SeatControlView[]; readonly automaticMoves: readonly AutomaticMove[];
+}
 
 export interface LobbyPlayer { readonly playerId: string; readonly name: string; readonly seat: Seat; readonly connected: boolean }
 export interface LobbyView {
@@ -24,6 +41,7 @@ export interface LobbyView {
   readonly viewerPlayerId: string;
   readonly game: PlayerView | null;
   readonly legalActions: readonly LegalAction[];
+  readonly clock: TurnClockView | null;
 }
 export interface SessionGrant { readonly code: string; readonly sessionId: string; readonly playerId: string }
 
@@ -48,11 +66,31 @@ export interface TestIdentityGrant { readonly identityId: string; readonly ident
 export interface TestAccountView {
   readonly identityId: string; readonly displayName: string; readonly available: number; readonly reserved: number;
   readonly currencyLabel: SimulatedConditions["currencyLabel"]; readonly movements: readonly SimulatedMovement[];
+  readonly results: readonly CompetitionResultSummary[];
 }
 export interface CompetitionMemberView { readonly identityId: string; readonly displayName: string; readonly seat: Seat; readonly accepted: boolean; readonly annulmentAccepted: boolean; readonly connected: boolean }
 export interface CompetitionView {
   readonly competitionId: string; readonly code: string; readonly status: "WAITING" | "PLAYING" | "ENDED" | "CANCELLED" | "EXPIRED";
   readonly conditions: SimulatedConditions; readonly createdAt: number; readonly expiresAt: number; readonly cancellationReason: string | null;
   readonly viewerIdentityId: string; readonly members: readonly CompetitionMemberView[]; readonly game: PlayerView | null;
-  readonly legalActions: readonly LegalAction[]; readonly settlement: null | { readonly championIdentityId: string; readonly matchId: string; readonly settledAt: number; readonly entry: number; readonly grossPrize: number; readonly commission: number; readonly netPrize: number };
+  readonly legalActions: readonly LegalAction[]; readonly clock: TurnClockView | null;
+  readonly settlement: null | { readonly championIdentityId: string; readonly matchId: string; readonly settledAt: number; readonly automaticIdentityIds: readonly string[]; readonly entry: number; readonly grossPrize: number; readonly commission: number; readonly netPrize: number };
+}
+
+export interface CompetitionResultSummary {
+  readonly competitionId: string; readonly endedAt: number; readonly status: "ENDED" | "CANCELLED" | "EXPIRED";
+  readonly championName: string | null; readonly automaticNames: readonly string[]; readonly viewerAutomatic: boolean;
+}
+
+// Jugar ahora: práctica gratuita, sin entrada, saldo ni premio.
+export interface QuickPlaySeat { readonly playerId: string; readonly displayName: string; readonly seat: Seat; readonly bot: boolean }
+export interface QuickPlayTicket { readonly ticketId: string; readonly joinedAt: number; readonly position: number; readonly waiting: readonly string[]; readonly botsFillAt: number; readonly serverNow: number }
+export interface QuickPlayMatchView {
+  readonly matchId: string; readonly status: "PLAYING" | "ENDED"; readonly viewerPlayerId: string; readonly seats: readonly QuickPlaySeat[];
+  readonly game: PlayerView; readonly legalActions: readonly LegalAction[]; readonly clock: TurnClockView;
+}
+export interface QuickPlayView { readonly ticket: QuickPlayTicket | null; readonly match: QuickPlayMatchView | null }
+export interface QuickPlayHistoryEntry {
+  readonly matchId: string; readonly startedAt: number; readonly endedAt: number; readonly championPlayerId: string;
+  readonly participants: readonly { readonly playerId: string; readonly displayName: string; readonly seat: Seat; readonly bot: boolean; readonly score: number; readonly endedAutomatic: boolean }[];
 }

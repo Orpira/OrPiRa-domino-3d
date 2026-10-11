@@ -1,4 +1,4 @@
-import type { CompetitionView, SimulatedConditions, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
+import type { CompetitionView, QuickPlayHistoryEntry, QuickPlayView, SimulatedConditions, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
 import { apiUrl } from "./api.ts";
 
 export class CompetitionApiError extends Error {
@@ -33,3 +33,12 @@ export const competitionApi = {
 };
 
 export function competitionCommandUrl(code: string): string { return `/api/competitions/${encodeURIComponent(code)}/commands`; }
+
+export const quickPlayApi = {
+  view: (token: string, signal?: AbortSignal) => request<QuickPlayView>("/api/quick-play", { token, ...(signal ? { signal } : {}) }),
+  join: (token: string) => request<QuickPlayView>("/api/quick-play/join", { method: "POST", token, body: {} }),
+  cancel: (token: string) => request<QuickPlayView>("/api/quick-play/cancel", { method: "POST", token, body: {} }),
+  dismiss: (token: string) => request<QuickPlayView>("/api/quick-play/dismiss", { method: "POST", token, body: {} }),
+  history: (token: string) => request<readonly QuickPlayHistoryEntry[]>("/api/quick-play/history", { token }),
+};
+export const QUICK_PLAY_COMMANDS = "/api/quick-play/commands";
