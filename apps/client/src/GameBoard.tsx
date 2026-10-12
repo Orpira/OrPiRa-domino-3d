@@ -5,6 +5,7 @@ import { dominationsRemaining, finalRanking, roundHeadline, shouldShowMatchFinal
 import { currentSelection, placementDecision, type PlacementSelection } from "./placement-interaction.ts";
 import { MatchCelebration } from "./MatchCelebration.tsx";
 import { DominoFace } from "./DominoFace.tsx";
+import { SoundToggle, useGameSounds } from "./sound.tsx";
 import type { StorageLike } from "./session-storage.ts";
 import { automaticMoveText, formatCountdown, latestAutomaticNotice, remainingMs, seatBadges, showAutomaticBanner } from "./turn-clock-presentation.ts";
 const Table3D = lazy(() => import("./Table3D.tsx").then((module) => ({ default: module.Table3D })));
@@ -44,8 +45,9 @@ export function GameBoard({ game, actions, names, viewerId, sending, message, re
     if (decision.kind === "SEND") onCommand(decision.command);
     else if (decision.kind === "CHOOSE") setSelection({ tileId, revision: game.revision });
   };
+  useGameSounds(game, viewerId);
   return <>
-    <div className="match-objective"><strong>Objetivo: 100 puntos</strong><span>Dominada +20 · Cierre +0</span></div>
+    <div className="match-objective"><strong>Objetivo: 100 puntos</strong><span>Dominada +20 · Cierre +0</span><SoundToggle/></div>
     {context}
     {mySeat && showAutomaticBanner(mySeat, game.phase) && <div className="auto-banner" role="status"><div><strong>Modo automático</strong><span>{mySeat.resumeRequested ? "Recuperarás el control en tu próximo turno." : "El servidor juega por ti tras agotar el tiempo o perder la conexión."}</span></div>
       {!mySeat.resumeRequested && <button className="primary" disabled={sending} onClick={() => onCommand({ type: "RESUME_CONTROL" })}>Retomar el control</button>}</div>}

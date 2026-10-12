@@ -53,6 +53,8 @@ prueba con cuatro dispositivos. GitHub tiene las ramas `feature/interface-redesi
 - Corregida la dirección del botón de extremo cuando la última ficha está en un giro.
 - Fichas de la mano con puntos en lugar de números (componente `DominoFace`, compartido con las ilustraciones y la ficha de rango).
 - Cada ficha jugada entra en la mesa desde el lado de quien la jugó (jugador local abajo; antihorario: abajo → derecha → arriba → izquierda), elevándose y girando hasta su sitio. En relevo entre personas todas llegan desde abajo. Sin animación con `prefers-reduced-motion` ni al restaurar varias fichas a la vez.
+- Sonidos sintetizados en el navegador con Web Audio, sin archivos (`sound.tsx`, `sound-events.ts`): ficha colocada, doble, pase forzado del rival, capicúa, ronda ganada por dominada o por cierre, ronda de otro jugador, partida ganada o perdida y barajado al empezar ronda. Botón «Sonido» en la práctica y en la mesa online, recordado en `localStorage` (activado por defecto). Al abrir o reconectar no suena nada.
+- La lluvia de confeti del medallero cae más despacio (unos 8 s en total, antes 2 s) y se balancea de lado a lado.
 - Limitación conocida: con más de unas 20 fichas en un mismo brazo, el trazado compacto sobrepasa el borde dibujado de la mesa (las fichas siguen visibles).
 
 ## Implementado

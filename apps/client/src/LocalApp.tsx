@@ -6,6 +6,7 @@ import { currentSelection, placementDecision, SubmissionGate, type PlacementSele
 import { MatchCelebration } from "./MatchCelebration.tsx";
 import { finalRanking } from "./online-presentation.ts";
 import { DominoFace } from "./DominoFace.tsx";
+import { SoundToggle, useGameSounds } from "./sound.tsx";
 const Table3D = lazy(() => import("./Table3D.tsx").then((module) => ({ default: module.Table3D })));
 
 function Tile({ id, selected = false, disabled = false, onClick }: { id: TileId; selected?: boolean; disabled?: boolean; onClick?: () => void }) {
@@ -29,6 +30,7 @@ export default function App() {
   const gameRef = useRef(bootRef.current.game);
   const [state, setState] = useState<GameState>(gameRef.current.state);
   const [mode, setMode] = useState<LocalMode>(gameRef.current.mode);
+  useGameSounds(state, mode === "BOTS" ? HUMAN_ID : undefined);
   const [handoff, setHandoff] = useState(bootRef.current.handoff);
   const [selection, setSelection] = useState<PlacementSelection | null>(null);
   const [message, setMessage] = useState(bootRef.current.restored ? "Partida reanudada" : "Partida preparada");
@@ -97,6 +99,7 @@ export default function App() {
       <button className={mode === "BOTS" ? "current" : ""} onClick={() => switchMode("BOTS")}>1 persona + 3 bots</button>
       <button className={mode === "PASS_AND_PLAY" ? "current" : ""} onClick={() => switchMode("PASS_AND_PLAY")}>4 personas · relevo</button>
       <button className="motion" onClick={() => setReducedMotion((value) => !value)}>{reducedMotion ? "Movimiento reducido" : "Movimiento suave"}</button>
+      <SoundToggle/>
     </nav>
     <section className="scoreboard" aria-label="Marcador">
       {state.players.map((player) => <div key={player.playerId} className={state.currentPlayerId === player.playerId ? "active-player" : ""}>
