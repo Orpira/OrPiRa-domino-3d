@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { TurnClockView } from "../../../packages/protocol/src/index.ts";
-import { automaticMoveText, formatCountdown, latestAutomaticNotice, remainingMs, seatBadges } from "../src/turn-clock-presentation.ts";
+import { automaticMoveText, formatCountdown, latestAutomaticNotice, remainingMs, seatBadges, showAutomaticBanner } from "../src/turn-clock-presentation.ts";
 
 const clock: TurnClockView = { turnDeadline: 130_000, deadlineKind: "TURN", serverNow: 100_000, turnSeconds: 30, seats: [], automaticMoves: [
   { revision: 8, playerId: "B", reason: "BOT", action: "PASS", at: 1 }, { revision: 9, playerId: "A", reason: "TIMEOUT", action: "PLACE", tileId: "6-4", side: "LEFT", at: 2 },
@@ -21,5 +21,11 @@ describe("presentación del reloj de turno", () => {
     assert.equal(latestAutomaticNotice(clock, 20), null);
     assert.deepEqual(seatBadges({ playerId: "B", bot: true, automatic: false, consecutiveTimeouts: 0, resumeRequested: false, connected: true }), ["Bot"]);
     assert.deepEqual(seatBadges({ playerId: "A", bot: false, automatic: true, consecutiveTimeouts: 2, resumeRequested: false, connected: false }), ["Automático", "Sin conexión"]);
+  });
+  test("el aviso de modo automático desaparece cuando la partida ha terminado", () => {
+    const automatic = { playerId: "A", bot: false, automatic: true, consecutiveTimeouts: 2, resumeRequested: false, connected: true };
+    assert.equal(showAutomaticBanner(automatic, "ROUND_ACTIVE"), true); assert.equal(showAutomaticBanner(automatic, "ROUND_ENDED"), true);
+    assert.equal(showAutomaticBanner(automatic, "MATCH_ENDED"), false); assert.equal(showAutomaticBanner({ ...automatic, automatic: false }, "ROUND_ACTIVE"), false);
+    assert.equal(showAutomaticBanner(undefined, "ROUND_ACTIVE"), false);
   });
 });

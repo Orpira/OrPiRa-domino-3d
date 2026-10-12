@@ -5,7 +5,7 @@ import { dominationsRemaining, finalRanking, roundHeadline, shouldShowMatchFinal
 import { currentSelection, placementDecision, type PlacementSelection } from "./placement-interaction.ts";
 import { MatchCelebration } from "./MatchCelebration.tsx";
 import type { StorageLike } from "./session-storage.ts";
-import { automaticMoveText, formatCountdown, latestAutomaticNotice, remainingMs, seatBadges } from "./turn-clock-presentation.ts";
+import { automaticMoveText, formatCountdown, latestAutomaticNotice, remainingMs, seatBadges, showAutomaticBanner } from "./turn-clock-presentation.ts";
 const Table3D = lazy(() => import("./Table3D.tsx").then((module) => ({ default: module.Table3D })));
 
 function Tile({ id, enabled, selected, onClick }: { id: TileId; enabled: boolean; selected: boolean; onClick: () => void }) {
@@ -46,7 +46,7 @@ export function GameBoard({ game, actions, names, viewerId, sending, message, re
   return <>
     <div className="match-objective"><strong>Objetivo: 100 puntos</strong><span>Dominada +20 · Cierre +0</span></div>
     {context}
-    {mySeat?.automatic && <div className="auto-banner" role="status"><div><strong>Modo automático</strong><span>{mySeat.resumeRequested ? "Recuperarás el control en tu próximo turno." : "El servidor juega por ti tras agotar el tiempo o perder la conexión."}</span></div>
+    {mySeat && showAutomaticBanner(mySeat, game.phase) && <div className="auto-banner" role="status"><div><strong>Modo automático</strong><span>{mySeat.resumeRequested ? "Recuperarás el control en tu próximo turno." : "El servidor juega por ti tras agotar el tiempo o perder la conexión."}</span></div>
       {!mySeat.resumeRequested && <button className="primary" disabled={sending} onClick={() => onCommand({ type: "RESUME_CONTROL" })}>Retomar el control</button>}</div>}
     <section className="scoreboard online-scoreboard" aria-label="Marcador">{game.players.map((player) => <div key={player.playerId} className={game.currentPlayerId === player.playerId ? "active-player" : ""}><span className="seat-name">{nameDecorations?.[player.playerId]}{names[player.playerId]}{player.playerId === viewerId ? " (tú)" : ""}{seatBadges(seatOf(player.playerId)).map((badge) => <em key={badge} className={`seat-badge ${badge === "Bot" ? "bot" : badge === "Automático" ? "auto" : "offline"}`}>{badge}</em>)}</span><strong>{player.score}<small> / {TARGET_SCORE}</small></strong><progress max={TARGET_SCORE} value={Math.min(player.score, TARGET_SCORE)} aria-label={`Progreso de ${names[player.playerId]} hacia 100 puntos`}/><small>{dominationsRemaining(player.score)} {dominationsRemaining(player.score) === 1 ? "dominada" : "dominadas"} para ganar · {game.handCounts[player.playerId]} fichas</small></div>)}</section>
     <section className="table" aria-label="Mesa de dominó"><div className="table-status"><span>Ronda {game.roundNumber}</span><strong>{myTurn ? "Tu turno" : game.currentPlayerId ? `Turno de ${names[game.currentPlayerId]}` : "Ronda terminada"}</strong><span>{game.leftEnd === null ? "Apertura" : `Extremos ${game.leftEnd} · ${game.rightEnd}`}</span></div>

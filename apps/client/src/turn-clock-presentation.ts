@@ -1,4 +1,5 @@
 import type { AutomaticMove, SeatControlView, TurnClockView } from "../../../packages/protocol/src/index.ts";
+import type { Phase } from "../../../packages/rules/src/index.ts";
 
 /** Tiempo restante según la hora límite del servidor; el desfase de reloj del dispositivo no influye. */
 export function remainingMs(clock: TurnClockView, receivedAt: number, now: number): number | null {
@@ -23,4 +24,8 @@ export function latestAutomaticNotice(clock: TurnClockView | null, revision: num
 export function seatBadges(seat: SeatControlView | undefined): readonly string[] {
   if (!seat) return []; if (seat.bot) return ["Bot"];
   return [...(seat.automatic ? ["Automático"] : []), ...(!seat.connected ? ["Sin conexión"] : [])];
+}
+/** El aviso de modo automático y «Retomar el control» solo tienen sentido mientras la partida sigue en juego. */
+export function showAutomaticBanner(seat: SeatControlView | undefined, phase: Phase): boolean {
+  return Boolean(seat?.automatic) && phase !== "MATCH_ENDED";
 }
