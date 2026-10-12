@@ -203,3 +203,16 @@ input:focus-visible { box-shadow: var(--focus); }
   .movements td { padding: 2px 0; border: 0; white-space: normal; }.movements td::before { content: attr(data-label); display: block; color: var(--c-faint); font-size: .72rem; }
   .movements td[data-label="Concepto"] { font-weight: 700; }.movements .num { text-align: left; }
 }
+/* Arrastre de fichas desde la mano: el dedo desliza la mano en horizontal y levanta la ficha en vertical. */
+.hand .tile.pips { touch-action: pan-x; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.hand .tile.pips.away { opacity: .18; transform: translateY(4px) scale(.94); box-shadow: inset 0 0 0 2px #eac56a66; }
+.hand-hint { margin: -4px 0 6px; color: #9fc2b8; font-size: .78rem; }
+.drag-ghost { position: fixed; z-index: 60; left: 0; top: 0; display: block; padding: 3px 4px; border: 1px solid #c9c1ad; border-radius: 8px; background: linear-gradient(160deg, #fbf7ec, #ece4cf); pointer-events: none; transform-origin: 50% 50%; will-change: transform; box-shadow: 0 4px 0 #a69e89, 0 22px 28px #00120fb3; transition: box-shadow .14s, opacity .14s; }
+.drag-ghost .tile-face { width: 100%; height: 100%; display: block; }
+.drag-ghost.over-target { box-shadow: 0 2px 0 #a69e89, 0 6px 10px #00120f99, 0 0 0 4px #ffe08acc; }
+.drag-ghost.returning { transition: transform .22s cubic-bezier(.2, .8, .3, 1), box-shadow .22s; box-shadow: 0 4px 0 #a69e89, 0 7px 12px #001b1766; }
+.drag-ghost.placing { opacity: 0; transition: opacity .18s .05s; }
+.end-target.spatial.hot { transform: translate(-50%, -50%) scale(1.22); background: #fff3c4; box-shadow: 0 0 0 10px #ffe08a55, 0 0 26px #ffe08a; }
+.end-target.spatial { transition: transform .12s, box-shadow .12s, background .12s; }
+.end-target.spatial.center { font-size: 1rem; }
+@media (prefers-reduced-motion: reduce) { .drag-ghost, .drag-ghost.returning, .end-target.spatial { transition: none; } }

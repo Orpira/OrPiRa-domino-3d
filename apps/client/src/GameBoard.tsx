@@ -2,16 +2,18 @@ import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { TILE_BY_ID, type LegalAction, type PlayerView, type Side, type TileId } from "../../../packages/rules/src/index.ts";
 import type { ClientCommand, TurnClockView } from "../../../packages/protocol/src/index.ts";
 import { dominationsRemaining, finalRanking, roundHeadline, shouldShowMatchFinale, TARGET_SCORE } from "./online-presentation.ts";
-import { currentSelection, placementDecision, type PlacementSelection } from "./placement-interaction.ts";
+import { currentSelection, type PlacementSelection } from "./placement-interaction.ts";
 import { MatchCelebration } from "./MatchCelebration.tsx";
 import { DominoFace } from "./DominoFace.tsx";
 import { SoundToggle, useGameSounds } from "./sound.tsx";
+import { dropSides, type DropSide } from "./drop-target.ts";
+import { placementTargets, useHandDrag } from "./hand-drag.tsx";
 import type { StorageLike } from "./session-storage.ts";
 import { automaticMoveText, formatCountdown, latestAutomaticNotice, remainingMs, seatBadges, showAutomaticBanner } from "./turn-clock-presentation.ts";
 const Table3D = lazy(() => import("./Table3D.tsx").then((module) => ({ default: module.Table3D })));
 
-function Tile({ id, enabled, selected, onClick }: { id: TileId; enabled: boolean; selected: boolean; onClick: () => void }) {
-  const tile = TILE_BY_ID.get(id)!; return <button type="button" className={`tile pips ${selected ? "selected" : ""}`} disabled={!enabled} aria-label={`Ficha ${tile.a}-${tile.b}`} aria-pressed={selected} onClick={onClick}><DominoFace a={tile.a} b={tile.b}/></button>;
+function Tile({ id, enabled, selected, away, onClick, drag }: { id: TileId; enabled: boolean; selected: boolean; away: boolean; onClick: () => void; drag: object }) {
+  const tile = TILE_BY_ID.get(id)!; return <button type="button" className={`tile pips ${selected ? "selected" : ""} ${away ? "away" : ""}`} disabled={!enabled} aria-label={`Ficha ${tile.a}-${tile.b}`} aria-pressed={selected} onClick={onClick} {...drag}><DominoFace a={tile.a} b={tile.b}/></button>;
 }
 
 interface GameBoardProps {
@@ -40,10 +42,16 @@ export function GameBoard({ game, actions, names, viewerId, sending, message, re
   const selected = currentSelection(selection, game.revision);
   const selectedActions = selected ? actions.filter((action) => action.tileId === selected) : [];
   const chooseSide = (side: Side) => { if (selected && selectedActions.some((action) => action.side === side)) onCommand({ type: "PLACE", tileId: selected, side }); };
+  const canPlace = game.phase === "ROUND_ACTIVE" && !sending && actions.some((action) => action.type === "PLACE");
+  const sidesOf = (tileId: TileId) => dropSides(actions, tileId);
+  const placeAt = (tileId: TileId, side: DropSide) => { if (!sending) onCommand({ type: "PLACE", tileId, ...(side === "CENTER" ? {} : { side }) }); };
+  const drag = useHandDrag({ enabled: canPlace, sidesOf, onDrop: placeAt, handIds: game.ownHand ?? [], reducedMotion });
+  const focusId = drag.draggingId ?? selected;
+  const targets = focusId && canPlace ? placementTargets(sidesOf(focusId), { left: game.leftEnd, right: game.rightEnd }, (side) => placeAt(focusId, side), drag.hot, sending) : undefined;
+  // Tocar una ficha solo la levanta: el jugador la coloca arrastrándola a la mesa o eligiendo un destino.
   const selectTile = (tileId: TileId) => {
-    if (sending) return; const decision = placementDecision(tileId, actions);
-    if (decision.kind === "SEND") onCommand(decision.command);
-    else if (decision.kind === "CHOOSE") setSelection({ tileId, revision: game.revision });
+    if (drag.consumeClick() || sending || sidesOf(tileId).length === 0) return;
+    setSelection(selected === tileId ? null : { tileId, revision: game.revision });
   };
   useGameSounds(game, viewerId);
   return <>
@@ -55,10 +63,11 @@ export function GameBoard({ game, actions, names, viewerId, sending, message, re
     <section className="table" aria-label="Mesa de dominó"><div className="table-status"><span>Ronda {game.roundNumber}</span><strong>{myTurn ? "Tu turno" : game.currentPlayerId ? `Turno de ${names[game.currentPlayerId]}` : "Ronda terminada"}</strong><span>{game.leftEnd === null ? "Apertura" : `Extremos ${game.leftEnd} · ${game.rightEnd}`}</span></div>
       {clock && remaining !== null && <div className={`turn-clock ${urgent ? "urgent" : ""} ${myTurn ? "mine" : ""}`} role="timer" aria-label={clock.deadlineKind === "ROUND_BREAK" ? `Siguiente ronda en ${formatCountdown(remaining)}` : `${myTurn ? "Tu tiempo" : "Tiempo del turno"}: ${formatCountdown(remaining)}`}>
         <span>{clock.deadlineKind === "ROUND_BREAK" ? "Siguiente ronda en" : myTurn ? "Tu tiempo" : `Tiempo de ${names[game.currentPlayerId ?? ""] ?? "turno"}`}</span><strong>{formatCountdown(remaining)}</strong>
-        {clock.deadlineKind === "TURN" && <progress max={clock.turnSeconds * 1000} value={Math.min(remaining, clock.turnSeconds * 1000)} aria-hidden="true"/>}</div>}<Suspense fallback={<div className="three-stage"><p>Preparando mesa…</p></div>}><Table3D chain={game.chain} reducedMotion={reducedMotion} players={game.players} viewerId={viewerId} endTargets={selectedActions.length > 1 ? { leftLabel: `Izquierda · ${game.leftEnd}`, rightLabel: `Derecha · ${game.rightEnd}`, leftValue: game.leftEnd!, rightValue: game.rightEnd!, disabled: sending, onLeft: () => chooseSide("LEFT"), onRight: () => chooseSide("RIGHT") } : undefined}/></Suspense></section>
+        {clock.deadlineKind === "TURN" && <progress max={clock.turnSeconds * 1000} value={Math.min(remaining, clock.turnSeconds * 1000)} aria-hidden="true"/>}</div>}<Suspense fallback={<div className="three-stage"><p>Preparando mesa…</p></div>}><Table3D chain={game.chain} reducedMotion={reducedMotion} players={game.players} viewerId={viewerId} targets={targets} locatorRef={drag.locatorRef} dropOrigin={drag.dropOrigin}/></Suspense></section>
+    {drag.ghost}
     {notice && <p className="auto-notice" role="status" key={notice.revision}><span aria-hidden="true">⏱</span>{automaticMoveText(notice, names, viewerId)}</p>}
     <p className="message" role="status">{sending ? "Enviando acción…" : message}</p>
-    {game.phase === "ROUND_ACTIVE" && <section className="controls"><div className="side-actions">{selectedActions.some((action) => action.side === "LEFT") && <button disabled={sending} onClick={() => chooseSide("LEFT")}>Jugar a la izquierda ({game.leftEnd})</button>}{selectedActions.some((action) => action.side === "RIGHT") && <button disabled={sending} onClick={() => chooseSide("RIGHT")}>Jugar a la derecha ({game.rightEnd})</button>}<button className="pass" disabled={sending || !actions.some((action) => action.type === "PASS")} onClick={() => onCommand({ type: "PASS" })}>Pasar</button></div><h2>Tu mano</h2><div className="hand">{game.ownHand?.map((id) => <Tile key={id} id={id} selected={selected === id} enabled={!sending && actions.some((action) => action.tileId === id)} onClick={() => selectTile(id)}/>)}</div>{selected && <button className="cancel" disabled={sending} onClick={() => setSelection(null)}>Cancelar selección</button>}</section>}
+    {game.phase === "ROUND_ACTIVE" && <section className="controls"><div className="side-actions">{selectedActions.some((action) => action.side === "LEFT") && <button disabled={sending} onClick={() => chooseSide("LEFT")}>Jugar a la izquierda ({game.leftEnd})</button>}{selectedActions.some((action) => action.side === "RIGHT") && <button disabled={sending} onClick={() => chooseSide("RIGHT")}>Jugar a la derecha ({game.rightEnd})</button>}{selected && selectedActions.some((action) => action.type === "PLACE" && action.side === undefined) && <button disabled={sending} onClick={() => placeAt(selected, "CENTER")}>Abrir con 6–6</button>}<button className="pass" disabled={sending || !actions.some((action) => action.type === "PASS")} onClick={() => onCommand({ type: "PASS" })}>Pasar</button></div><h2>Tu mano</h2>{canPlace && <p className="hand-hint">Arrastra una ficha hasta la mesa · o tócala y elige el extremo</p>}<div className="hand">{game.ownHand?.map((id) => <Tile key={id} id={id} selected={selected === id} away={drag.hiddenId === id} enabled={!sending && actions.some((action) => action.tileId === id)} onClick={() => selectTile(id)} drag={drag.bind(id)}/>)}</div>{selected && <button className="cancel" disabled={sending} onClick={() => setSelection(null)}>Cancelar selección</button>}</section>}
     {game.phase === "ROUND_ENDED" && game.roundResult && <section className="result round-summary" aria-live="polite"><p className="eyebrow">Resultado de la ronda {game.roundNumber}</p><h2>{roundHeadline(game.roundResult)}</h2><p>{game.roundResult.winnerId ? `${names[game.roundResult.winnerId]} gana la ronda` : `Empate entre ${game.roundResult.tiedPlayerIds.map((id) => names[id]).join(" y ")}`}</p><div className="result-scores">{game.players.map((player) => <span key={player.playerId}><strong>{names[player.playerId]}</strong>{player.score} puntos {game.roundResult!.scoreDeltas[player.playerId] ? `(+${game.roundResult!.scoreDeltas[player.playerId]})` : "(+0)"}</span>)}</div><button className="primary" disabled={sending} onClick={() => onCommand({ type: "NEXT_ROUND" })}>Siguiente ronda</button></section>}
     {shouldShowMatchFinale(game.phase, game.matchResult) && <><MatchCelebration matchId={game.matchId} phase={game.phase} result={game.matchResult} reducedMotion={reducedMotion} storage={celebrationStorage}/><section className="result match-finale" aria-live="polite"><p className="eyebrow">Objetivo alcanzado</p><div className="champion-callout"><span className="champion-trophy" aria-hidden="true">🏆</span><strong>¡{names[game.matchResult.championId]} ganó la partida!</strong><span>{game.matchResult.finalScores[game.matchResult.championId]} puntos</span></div>{game.roundResult && <div className="final-round-reason"><strong>{roundHeadline(game.roundResult)}</strong><span>{game.roundResult.winnerId ? `${names[game.roundResult.winnerId]} ganó la última ronda` : `Última ronda empatada entre ${game.roundResult.tiedPlayerIds.map((id) => names[id]).join(" y ")}`}</span></div>}<p>Marcador final de la partida</p><ol className="final-ranking">{finalRanking(game.players, names, game.matchResult).map((player) => <li key={player.playerId}><span>{player.rank}.º · {player.name}{player.tied ? " · empate" : ""}</span><strong>{player.score} puntos</strong></li>)}</ol>{finaleDetails}{finaleActions ?? <button className="primary" onClick={onLeave}>Volver al lobby</button>}</section></>}
   </>;

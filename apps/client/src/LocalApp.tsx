@@ -2,16 +2,18 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { TILE_BY_ID, type GameState, type Side, type TileId } from "../../../packages/rules/src/index.ts";
 import { HUMAN_ID, LocalGame, playerName, randomDeal, type LocalMode } from "./local-game.ts";
 import { loadSession, saveSession } from "./session-storage.ts";
-import { currentSelection, placementDecision, SubmissionGate, type PlacementSelection } from "./placement-interaction.ts";
+import { currentSelection, SubmissionGate, type PlacementSelection } from "./placement-interaction.ts";
 import { MatchCelebration } from "./MatchCelebration.tsx";
 import { finalRanking } from "./online-presentation.ts";
 import { DominoFace } from "./DominoFace.tsx";
 import { SoundToggle, useGameSounds } from "./sound.tsx";
+import { dropSides, type DropSide } from "./drop-target.ts";
+import { placementTargets, useHandDrag } from "./hand-drag.tsx";
 const Table3D = lazy(() => import("./Table3D.tsx").then((module) => ({ default: module.Table3D })));
 
-function Tile({ id, selected = false, disabled = false, onClick }: { id: TileId; selected?: boolean; disabled?: boolean; onClick?: () => void }) {
+function Tile({ id, selected = false, disabled = false, away = false, onClick, drag }: { id: TileId; selected?: boolean; disabled?: boolean; away?: boolean; onClick?: () => void; drag?: object }) {
   const tile = TILE_BY_ID.get(id)!;
-  return <button type="button" className={`tile pips ${selected ? "selected" : ""}`} disabled={disabled} onClick={onClick} aria-label={`Ficha ${tile.a}-${tile.b}`} aria-pressed={selected}>
+  return <button type="button" className={`tile pips ${selected ? "selected" : ""} ${away ? "away" : ""}`} disabled={disabled} onClick={onClick} aria-label={`Ficha ${tile.a}-${tile.b}`} aria-pressed={selected} {...drag}>
     <DominoFace a={tile.a} b={tile.b}/>
   </button>;
 }
@@ -61,6 +63,13 @@ export default function App() {
 
   const selected = currentSelection(selection, state.revision);
   const selectedActions = selected ? actions.filter((action) => action.type === "PLACE" && action.tileId === selected) : [];
+  const handIds = state.phase === "ROUND_ACTIVE" && visibleHandId ? state.hands[visibleHandId]! : [];
+  const canPlace = state.phase === "ROUND_ACTIVE" && game.isHumanTurn && !botsBusy && !handoff;
+  const sidesOf = (id: TileId) => dropSides(actions, id);
+  const placeAt = (id: TileId, side: DropSide) => playTile(id, side === "CENTER" ? undefined : side);
+  const drag = useHandDrag({ enabled: canPlace, sidesOf, onDrop: placeAt, handIds, reducedMotion });
+  const focusId = drag.draggingId ?? selected;
+  const targets = focusId && canPlace ? placementTargets(sidesOf(focusId), { left: state.leftEnd, right: state.rightEnd }, (side) => placeAt(focusId, side), drag.hot) : undefined;
   const canPass = !handoff && actions.length === 1 && actions[0]?.type === "PASS";
   const roundResult = state.roundResult;
   const winnerName = roundResult?.winnerId ? playerName(roundResult.winnerId, mode) : null;
@@ -82,11 +91,10 @@ export default function App() {
     finally { window.setTimeout(() => placementGate.current.release(), 0); }
   };
   const playSelected = (side: Side) => { if (selected && selectedActions.some((action) => action.side === side)) playTile(selected, side); };
+  // Tocar una ficha solo la levanta: el jugador la coloca arrastrándola a la mesa o eligiendo un destino.
   const selectTile = (id: TileId) => {
-    if (!game.isHumanTurn || botsBusy || handoff) return;
-    const decision = placementDecision(id, actions);
-    if (decision.kind === "SEND" && decision.command.type === "PLACE") playTile(decision.command.tileId, decision.command.side);
-    else if (decision.kind === "CHOOSE") setSelection({ tileId: id, revision: state.revision });
+    if (drag.consumeClick() || !canPlace || sidesOf(id).length === 0) return;
+    setSelection(selected === id ? null : { tileId: id, revision: state.revision });
   };
   const restart = () => update(game.restart(), "Nueva partida preparada", mode === "PASS_AND_PLAY");
 
@@ -108,19 +116,22 @@ export default function App() {
     </section>
     <section className="table" aria-label="Mesa de dominó">
       <div className="table-status"><span>Ronda {state.roundNumber}</span><strong>{state.phase === "ROUND_ACTIVE" ? `Turno: ${playerName(activeId!, mode)}` : "Ronda terminada"}</strong><span>{state.leftEnd === null ? "Apertura pendiente" : `Extremos ${state.leftEnd} · ${state.rightEnd}`}</span></div>
-      <Suspense fallback={<div className="three-stage"><p>Preparando mesa 3D…</p></div>}><Table3D chain={state.chain} reducedMotion={reducedMotion} players={state.players} viewerId={mode === "BOTS" ? HUMAN_ID : undefined} endTargets={selectedActions.length > 1 ? { leftLabel: `Izquierda · ${state.leftEnd}`, rightLabel: `Derecha · ${state.rightEnd}`, leftValue: state.leftEnd!, rightValue: state.rightEnd!, onLeft: () => playSelected("LEFT"), onRight: () => playSelected("RIGHT") } : undefined} /></Suspense>
+      <Suspense fallback={<div className="three-stage"><p>Preparando mesa 3D…</p></div>}><Table3D chain={state.chain} reducedMotion={reducedMotion} players={state.players} viewerId={mode === "BOTS" ? HUMAN_ID : undefined} targets={targets} locatorRef={drag.locatorRef} dropOrigin={drag.dropOrigin} /></Suspense>
     </section>
     <p className="message" role="status">{botsBusy ? "El bot está pensando…" : message} <span className="saved">Guardado local automático</span></p>
     {state.phase === "ROUND_ACTIVE" && !handoff && !botsBusy && visibleHandId && <section className="controls">
       <div className="side-actions">
         {selectedActions.some((action) => action.side === "LEFT") && <button onClick={() => playSelected("LEFT")}>Jugar a la izquierda ({state.leftEnd})</button>}
         {selectedActions.some((action) => action.side === "RIGHT") && <button onClick={() => playSelected("RIGHT")}>Jugar a la derecha ({state.rightEnd})</button>}
+        {selected && selectedActions.some((action) => action.side === undefined) && <button onClick={() => playTile(selected)}>Abrir con 6–6</button>}
         <button className="pass" disabled={!canPass} onClick={() => afterHumanAction(game.passCurrent(), `${playerName(activeId!, mode)} pasa`)}>Pasar</button>
       </div>
       <h2>Mano de {playerName(visibleHandId, mode)}</h2>
-      <div className="hand">{state.hands[visibleHandId]!.map((id) => <Tile key={id} id={id} selected={selected === id} disabled={!actions.some((action) => action.tileId === id)} onClick={() => selectTile(id)} />)}</div>
+      {canPlace && <p className="hand-hint">Arrastra una ficha hasta la mesa · o tócala y elige el extremo</p>}
+      <div className="hand">{state.hands[visibleHandId]!.map((id) => <Tile key={id} id={id} selected={selected === id} away={drag.hiddenId === id} disabled={!actions.some((action) => action.tileId === id)} onClick={() => selectTile(id)} drag={drag.bind(id)} />)}</div>
       {selected && <button className="cancel" onClick={() => setSelection(null)}>Cancelar selección</button>}
     </section>}
+    {drag.ghost}
     {state.phase === "MATCH_ENDED" && <MatchCelebration matchId={state.matchId} phase={state.phase} result={state.matchResult} reducedMotion={reducedMotion} storage={window.localStorage}/>}
     {state.phase !== "ROUND_ACTIVE" && roundResult && <section className={`result ${state.phase === "MATCH_ENDED" ? "match-finale" : ""}`} role="dialog" aria-label={state.phase === "MATCH_ENDED" ? "Resultado final de la partida" : "Resultado de ronda"}>
       <p className="eyebrow">{roundResult.reason === "DOMINO" ? "Dominada" : "Cierre"}</p><h2>{winnerName ? `${winnerName} gana la ronda` : "Empate en el mínimo"}</h2>
