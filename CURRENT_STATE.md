@@ -1,6 +1,8 @@
 # Estado actual
 
-Fecha: 12 de octubre de 2026. **Versión en producción: API 1.5-rc1 y web/APK 1.5-rc3.**
+Fecha: 12 de octubre de 2026. **Versión en producción: API 1.5-rc1, web `main` (`81d4ae8`, fichas más grandes) y APK 1.5-rc3.**
+El 12 oct 2026 `main` avanzó de `f0dddf1` a `81d4ae8` (incluye toda la 1.5 y las fichas más grandes) por decisión del propietario, antes de la prueba con cuatro dispositivos; Vercel lo publicó automáticamente (despliegue `HwsiiFwpqPZYLfQfoTJ4FBvy52vV`). La APK aún no incluye este cambio.
+
 `v1.5-rc2` (`ec52fd4`) corrige el ancho en pantallas estrechas y `v1.5-rc3` (`289ac4b`)
 oculta el aviso de modo automático cuando la partida ha terminado; ninguna cambia el
 servidor, que sigue siendo el de `v1.5-rc1` (`2240f70`). `main` sigue en `f0dddf1` hasta la
@@ -42,7 +44,7 @@ prueba con cuatro dispositivos. GitHub tiene las ramas `feature/interface-redesi
 - Corregido en 1.5-rc3: el aviso «Modo automático» con «Retomar el control» ya no aparece
   en una partida terminada.
 
-## En curso (rama `feature/larger-tiles`, sin desplegar)
+## Fichas más grandes en la mesa (12 oct 2026, `81d4ae8`, web en producción desde `main`)
 
 - Fichas de la mesa más legibles: puntos casi el doble de grandes y textura a doble resolución.
 - La cámara encuadra las fichas jugadas (con un tamaño mínimo) en lugar de mostrar siempre toda la mesa; se mueve con suavidad y respeta `prefers-reduced-motion`.
