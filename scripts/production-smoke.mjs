@@ -11,9 +11,14 @@ async function call(path, { token, body } = {}) {
 const check = (label, ok, detail = "") => { console.log(`${ok ? "OK  " : "FALLO"} ${label}${detail ? ` — ${detail}` : ""}`); if (!ok) process.exitCode = 1; return ok; };
 
 if (rateLimit) {
-  // Envía consultas ligeras hasta recibir 429 (máximo 700) y muestra Retry-After; bloquea esta IP como mucho una ventana.
-  let sent = 0; let blocked = null;
-  for (; sent < 700 && !blocked; sent++) { const response = await call("/api/simulated-conditions"); if (response.status === 429) blocked = response; }
+  // Envía consultas ligeras en lotes paralelos de 50 hasta recibir 429 (máximo 700), para que caigan dentro de una misma
+  // ventana de 60 s aunque la latencia sea alta. Muestra Retry-After; bloquea esta IP como mucho una ventana.
+  let sent = 0; let blocked = null; const startedAt = Date.now();
+  while (sent < 700 && !blocked) {
+    const batch = await Promise.all(Array.from({ length: 50 }, () => call("/api/simulated-conditions"))); sent += batch.length;
+    blocked = batch.find((response) => response.status === 429) ?? null;
+  }
+  console.log(`${sent} peticiones en ${((Date.now() - startedAt) / 1000).toFixed(1)} s`);
   check("límite de peticiones responde 429 con Retry-After", Boolean(blocked && blocked.body?.code === "RATE_LIMITED" && Number(blocked.headers.get("retry-after")) > 0),
     blocked ? `429 tras ${sent} peticiones, Retry-After ${blocked.headers.get("retry-after")} s, cuerpo ${JSON.stringify(blocked.body)}` : `sin 429 tras ${sent}`);
   process.exit();

@@ -1,15 +1,35 @@
 # Estado actual
 
-Fecha: 12 de octubre de 2026. En producción: web de `main` (`f0dddf1`) en Vercel y API
-0.5.0 en `https://api-domino.orpira.es` (VPS 167.233.139.93 tras Nginx Proxy Manager,
-certificado Let's Encrypt hasta el 9 de enero de 2027; verificado desde fuera). Candidata
-`v1.5-rc1` (`2240f70`, rama `feature/league`) preparada y **no desplegada**: plan en
-`DEPLOY_PLAN.md`, pendiente de aprobación y de acceso SSH al VPS. En la rama
-`feature/interface-redesign` (commit `30a1c60`, sin publicar): competición de prueba con
-COP simulados y rediseño de interfaz. Contrato completo en `COMPETITION_CONTRACT.md`.
-Sobre ella, `feature/quick-play` (commit `1493992`) añade «Jugar ahora» y el reloj de
-turno con jugada automática (`QUICK_PLAY.md`), y `feature/league` (sin commit ni
-publicar) añade la liga por temporadas (`LEAGUE.md`).
+Fecha: 12 de octubre de 2026. **Versión en producción: 1.5-rc1** (etiqueta `v1.5-rc1`,
+commit `2240f70`, rama `feature/league`; `main` sigue en `f0dddf1` hasta la prueba con
+cuatro dispositivos).
+
+- API: desplegada el 11 oct 2026 ~23:40 UTC en el VPS `orpira-cloud` (167.233.139.93),
+  Docker Compose, proyecto `orpira-domino`, directorio `/opt/domino-3d-v1.5-rc1`, imagen
+  `orpira/domino-api:1.5-rc1` (`sha256:57cd7d6d0e3e…80ae0`), tras Nginx Proxy Manager con
+  Let's Encrypt. El directorio anterior `/opt/domino-3d` (0.5.0) queda intacto para volver
+  atrás (`DEPLOY_PLAN.md`, sección 6).
+- Web: Vercel, despliegue `dpl_H1oJq62k4s6i3RAh4MLC9sqFYGmV` desde la etiqueta, alias
+  `https://orpira-domino-3d.vercel.app` (`index-mnwN1v2X.js`). Anterior para volver
+  atrás: `dpl_BQ9kn3vDir7wwwBBN9GpfRY57P4R`.
+- APK: 1.5 (`versionCode` 6), SHA-256 `f4f2c5d07e7506a1bfdaf2c0959b78635a5b5f40e55242fea2e8997dd9165bb2`,
+  instalada en el Samsung SM-A165F.
+- Copias previas en el VPS, `/opt/backups/orpira-domino/` (STAMP `20261011-2325`):
+  - `domino-data-pre-1.5-rc1-20261011-2325.tar.gz` — `5103527208fd3917622d68645173772345bb9b71ff56f5a3f8d8dff28cfcd1e4` (volumen vacío)
+  - `domino-api-0.5.0-pre-1.5-rc1-20261011-2325.tar.gz` — `ee6e996d82d1fcba8bbdf6c848f428338abd0bd7cb4b9a95ba1d0071207fb341`
+  - `opt-domino-3d-pre-1.5-rc1-20261011-2325.tar.gz` — `16aab9bae3b24f663f4892ea5a197143535c83e82dd45c55d6ae13c45e3d262a`
+  - `SHA256SUMS-20261011-2325`
+- Comprobaciones en producción: HTTPS y `/health`; importes de
+  `/api/simulated-conditions`; CORS de la web y de la APK (otros orígenes, 403); partida
+  de «Jugar ahora» con tres bots terminada en 675 s con +5 puntos de liga concedidos
+  una sola vez; límite de peticiones con 429 y `Retry-After: 59`. La primera
+  comprobación del límite falló por un defecto del script (peticiones secuenciales más
+  lentas que la ventana); se corrigió con lotes paralelos.
+- Datos de prueba que quedan en producción: identidades «QA 10-11 23:33» y «Samsung», con
+  sus partidas públicas y puntos de liga de octubre.
+- Defecto encontrado en el dispositivo: a 384 px de ancho (densidad 450) los nombres
+  largos ensanchaban el marcador y la página, desplazando la barra inferior. Corregido
+  en la rama después de la etiqueta (sin desplegar; requiere una nueva candidata).
 
 ## Implementado
 
