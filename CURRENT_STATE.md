@@ -1,19 +1,24 @@
 # Estado actual
 
-Fecha: 12 de octubre de 2026. **Versión en producción: 1.5-rc1** (etiqueta `v1.5-rc1`,
-commit `2240f70`, rama `feature/league`; `main` sigue en `f0dddf1` hasta la prueba con
-cuatro dispositivos).
+Fecha: 12 de octubre de 2026. **Versión en producción: API 1.5-rc1 y web/APK 1.5-rc2.**
+La etiqueta `v1.5-rc2` (`ec52fd4`, rama `feature/league`) solo corrige el ancho en
+pantallas estrechas; el servidor es idéntico al de `v1.5-rc1` (`2240f70`). `main` sigue
+en `f0dddf1` hasta la prueba con cuatro dispositivos. Las ramas y etiquetas nuevas
+**aún no están en GitHub**: el `git push` quedó bloqueado por los permisos de la sesión.
 
 - API: desplegada el 11 oct 2026 ~23:40 UTC en el VPS `orpira-cloud` (167.233.139.93),
   Docker Compose, proyecto `orpira-domino`, directorio `/opt/domino-3d-v1.5-rc1`, imagen
   `orpira/domino-api:1.5-rc1` (`sha256:57cd7d6d0e3e…80ae0`), tras Nginx Proxy Manager con
   Let's Encrypt. El directorio anterior `/opt/domino-3d` (0.5.0) queda intacto para volver
   atrás (`DEPLOY_PLAN.md`, sección 6).
-- Web: Vercel, despliegue `dpl_H1oJq62k4s6i3RAh4MLC9sqFYGmV` desde la etiqueta, alias
-  `https://orpira-domino-3d.vercel.app` (`index-mnwN1v2X.js`). Anterior para volver
-  atrás: `dpl_BQ9kn3vDir7wwwBBN9GpfRY57P4R`.
-- APK: 1.5 (`versionCode` 6), SHA-256 `f4f2c5d07e7506a1bfdaf2c0959b78635a5b5f40e55242fea2e8997dd9165bb2`,
-  instalada en el Samsung SM-A165F.
+- Web: Vercel, despliegue `dpl_8Dax53PJda4DK4SVm9KuBbz3Txwd` desde `v1.5-rc2`, alias
+  `https://orpira-domino-3d.vercel.app` (`index-wwnVgAoE.css`). Anteriores para volver
+  atrás: `dpl_H1oJq62k4s6i3RAh4MLC9sqFYGmV` (rc1) y `dpl_BQ9kn3vDir7wwwBBN9GpfRY57P4R` (`main`).
+- APK: 1.5-rc2 (`versionCode` 7), `artifacts/domino3d-orpira-1.5-rc2-debug.apk`, SHA-256
+  `3f6c2dd78ad658092c081dbfa2edeb02ffd795be1e25ad7c9987e4038847d4c7`, instalada en el
+  Samsung SM-A165F. En el dispositivo, con el marcador de nombres largos, el ancho del
+  documento es 384 px (igual al de la pantalla) y ningún elemento queda fuera. La 1.5
+  (`versionCode` 6) tenía SHA-256 `f4f2c5d07e7506a1bfdaf2c0959b78635a5b5f40e55242fea2e8997dd9165bb2`.
 - Copias previas en el VPS, `/opt/backups/orpira-domino/` (STAMP `20261011-2325`):
   - `domino-data-pre-1.5-rc1-20261011-2325.tar.gz` — `5103527208fd3917622d68645173772345bb9b71ff56f5a3f8d8dff28cfcd1e4` (volumen vacío)
   - `domino-api-0.5.0-pre-1.5-rc1-20261011-2325.tar.gz` — `ee6e996d82d1fcba8bbdf6c848f428338abd0bd7cb4b9a95ba1d0071207fb341`
@@ -27,9 +32,10 @@ cuatro dispositivos).
   lentas que la ventana); se corrigió con lotes paralelos.
 - Datos de prueba que quedan en producción: identidades «QA 10-11 23:33» y «Samsung», con
   sus partidas públicas y puntos de liga de octubre.
-- Defecto encontrado en el dispositivo: a 384 px de ancho (densidad 450) los nombres
-  largos ensanchaban el marcador y la página, desplazando la barra inferior. Corregido
-  en la rama después de la etiqueta (sin desplegar; requiere una nueva candidata).
+- Defecto encontrado en el dispositivo y corregido en 1.5-rc2: a 384 px de ancho
+  (densidad 450) los nombres largos ensanchaban el marcador y la página.
+- Pendiente menor: en una partida ya terminada sigue apareciendo el aviso «Modo
+  automático» con «Retomar el control»; debería ocultarse.
 
 ## Implementado
 
