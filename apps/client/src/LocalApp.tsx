@@ -5,12 +5,13 @@ import { loadSession, saveSession } from "./session-storage.ts";
 import { currentSelection, placementDecision, SubmissionGate, type PlacementSelection } from "./placement-interaction.ts";
 import { MatchCelebration } from "./MatchCelebration.tsx";
 import { finalRanking } from "./online-presentation.ts";
+import { DominoFace } from "./DominoFace.tsx";
 const Table3D = lazy(() => import("./Table3D.tsx").then((module) => ({ default: module.Table3D })));
 
 function Tile({ id, selected = false, disabled = false, onClick }: { id: TileId; selected?: boolean; disabled?: boolean; onClick?: () => void }) {
   const tile = TILE_BY_ID.get(id)!;
-  return <button type="button" className={`tile ${selected ? "selected" : ""}`} disabled={disabled} onClick={onClick} aria-label={`Ficha ${tile.a}-${tile.b}`} aria-pressed={selected}>
-    <span>{tile.a}</span><i /><span>{tile.b}</span>
+  return <button type="button" className={`tile pips ${selected ? "selected" : ""}`} disabled={disabled} onClick={onClick} aria-label={`Ficha ${tile.a}-${tile.b}`} aria-pressed={selected}>
+    <DominoFace a={tile.a} b={tile.b}/>
   </button>;
 }
 
@@ -104,7 +105,7 @@ export default function App() {
     </section>
     <section className="table" aria-label="Mesa de dominó">
       <div className="table-status"><span>Ronda {state.roundNumber}</span><strong>{state.phase === "ROUND_ACTIVE" ? `Turno: ${playerName(activeId!, mode)}` : "Ronda terminada"}</strong><span>{state.leftEnd === null ? "Apertura pendiente" : `Extremos ${state.leftEnd} · ${state.rightEnd}`}</span></div>
-      <Suspense fallback={<div className="three-stage"><p>Preparando mesa 3D…</p></div>}><Table3D chain={state.chain} reducedMotion={reducedMotion} endTargets={selectedActions.length > 1 ? { leftLabel: `Izquierda · ${state.leftEnd}`, rightLabel: `Derecha · ${state.rightEnd}`, leftValue: state.leftEnd!, rightValue: state.rightEnd!, onLeft: () => playSelected("LEFT"), onRight: () => playSelected("RIGHT") } : undefined} /></Suspense>
+      <Suspense fallback={<div className="three-stage"><p>Preparando mesa 3D…</p></div>}><Table3D chain={state.chain} reducedMotion={reducedMotion} players={state.players} viewerId={mode === "BOTS" ? HUMAN_ID : undefined} endTargets={selectedActions.length > 1 ? { leftLabel: `Izquierda · ${state.leftEnd}`, rightLabel: `Derecha · ${state.rightEnd}`, leftValue: state.leftEnd!, rightValue: state.rightEnd!, onLeft: () => playSelected("LEFT"), onRight: () => playSelected("RIGHT") } : undefined} /></Suspense>
     </section>
     <p className="message" role="status">{botsBusy ? "El bot está pensando…" : message} <span className="saved">Guardado local automático</span></p>
     {state.phase === "ROUND_ACTIVE" && !handoff && !botsBusy && visibleHandId && <section className="controls">

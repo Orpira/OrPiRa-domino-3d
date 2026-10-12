@@ -126,3 +126,17 @@ export function layoutDominoChain(chain: readonly OrientedTile[], width: number,
     return { id: tile.id, x: outward.x, z: outward.z, tangent, rotation, scale, distanceFromOpening };
   });
 }
+
+export type SeatSide = "BOTTOM" | "RIGHT" | "TOP" | "LEFT";
+
+/**
+ * Lado de la mesa desde el que llega una ficha, con el jugador local siempre abajo.
+ * El turno avanza en sentido antihorario (asiento s → s − 1): abajo → derecha → arriba → izquierda.
+ * Sin jugador local (relevo entre personas) o con un autor desconocido, la ficha llega desde abajo.
+ */
+export function seatSide(players: readonly { readonly playerId: string; readonly seat: number }[], viewerId: string | undefined, playedBy: string): SeatSide {
+  const viewer = players.find((player) => player.playerId === viewerId); const actor = players.find((player) => player.playerId === playedBy);
+  if (!viewer || !actor) return "BOTTOM";
+  const turnsAfterViewer = ((viewer.seat - actor.seat) % 4 + 4) % 4;
+  return (["BOTTOM", "RIGHT", "TOP", "LEFT"] as const)[turnsAfterViewer]!;
+}

@@ -3,6 +3,7 @@ import type { LeagueRankId, TestAccountView } from "../../../packages/protocol/s
 import { RANK_NAMES, rankPips } from "./league-presentation.ts";
 import { formatCop, SIMULATED_NOTICE } from "./competition-presentation.ts";
 import type { Loadable, TestAccount } from "./use-test-account.ts";
+import { PIPS } from "./DominoFace.tsx";
 
 export function SimulatedNotice({ compact = false }: { compact?: boolean }) {
   return <p className={`simulated-notice ${compact ? "compact" : ""}`}><span aria-hidden="true">◆</span>{SIMULATED_NOTICE}</p>;
@@ -12,10 +13,6 @@ export function StateCard({ tone = "neutral", title, children, action }: { tone?
   return <div className={`state-card ${tone}`} role={tone === "error" ? "alert" : "status"}><strong>{title}</strong>{children && <div>{children}</div>}{action}</div>;
 }
 
-const PIPS: Record<number, ReadonlyArray<readonly [number, number]>> = {
-  0: [], 1: [[.5, .5]], 2: [[.28, .28], [.72, .72]], 3: [[.25, .25], [.5, .5], [.75, .75]], 4: [[.28, .28], [.72, .28], [.28, .72], [.72, .72]],
-  5: [[.25, .25], [.75, .25], [.5, .5], [.25, .75], [.75, .75]], 6: [[.28, .22], [.72, .22], [.28, .5], [.72, .5], [.28, .78], [.72, .78]],
-};
 function SvgTile({ x, y, rotate, top, bottom, fill }: { x: number; y: number; rotate: number; top: number; bottom: number; fill: string }) {
   return <g transform={`translate(${x} ${y}) rotate(${rotate} 30 56)`}>
     <rect x="3" y="7" width="60" height="112" rx="11" fill="#0a2a24" opacity=".45"/>

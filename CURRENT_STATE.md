@@ -51,6 +51,8 @@ prueba con cuatro dispositivos. GitHub tiene las ramas `feature/interface-redesi
 - Trazado compacto para pantallas con proporción menor de 1,6 (móvil y tableta vertical): filas de tres fichas, brazo derecho hacia abajo y brazo izquierdo hacia arriba. En móvil las fichas se ven en torno al doble de grandes con 16 fichas en mesa. El trazado ancho de escritorio no cambia.
 - Botones de extremo circulares con el valor del extremo (texto completo en `aria-label`), colocados más allá de la ficha extrema y siempre dentro de la mesa.
 - Corregida la dirección del botón de extremo cuando la última ficha está en un giro.
+- Fichas de la mano con puntos en lugar de números (componente `DominoFace`, compartido con las ilustraciones y la ficha de rango).
+- Cada ficha jugada entra en la mesa desde el lado de quien la jugó (jugador local abajo; antihorario: abajo → derecha → arriba → izquierda), elevándose y girando hasta su sitio. En relevo entre personas todas llegan desde abajo. Sin animación con `prefers-reduced-motion` ni al restaurar varias fichas a la vez.
 - Limitación conocida: con más de unas 20 fichas en un mismo brazo, el trazado compacto sobrepasa el borde dibujado de la mesa (las fichas siguen visibles).
 
 ## Implementado

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { OrientedTile, TileId } from "../../../packages/rules/src/index.ts";
-import { chainBounds, COMPACT_ASPECT, endAnchors, frameBounds, layoutDominoChain, MAX_CHAIN_TILES, MIN_FRAME_DEPTH, MIN_FRAME_WIDTH, TILE_LENGTH } from "../src/table-layout.ts";
+import { chainBounds, COMPACT_ASPECT, endAnchors, frameBounds, layoutDominoChain, MAX_CHAIN_TILES, MIN_FRAME_DEPTH, MIN_FRAME_WIDTH, seatSide, TILE_LENGTH } from "../src/table-layout.ts";
 
 function tile(id: TileId, left: number, right: number): OrientedTile { return { id, left, right, playedBy: "P0" }; }
 function angleDistance(a: number, b: number) { return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))); }
@@ -95,5 +95,14 @@ describe("distribución serpenteante anclada en 6-6", () => {
     const layout = layoutDominoChain([tile("6-6", 6, 6), ...ids.map((id) => tile(id, 6, 5))], 1000, 420);
     const turn = layout.at(-1)!; const anchors = endAnchors(layout)!;
     assert.ok(anchors.right.z > turn.z, "tras el primer giro el brazo derecho baja hacia el jugador");
+  });
+
+  it("cada ficha llega desde el lado de quien la jugó, en sentido antihorario", () => {
+    const players = [{ playerId: "A", seat: 0 }, { playerId: "B", seat: 1 }, { playerId: "C", seat: 2 }, { playerId: "D", seat: 3 }];
+    // El turno pasa del asiento s al s − 1: tras A (0) juega D (3), luego C (2) y luego B (1).
+    assert.equal(seatSide(players, "A", "A"), "BOTTOM"); assert.equal(seatSide(players, "A", "D"), "RIGHT");
+    assert.equal(seatSide(players, "A", "C"), "TOP"); assert.equal(seatSide(players, "A", "B"), "LEFT");
+    assert.equal(seatSide(players, "C", "B"), "RIGHT"); assert.equal(seatSide(players, "C", "D"), "LEFT");
+    assert.equal(seatSide(players, undefined, "B"), "BOTTOM"); assert.equal(seatSide(players, "A", "desconocido"), "BOTTOM");
   });
 });

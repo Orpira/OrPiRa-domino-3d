@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import type { OrientedTile, TileId } from "../../../packages/rules/src/index.ts";
-import { endAnchors, frameBounds, layoutDominoChain, TILE_LENGTH, TILE_WIDTH, type TableBounds, type TablePoint } from "./table-layout.ts";
+import type { OrientedTile, Player, TileId } from "../../../packages/rules/src/index.ts";
+import { endAnchors, frameBounds, layoutDominoChain, seatSide, TILE_LENGTH, TILE_WIDTH, type SeatSide, type TableBounds, type TablePoint } from "./table-layout.ts";
 
 interface EndTargets {
   /** Texto accesible completo (p. ej. «Izquierda · 3»); en pantalla solo se ve el valor del extremo. */
@@ -14,6 +14,8 @@ interface Visual { readonly mesh: THREE.Mesh; readonly texture: THREE.Texture }
 interface Motion {
   readonly mesh: THREE.Mesh; readonly from: THREE.Vector3; readonly to: THREE.Vector3;
   readonly fromRotation: number; readonly toRotation: number; readonly started: number; readonly duration: number;
+  /** Altura extra en el punto medio del trayecto: la ficha se levanta al salir de la mano y cae sobre la mesa. */
+  readonly arc: number;
 }
 interface CameraPose { readonly target: THREE.Vector3; readonly distance: number }
 interface CameraMotion { readonly from: CameraPose; readonly to: CameraPose; readonly started: number; readonly duration: number }
@@ -30,6 +32,9 @@ const OVERVIEW: CameraPose = { target: new THREE.Vector3(0, 0, 0), distance: Mat
 /** Fracción de la pantalla (en coordenadas normalizadas) que pueden ocupar las fichas; el resto deja sitio a los botones de extremo. */
 const FRAME_MARGIN = .78;
 const TEXTURE_SIZE = 256;
+/** Punto de la pantalla (coordenadas normalizadas, fuera del encuadre) por el que entra la ficha de cada asiento. */
+const SEAT_ENTRY: Record<SeatSide, readonly [number, number]> = { BOTTOM: [0, -1.25], RIGHT: [1.25, -.1], TOP: [0, 1.15], LEFT: [-1.25, -.1] };
+const HAND_HEIGHT = 1.1; const ARRIVAL_MS = 850;
 /** Medio tamaño del botón circular de extremo con su halo, para que no se salga por el borde. */
 const END_TARGET_HALF_WIDTH = 34; const END_TARGET_HALF_HEIGHT = 34;
 
@@ -104,8 +109,10 @@ function renderMotion(context: SceneContext) {
       applyPose(context.camera, context.view); if (progress === 1) context.cameraMotion = null;
     }
     for (const [id, motion] of context.motions) {
-      const progress = Math.min(1, (now - motion.started) / motion.duration); const eased = 1 - (1 - progress) ** 3;
-      motion.mesh.position.lerpVectors(motion.from, motion.to, eased);
+      const progress = Math.min(1, (now - motion.started) / motion.duration);
+      // La llegada desde la mano acelera y frena (se ve el trayecto); los reajustes solo frenan.
+      const eased = motion.arc ? (progress < .5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2) : 1 - (1 - progress) ** 3;
+      motion.mesh.position.lerpVectors(motion.from, motion.to, eased); motion.mesh.position.y += Math.sin(Math.PI * eased) * motion.arc;
       motion.mesh.rotation.y = motion.fromRotation + (motion.toRotation - motion.fromRotation) * eased;
       if (progress === 1) context.motions.delete(id);
     }
@@ -122,13 +129,24 @@ function projectAnchor(context: SceneContext, anchor: TablePoint): ScreenPoint {
   return { left: Math.max(marginX, Math.min(100 - marginX, (point.x + 1) * 50)), top: Math.max(marginY, Math.min(100 - marginY, (1 - point.y) * 50)) };
 }
 
-function syncChain(context: SceneContext, chain: readonly OrientedTile[], reducedMotion: boolean, animateChange: boolean, setEnds: (ends: ScreenEnds | null) => void) {
+/** Punto, a la altura de la mano, por el que entra en la mesa una ficha jugada desde un asiento. */
+function seatEntry(camera: THREE.PerspectiveCamera, side: SeatSide, fallback: THREE.Vector3): THREE.Vector3 {
+  const [x, y] = SEAT_ENTRY[side]; const ray = new THREE.Raycaster(); ray.setFromCamera(new THREE.Vector2(x, y), camera);
+  const point = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -HAND_HEIGHT), new THREE.Vector3());
+  return point ?? fallback.clone().setY(HAND_HEIGHT);
+}
+
+function syncChain(context: SceneContext, chain: readonly OrientedTile[], reducedMotion: boolean, animateChange: boolean, setEnds: (ends: ScreenEnds | null) => void,
+  originOf: (playedBy: string) => SeatSide = () => "BOTTOM") {
   const placements = layoutDominoChain(chain, context.width, context.height); const ids = new Set(chain.map((tile) => tile.id));
   for (const [id, visual] of context.visuals) if (!ids.has(id)) {
     context.scene.remove(visual.mesh); context.visuals.delete(id); context.motions.delete(id); disposeVisual(visual);
   }
   const newIds = chain.filter((tile) => !context.visuals.has(tile.id));
   const animateArrival = context.initialized && animateChange && !reducedMotion && newIds.length === 1;
+  // La cámara se calcula primero: la ficha nueva entra por el borde del encuadre final, desde el lado de quien la jugó.
+  const animateCamera = context.initialized && animateChange && !reducedMotion;
+  const previous = context.view; const next = fitPose(context.camera, frameBounds(placements)); applyPose(context.camera, next);
   placements.forEach((placement, index) => {
     const tile = chain[index]!; let visual = context.visuals.get(tile.id); const isNew = !visual;
     if (!visual) { visual = createDomino(tile); context.visuals.set(tile.id, visual); context.scene.add(visual.mesh); }
@@ -137,20 +155,18 @@ function syncChain(context: SceneContext, chain: readonly OrientedTile[], reduce
       visual.mesh.position.copy(target); visual.mesh.rotation.y = placement.rotation; context.motions.delete(tile.id);
     } else {
       const from = visual.mesh.position.clone();
-      if (isNew && animateArrival) {
-        const openingIndex = chain.findIndex((candidate) => candidate.id === "6-6");
-        const neighbour = placements[placement.distanceFromOpening === 0 ? index : index < openingIndex ? index + 1 : index - 1];
-        from.set(neighbour?.x ?? placement.x, .72, neighbour?.z ?? placement.z);
-        visual.mesh.position.copy(from); visual.mesh.rotation.y = placement.rotation - .24;
+      const arrives = isNew && animateArrival; const side = originOf(tile.playedBy);
+      if (arrives) {
+        // Sale de la mano del jugador (fuera de cámara, a su lado de la mesa) y gira mientras viaja hasta su sitio.
+        from.copy(seatEntry(context.camera, side, target));
+        visual.mesh.position.copy(from); visual.mesh.rotation.y = placement.rotation + (side === "LEFT" || side === "TOP" ? -.9 : .9);
       }
       const fromRotation = visual.mesh.rotation.y;
-      context.motions.set(tile.id, { mesh: visual.mesh, from, to: target, fromRotation,
-        toRotation: shortestRotation(fromRotation, placement.rotation), started: performance.now(), duration: isNew ? 520 : 240 });
+      context.motions.set(tile.id, { mesh: visual.mesh, from, to: target, fromRotation, arc: arrives ? .55 : 0,
+        toRotation: shortestRotation(fromRotation, placement.rotation), started: performance.now(), duration: arrives ? ARRIVAL_MS : isNew ? 520 : 240 });
     }
   });
-  const animateCamera = context.initialized && animateChange && !reducedMotion;
-  const previous = context.view; const next = fitPose(context.camera, frameBounds(placements));
-  applyPose(context.camera, next); context.initialized = true;
+  context.initialized = true;
   // Los botones de extremo se colocan con la cámara ya en su posición final.
   const anchors = endAnchors(placements);
   setEnds(anchors ? { left: projectAnchor(context, anchors.left), right: projectAnchor(context, anchors.right) } : null);
@@ -160,8 +176,14 @@ function syncChain(context: SceneContext, chain: readonly OrientedTile[], reduce
   if (context.motions.size || context.cameraMotion) renderMotion(context); else context.renderer.render(context.scene, context.camera);
 }
 
-export function Table3D({ chain, reducedMotion, endTargets }: { chain: readonly OrientedTile[]; reducedMotion: boolean; endTargets?: EndTargets | undefined }) {
+export function Table3D({ chain, reducedMotion, endTargets, players, viewerId }: {
+  chain: readonly OrientedTile[]; reducedMotion: boolean; endTargets?: EndTargets | undefined;
+  /** Jugadores con su asiento y jugador local: deciden desde qué lado llega cada ficha. */
+  players?: readonly Player[] | undefined; viewerId?: string | undefined;
+}) {
   const host = useRef<HTMLDivElement>(null); const sceneRef = useRef<SceneContext | null>(null);
+  const originRef = useRef<(playedBy: string) => SeatSide>(() => "BOTTOM");
+  originRef.current = (playedBy) => seatSide(players ?? [], viewerId, playedBy);
   const chainRef = useRef(chain); chainRef.current = chain; const reducedRef = useRef(reducedMotion); reducedRef.current = reducedMotion;
   const [unsupported, setUnsupported] = useState(false); const [ends, setEnds] = useState<ScreenEnds | null>(null);
   useEffect(() => {
@@ -190,7 +212,7 @@ export function Table3D({ chain, reducedMotion, endTargets }: { chain: readonly 
       renderer.dispose(); renderer.domElement.remove(); sceneRef.current = null;
     };
   }, []);
-  useEffect(() => { const context = sceneRef.current; if (context) syncChain(context, chain, reducedMotion, true, setEnds); }, [chain, reducedMotion]);
+  useEffect(() => { const context = sceneRef.current; if (context) syncChain(context, chain, reducedMotion, true, setEnds, originRef.current); }, [chain, reducedMotion]);
   return <div className="three-stage" ref={host} aria-label={`Mesa 3D con ${chain.length} fichas`}>
     {chain.length === 0 && <p>El poseedor de 6–6 abre la ronda</p>}
     {unsupported && <p>WebGL no disponible. Usa la descripción accesible de la cadena.</p>}
