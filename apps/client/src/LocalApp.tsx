@@ -104,7 +104,7 @@ export default function App() {
     </section>
     <section className="table" aria-label="Mesa de dominó">
       <div className="table-status"><span>Ronda {state.roundNumber}</span><strong>{state.phase === "ROUND_ACTIVE" ? `Turno: ${playerName(activeId!, mode)}` : "Ronda terminada"}</strong><span>{state.leftEnd === null ? "Apertura pendiente" : `Extremos ${state.leftEnd} · ${state.rightEnd}`}</span></div>
-      <Suspense fallback={<div className="three-stage"><p>Preparando mesa 3D…</p></div>}><Table3D chain={state.chain} reducedMotion={reducedMotion} endTargets={selectedActions.length > 1 ? { leftLabel: `Izquierda · ${state.leftEnd}`, rightLabel: `Derecha · ${state.rightEnd}`, onLeft: () => playSelected("LEFT"), onRight: () => playSelected("RIGHT") } : undefined} /></Suspense>
+      <Suspense fallback={<div className="three-stage"><p>Preparando mesa 3D…</p></div>}><Table3D chain={state.chain} reducedMotion={reducedMotion} endTargets={selectedActions.length > 1 ? { leftLabel: `Izquierda · ${state.leftEnd}`, rightLabel: `Derecha · ${state.rightEnd}`, leftValue: state.leftEnd!, rightValue: state.rightEnd!, onLeft: () => playSelected("LEFT"), onRight: () => playSelected("RIGHT") } : undefined} /></Suspense>
     </section>
     <p className="message" role="status">{botsBusy ? "El bot está pensando…" : message} <span className="saved">Guardado local automático</span></p>
     {state.phase === "ROUND_ACTIVE" && !handoff && !botsBusy && visibleHandId && <section className="controls">

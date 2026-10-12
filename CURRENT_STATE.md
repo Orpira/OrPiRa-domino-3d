@@ -42,6 +42,15 @@ prueba con cuatro dispositivos. GitHub tiene las ramas `feature/interface-redesi
 - Corregido en 1.5-rc3: el aviso «Modo automático» con «Retomar el control» ya no aparece
   en una partida terminada.
 
+## En curso (rama `feature/larger-tiles`, sin desplegar)
+
+- Fichas de la mesa más legibles: puntos casi el doble de grandes y textura a doble resolución.
+- La cámara encuadra las fichas jugadas (con un tamaño mínimo) en lugar de mostrar siempre toda la mesa; se mueve con suavidad y respeta `prefers-reduced-motion`.
+- Trazado compacto para pantallas con proporción menor de 1,6 (móvil y tableta vertical): filas de tres fichas, brazo derecho hacia abajo y brazo izquierdo hacia arriba. En móvil las fichas se ven en torno al doble de grandes con 16 fichas en mesa. El trazado ancho de escritorio no cambia.
+- Botones de extremo circulares con el valor del extremo (texto completo en `aria-label`), colocados más allá de la ficha extrema y siempre dentro de la mesa.
+- Corregida la dirección del botón de extremo cuando la última ficha está en un giro.
+- Limitación conocida: con más de unas 20 fichas en un mismo brazo, el trazado compacto sobrepasa el borde dibujado de la mesa (las fichas siguen visibles).
+
 ## Implementado
 
 - Motor TypeScript puro en `packages/rules`.
