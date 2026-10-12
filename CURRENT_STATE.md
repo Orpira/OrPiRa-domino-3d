@@ -1,22 +1,27 @@
 # Estado actual
 
-Fecha: 12 de octubre de 2026. **Versión en producción: API 1.5-rc1 y web/APK 1.5-rc2.**
-La etiqueta `v1.5-rc2` (`ec52fd4`, rama `feature/league`) solo corrige el ancho en
-pantallas estrechas; el servidor es idéntico al de `v1.5-rc1` (`2240f70`). `main` sigue
-en `f0dddf1` hasta la prueba con cuatro dispositivos. Las ramas y etiquetas nuevas
-**aún no están en GitHub**: el `git push` quedó bloqueado por los permisos de la sesión.
+Fecha: 12 de octubre de 2026. **Versión en producción: API 1.5-rc1 y web/APK 1.5-rc3.**
+`v1.5-rc2` (`ec52fd4`) corrige el ancho en pantallas estrechas y `v1.5-rc3` (`289ac4b`)
+oculta el aviso de modo automático cuando la partida ha terminado; ninguna cambia el
+servidor, que sigue siendo el de `v1.5-rc1` (`2240f70`). `main` sigue en `f0dddf1` hasta la
+prueba con cuatro dispositivos. GitHub tiene las ramas `feature/interface-redesign`,
+`feature/quick-play` y `feature/league` (hasta `b519f34`) y las etiquetas `v1.5-rc1` y
+`v1.5-rc2`; falta subir `v1.5-rc3` y los commits posteriores.
 
 - API: desplegada el 11 oct 2026 ~23:40 UTC en el VPS `orpira-cloud` (167.233.139.93),
   Docker Compose, proyecto `orpira-domino`, directorio `/opt/domino-3d-v1.5-rc1`, imagen
   `orpira/domino-api:1.5-rc1` (`sha256:57cd7d6d0e3e…80ae0`), tras Nginx Proxy Manager con
   Let's Encrypt. El directorio anterior `/opt/domino-3d` (0.5.0) queda intacto para volver
   atrás (`DEPLOY_PLAN.md`, sección 6).
-- Web: Vercel, despliegue `dpl_8Dax53PJda4DK4SVm9KuBbz3Txwd` desde `v1.5-rc2`, alias
-  `https://orpira-domino-3d.vercel.app` (`index-wwnVgAoE.css`). Anteriores para volver
-  atrás: `dpl_H1oJq62k4s6i3RAh4MLC9sqFYGmV` (rc1) y `dpl_BQ9kn3vDir7wwwBBN9GpfRY57P4R` (`main`).
-- APK: 1.5-rc2 (`versionCode` 7), `artifacts/domino3d-orpira-1.5-rc2-debug.apk`, SHA-256
-  `3f6c2dd78ad658092c081dbfa2edeb02ffd795be1e25ad7c9987e4038847d4c7`, instalada en el
-  Samsung SM-A165F. En el dispositivo, con el marcador de nombres largos, el ancho del
+- Web: Vercel, despliegue `dpl_2mgkpdYaM2qK4GWmpg99NQhCdVin` desde `v1.5-rc3`, alias
+  `https://orpira-domino-3d.vercel.app` (`index-B7WbB0e_.js`). Anteriores para volver
+  atrás: `dpl_8Dax53PJda4DK4SVm9KuBbz3Txwd` (rc2), `dpl_H1oJq62k4s6i3RAh4MLC9sqFYGmV` (rc1) y
+  `dpl_BQ9kn3vDir7wwwBBN9GpfRY57P4R` (`main`).
+- APK: 1.5-rc3 (`versionCode` 8), `artifacts/domino3d-orpira-1.5-rc3-debug.apk`, SHA-256
+  `a53f4c789488471a1ce2d30a043ff97c0cb6cae14dacef7059b4d10dff000e24`, instalada en el
+  Samsung SM-A165F. Verificado en el dispositivo sobre una partida terminada: sin aviso de
+  modo automático ni «Retomar el control», y ancho 384/384 px. La 1.5-rc2 (`versionCode` 7)
+  tenía SHA-256 `3f6c2dd78ad658092c081dbfa2edeb02ffd795be1e25ad7c9987e4038847d4c7`. En el dispositivo, con el marcador de nombres largos, el ancho del
   documento es 384 px (igual al de la pantalla) y ningún elemento queda fuera. La 1.5
   (`versionCode` 6) tenía SHA-256 `f4f2c5d07e7506a1bfdaf2c0959b78635a5b5f40e55242fea2e8997dd9165bb2`.
 - Copias previas en el VPS, `/opt/backups/orpira-domino/` (STAMP `20261011-2325`):
@@ -34,8 +39,8 @@ en `f0dddf1` hasta la prueba con cuatro dispositivos. Las ramas y etiquetas nuev
   sus partidas públicas y puntos de liga de octubre.
 - Defecto encontrado en el dispositivo y corregido en 1.5-rc2: a 384 px de ancho
   (densidad 450) los nombres largos ensanchaban el marcador y la página.
-- Pendiente menor: en una partida ya terminada sigue apareciendo el aviso «Modo
-  automático» con «Retomar el control»; debería ocultarse.
+- Corregido en 1.5-rc3: el aviso «Modo automático» con «Retomar el control» ya no aparece
+  en una partida terminada.
 
 ## Implementado
 
