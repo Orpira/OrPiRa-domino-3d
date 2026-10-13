@@ -1,5 +1,6 @@
-import { useId, useState, type ReactNode } from "react";
-import type { GameMode } from "../../../packages/rules/src/index.ts";
+import { Fragment, useId, useState, type ReactNode } from "react";
+import { TARGET_OPTIONS } from "../../../packages/rules/src/index.ts";
+import { effectiveTarget, normalizeChoice, RULES_LABELS, type TableChoice } from "./modes-presentation.ts";
 import type { LeagueRankId, TestAccountView } from "../../../packages/protocol/src/index.ts";
 import { RANK_NAMES, rankPips } from "./league-presentation.ts";
 import { formatCop, SIMULATED_NOTICE } from "./competition-presentation.ts";
@@ -73,10 +74,14 @@ export function RankTile({ rank, size = "small", decorative = false }: { rank: L
   </svg>;
 }
 
-/** Individual a 100 o parejas a 200; el servidor fija la modalidad al crear la sala o la mesa. */
-export function ModeSwitch({ mode, onChange, label }: { mode: GameMode; onChange: (mode: GameMode) => void; label: string }) {
-  return <nav className="mode-switch variant-switch" aria-label={label}>
-    <button type="button" className={mode === "INDIVIDUAL" ? "current" : ""} aria-pressed={mode === "INDIVIDUAL"} onClick={() => onChange("INDIVIDUAL")}>Individual · a 100</button>
-    <button type="button" className={mode === "PAIRS" ? "current" : ""} aria-pressed={mode === "PAIRS"} onClick={() => onChange("PAIRS")}>Parejas · a 200</button>
-  </nav>;
+/** Reglas, formato y objetivo de una mesa. Las parejas solo existen en Latino; el servidor valida lo elegido. */
+export function TableSetup({ choice, onChange, label, showTarget = true }: { choice: TableChoice; onChange: (choice: TableChoice) => void; label: string; showTarget?: boolean }) {
+  const set = (next: Partial<TableChoice>) => onChange(normalizeChoice({ ...choice, ...next, ...(next.mode && next.mode !== choice.mode ? { targetScore: undefined } : {}) } as TableChoice));
+  const target = effectiveTarget(choice);
+  const option = (current: boolean, text: string, onClick: () => void) => <button type="button" className={current ? "current" : ""} aria-pressed={current} onClick={onClick}>{text}</button>;
+  return <fieldset className="table-setup"><legend>{label}</legend>
+    <div className="setup-row"><span>Reglas</span><div className="mode-switch">{(["LATINO", "DRAW"] as const).map((rules) => <Fragment key={rules}>{option(choice.rules === rules, RULES_LABELS[rules], () => set({ rules }))}</Fragment>)}</div></div>
+    {choice.rules === "LATINO" && <div className="setup-row"><span>Formato</span><div className="mode-switch">{option(choice.mode === "INDIVIDUAL", "Individual", () => set({ mode: "INDIVIDUAL" }))}{option(choice.mode === "PAIRS", "Parejas", () => set({ mode: "PAIRS" }))}</div></div>}
+    {showTarget && <div className="setup-row"><span>Objetivo</span><div className="mode-switch">{TARGET_OPTIONS.map((value) => <Fragment key={value}>{option(target === value, String(value), () => set({ targetScore: value }))}</Fragment>)}</div></div>}
+  </fieldset>;
 }

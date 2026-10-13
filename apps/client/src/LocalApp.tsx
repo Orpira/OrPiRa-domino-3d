@@ -1,5 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { freeOpening, targetScore, TILE_BY_ID, type GameMode, type GameState, type Side, type TileId } from "../../../packages/rules/src/index.ts";
+import { freeOpening, legalActions, targetScore, TILE_BY_ID, type GameState, type Side, type TileId } from "../../../packages/rules/src/index.ts";
+import { choiceLabel, individualRoundText, rulesSummary, type TableChoice } from "./modes-presentation.ts";
+import { TableSetup } from "./ui.tsx";
 import { championTeamText, openerText, pairsRoundText, teamStandings } from "./pairs-presentation.ts";
 import { HUMAN_ID, LocalGame, playerName, randomDeal, type LocalMode } from "./local-game.ts";
 import { loadSession, saveSession } from "./session-storage.ts";
@@ -58,8 +60,8 @@ export default function App() {
   useEffect(() => {
     if (!game.isBotTurn) return;
     const timer = window.setTimeout(() => {
-      const actor = game.state.currentPlayerId!;
-      update(game.playOneBotTurn(), `${playerName(actor, mode)} ha jugado`);
+      const actor = game.state.currentPlayerId!; const before = game.state.boneyard?.length;
+      const next = game.playOneBotTurn(); update(next, `${playerName(actor, mode)} ${next.boneyard && next.boneyard.length !== before ? "roba del pozo" : "ha jugado"}`);
     }, reducedMotion ? 80 : 420);
     return () => window.clearTimeout(timer);
   }, [game, mode, reducedMotion, state, update]);
@@ -95,13 +97,18 @@ export default function App() {
       setMode(nextMode); update(nextGame.state, nextMode === "BOTS" ? "Nueva partida contra bots" : "Partida para cuatro personas", nextMode === "PASS_AND_PLAY");
     });
   };
-  const switchVariant = (variant: GameMode) => {
-    if (variant === game.variant) return;
-    afterConfirming(variant === "PAIRS" ? "¿Cambiar a parejas, a 200?" : "¿Cambiar a individual, a 100?", () => {
-      const nextGame = new LocalGame(randomDeal, mode, undefined, variant); gameRef.current = nextGame;
-      update(nextGame.state, variant === "PAIRS" ? "Nueva partida en parejas, a 200" : "Nueva partida individual, a 100", mode === "PASS_AND_PLAY");
+  const choice: TableChoice = { rules: game.rules, mode: game.variant, ...(game.targetScore ? { targetScore: game.targetScore } : {}) };
+  const switchSetup = (next: TableChoice) => {
+    if (next.rules === choice.rules && next.mode === choice.mode && next.targetScore === choice.targetScore) return;
+    afterConfirming(`¿Cambiar a ${choiceLabel(next)}?`, () => {
+      const nextGame = new LocalGame(randomDeal, mode, undefined, next.mode, { rules: next.rules, ...(next.targetScore ? { targetScore: next.targetScore } : {}) }); gameRef.current = nextGame;
+      update(nextGame.state, `Nueva partida: ${choiceLabel(next)}`, mode === "PASS_AND_PLAY");
     });
   };
+  const drawing = game.rules === "DRAW"; const boneyard = state.boneyard?.length ?? 0;
+  const canDraw = !handoff && actions.length === 1 && actions[0]?.type === "DRAW";
+  const openingTile = state.phase === "ROUND_ACTIVE" && state.chain.length === 0 && drawing && activeId ? legalActions(state, activeId)[0]?.tileId : undefined;
+  const individualRound = !pairs && roundResult ? individualRoundText(roundResult, names, game.rules) : null;
   const afterHumanAction = (next: GameState, text: string) => update(next, text, mode === "PASS_AND_PLAY");
   const playTile = (tileId: TileId, side?: Side) => {
     if (botsBusy || handoff || !placementGate.current.tryLock()) return;
@@ -118,7 +125,7 @@ export default function App() {
 
   return <main>
     <header className="hero">
-      <div><p className="eyebrow">OrPiRa · partida local 3D</p><h1>Dominó <em>Latino</em></h1></div>
+      <div><p className="eyebrow">OrPiRa · partida local 3D</p><h1>Dominó <em>{drawing ? "con robo" : "Latino"}</em></h1></div>
       <div className="target"><span>Objetivo</span><strong>{targetScore(state)}</strong></div>
     </header>
     <nav className="mode-switch" aria-label="Modalidad local">
@@ -127,10 +134,7 @@ export default function App() {
       <button className="motion" onClick={() => setReducedMotion((value) => !value)}>{reducedMotion ? "Movimiento reducido" : "Movimiento suave"}</button>
       <SoundToggle/>
     </nav>
-    <nav className="mode-switch variant-switch" aria-label="Forma de juego">
-      <button className={!pairs ? "current" : ""} aria-pressed={!pairs} onClick={() => switchVariant("INDIVIDUAL")}>Individual · a 100</button>
-      <button className={pairs ? "current" : ""} aria-pressed={pairs} onClick={() => switchVariant("PAIRS")}>Parejas · a 200</button>
-    </nav>
+    <TableSetup choice={choice} onChange={switchSetup} label="Forma de juego"/>
     {pairs ? <section className="scoreboard pairs" aria-label="Marcador por parejas">
       {teamStandings(state, names).map((team) => <div key={team.label} className={team.active ? "active-player" : ""}>
         <span>{team.label}</span><strong>{team.score}</strong>
@@ -142,12 +146,13 @@ export default function App() {
       </div>)}
     </section>}
     <section className="table" aria-label="Mesa de dominó">
-      <div className="table-status"><span>Ronda {state.roundNumber}</span><strong>{state.phase === "ROUND_ACTIVE" ? `Turno: ${playerName(activeId!, mode)}` : "Ronda terminada"}</strong><span>{state.leftEnd === null ? "Apertura pendiente" : `Extremos ${state.leftEnd} · ${state.rightEnd}`}</span></div>
-      <Suspense fallback={<div className="three-stage"><p>Preparando mesa 3D…</p></div>}><Table3D chain={state.chain} reducedMotion={reducedMotion} players={state.players} viewerId={mode === "BOTS" ? HUMAN_ID : undefined} targets={targets} locatorRef={drag.locatorRef} dropOrigin={drag.dropOrigin} openingId={state.openingTileId} openingHint={freeOpening(state) && state.currentPlayerId ? `${openerText(names[state.currentPlayerId]!)} con la ficha que quiera` : undefined} /></Suspense>
+      <div className="table-status"><span>Ronda {state.roundNumber}</span><strong>{state.phase === "ROUND_ACTIVE" ? `Turno: ${playerName(activeId!, mode)}` : "Ronda terminada"}</strong><span>{state.leftEnd === null ? "Apertura pendiente" : `Extremos ${state.leftEnd} · ${state.rightEnd}`}{drawing ? ` · Pozo: ${boneyard}` : ""}</span></div>
+      <Suspense fallback={<div className="three-stage"><p>Preparando mesa 3D…</p></div>}><Table3D chain={state.chain} reducedMotion={reducedMotion} players={state.players} viewerId={mode === "BOTS" ? HUMAN_ID : undefined} targets={targets} locatorRef={drag.locatorRef} dropOrigin={drag.dropOrigin} openingId={state.openingTileId} openingHint={freeOpening(state) && state.currentPlayerId ? `${openerText(names[state.currentPlayerId]!)} con la ficha que quiera` : openingTile && activeId ? `${openerText(names[activeId]!)} con el ${openingTile.replace("-", "–")}` : undefined} /></Suspense>
     </section>
     <p className="message" role="status">{botsBusy ? "El bot está pensando…" : message} <span className="saved">Guardado local automático</span></p>
     {state.phase === "ROUND_ACTIVE" && !handoff && visibleHandId && <section className="controls">
       <div className="side-actions">
+        {drawing && <button className="pass draw-button" disabled={!canDraw} onClick={() => afterHumanAction(game.drawCurrent(), `${playerName(activeId!, mode)} roba del pozo`)}>Robar <span className="count">({boneyard})</span></button>}
         <button className="pass" disabled={!canPass} onClick={() => afterHumanAction(game.passCurrent(), `${playerName(activeId!, mode)} pasa`)}>Pasar</button>
       </div>
       <h2>Mano de {playerName(visibleHandId, mode)}</h2>
@@ -158,8 +163,8 @@ export default function App() {
     {drag.ghost}
     {state.phase === "MATCH_ENDED" && <MatchCelebration matchId={state.matchId} phase={state.phase} result={state.matchResult} reducedMotion={reducedMotion} storage={window.localStorage}/>}
     {state.phase !== "ROUND_ACTIVE" && roundResult && <section className={`result ${state.phase === "MATCH_ENDED" ? "match-finale" : ""}`} role="dialog" aria-label={state.phase === "MATCH_ENDED" ? "Resultado final de la partida" : "Resultado de ronda"}>
-      <p className="eyebrow">{roundResult.reason === "DOMINO" ? "Dominada" : pairs ? "Tranque" : "Cierre"}</p><h2>{pairsRound ? pairsRound.headline : winnerName ? `${winnerName} gana la ronda` : "Empate en el mínimo"}</h2>
-      <p>{pairsRound ? pairsRound.detail : roundResult.reason === "DOMINO" ? `${winnerName} suma 20 puntos.` : "El cierre no concede puntos."}</p>
+      <p className="eyebrow">{roundResult.reason === "DOMINO" ? "Dominada" : pairs || drawing ? "Tranque" : "Cierre"}</p><h2>{pairsRound ? pairsRound.headline : drawing ? individualRound!.headline : winnerName ? `${winnerName} gana la ronda` : "Empate en el mínimo"}</h2>
+      <p>{pairsRound ? pairsRound.detail : drawing ? individualRound!.detail : roundResult.reason === "DOMINO" ? `${winnerName} suma 20 puntos.` : "El cierre no concede puntos."}</p>
       <div className="totals">{state.players.map((player) => <span key={player.playerId}>{playerName(player.playerId, mode)}: {roundResult.handPipTotals[player.playerId]}</span>)}</div>
       {state.phase === "ROUND_ENDED" ? <button className="primary" onClick={() => { const next = game.startNextRound(); update(next, pairs ? `Nueva mano: ${openerText(names[next.currentPlayerId!]!).toLowerCase()}` : "Nueva ronda: busca el 6–6", mode === "PASS_AND_PLAY"); }}>{pairs ? "Siguiente mano" : "Siguiente ronda"}</button> : <><div className="champion-callout"><span className="champion-trophy" aria-hidden="true">🏆</span><strong>{champions ? `¡${champions.label} ganan la partida!` : `¡${championName} ganó la partida!`}</strong><span>{champions ? champions.score : state.matchResult!.finalScores[state.matchResult!.championId]} puntos</span></div><p>Clasificación final</p><ol className="final-ranking">{pairs
         ? [...teamStandings(state, names)].sort((left, right) => right.score - left.score).map((team, index) => <li key={team.label}><span>{index + 1}.º · {team.label}</span><strong>{team.score} puntos</strong></li>)
@@ -168,6 +173,6 @@ export default function App() {
     {handoff && state.phase === "ROUND_ACTIVE" && <section className="handoff" role="dialog" aria-modal="true" aria-label="Relevo de jugador">
       <div><p className="eyebrow">Relevo privado</p><h2>Entrega el dispositivo a {playerName(activeId!, mode)}</h2><p>La mano anterior está oculta. Solo la siguiente persona debe continuar.</p><button autoFocus className="primary" onClick={() => setHandoff(false)}>Soy {playerName(activeId!, mode)} · mostrar mi mano</button></div>
     </section>}
-    <footer>{pairs ? "2 parejas (compañero enfrente) · a 200 · se cuentan las 4 manos · sin pozo · turnos antihorarios" : "4 jugadores · doble seis · sin pozo · turnos antihorarios"}</footer>
+    <footer>{`${choiceLabel(choice)} · ${rulesSummary(choice)} · turnos antihorarios`}</footer>
   </main>;
 }

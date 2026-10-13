@@ -3,8 +3,8 @@ import type { MatchResult, Phase, Player, RoundResult } from "../../../packages/
 export const TARGET_SCORE = 100;
 export const DOMINO_POINTS = 20;
 
-export function dominationsRemaining(score: number): number {
-  return Math.max(0, Math.ceil((TARGET_SCORE - score) / DOMINO_POINTS));
+export function dominationsRemaining(score: number, target: number = TARGET_SCORE): number {
+  return Math.max(0, Math.ceil((target - score) / DOMINO_POINTS));
 }
 
 export interface RankedPlayer { readonly playerId: string; readonly name: string; readonly score: number; readonly rank: number; readonly tied: boolean }

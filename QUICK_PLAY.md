@@ -22,6 +22,9 @@ premio. No es la Competición de prueba y nunca la alimenta.
   (`{ "mode": "PAIRS" }` al entrar). Nunca se mezclan: cada cola forma sus mesas y
   cuenta su propia espera de 45 s. Quien ya está en una cola sigue en ella aunque pida
   la otra modalidad; para cambiar, cancela y vuelve a buscar.
+- Tres mesas públicas, cada una con su cola: Latino individual, Latino por parejas y «con
+  robo» (`{ "rules": "DRAW" }` al entrar; solo individual). El objetivo es siempre el de la
+  modalidad (100 o 200). «Con robo» no puntúa en la liga.
 - En parejas los asientos también van por orden de llegada: 0 y 2 contra 1 y 3. Con dos
   humanos y dos bots, los humanos quedan en parejas contrarias, cada uno con un bot de
   compañero (decisión del propietario, 14 oct 2026).

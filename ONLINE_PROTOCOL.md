@@ -9,7 +9,10 @@ usan `POST /api/lobbies/:code/join`. Los asientos P0–P3 se asignan en orden de
 entrada y la partida comienza automáticamente al entrar el cuarto jugador. El código
 solo localiza la sala: consultar o jugar siempre exige además el `sessionId` secreto.
 
-Modalidad: `POST /api/lobbies` acepta `{ "name", "mode": "INDIVIDUAL" | "PAIRS" }`
+Modalidad: `POST /api/lobbies` acepta `{ "name", "mode": "INDIVIDUAL" | "PAIRS", "rules": "LATINO" | "DRAW", "targetScore": 100 | 150 | 200 }`
+(errores `INVALID_MODE`, `INVALID_RULES`, `INVALID_TARGET`; «con robo» solo en individual).
+Con robo existe el comando `{ "type": "DRAW" }`; la vista trae `boneyardCount`, nunca el pozo.
+Antes de las modalidades:
 (por defecto individual). En parejas, P0 y P2 juegan contra P1 y P3 hasta 200. La vista
 de sala incluye `mode`; las salas guardadas antes no lo tienen y son individuales.
 

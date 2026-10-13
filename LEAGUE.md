@@ -6,7 +6,8 @@ recompensas.
 
 ## Qué puntúa
 
-- Solo las partidas de «Jugar ahora» terminadas (`MATCH_ENDED`). Las salas entre
+- Solo las partidas de «Jugar ahora» terminadas (`MATCH_ENDED`) en **Latino** (individual o
+  parejas). Las modalidades casuales («con robo») no puntúan (decisión del propietario, 14 oct 2026). Las salas entre
   amigos y la Competición de prueba no dan puntos.
 - Puntos = base por posición × (humanos en la mesa / 4), redondeando hacia abajo.
 

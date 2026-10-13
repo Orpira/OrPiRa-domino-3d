@@ -247,3 +247,11 @@ input:focus-visible { box-shadow: var(--focus); }
 @keyframes confirm-fade { from { opacity: 0; } }
 @keyframes confirm-rise { from { opacity: 0; transform: translateY(12px) scale(.98); } }
 @media (prefers-reduced-motion: reduce) { .confirm-backdrop, .confirm-dialog { animation: none; } }
+/* Selector de mesa: reglas, formato y objetivo. */
+.table-setup { display: grid; gap: var(--space-2); margin: var(--space-3) 0; padding: 0; border: 0; min-width: 0; }
+.table-setup legend { padding: 0; margin-bottom: var(--space-2); color: var(--c-faint); font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.setup-row { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: var(--space-2); }
+.setup-row > span { color: var(--c-muted); font-size: .9rem; }
+.setup-row .mode-switch { margin: 0; }
+@media (max-width: 420px) { .setup-row { grid-template-columns: 1fr; gap: 2px; } }
+.draw-button .count { font-weight: 500; opacity: .85; }
