@@ -12,9 +12,10 @@ export function teamLabel(ids: readonly string[], names: Readonly<Record<string,
   return ids.map((id) => names[id] ?? id).join(" y ");
 }
 
-/** Las dos parejas de la mesa: primero la del asiento 0 (el jugador local), con su marcador compartido. */
-export function teamStandings(state: Pick<GameState, "mode" | "players" | "currentPlayerId">, names: Readonly<Record<string, string>>): readonly TeamStanding[] {
-  const first = state.players.find((p) => p.seat === 0)!; const second = state.players.find((p) => p.seat === 1)!;
+/** Las dos parejas de la mesa con su marcador compartido: primero la de `firstId` (por defecto, el asiento 0: el jugador local). */
+export function teamStandings(state: Pick<GameState, "mode" | "players" | "currentPlayerId">, names: Readonly<Record<string, string>>, firstId?: string): readonly TeamStanding[] {
+  const first = state.players.find((p) => firstId ? p.playerId === firstId : p.seat === 0) ?? state.players.find((p) => p.seat === 0)!;
+  const second = state.players.find((p) => p.seat === (first.seat + 1) % 4)!;
   return [first, second].map((anchor) => {
     const ids = teamOf(state, anchor.playerId);
     return { ids, label: teamLabel(ids, names), score: anchor.score, active: state.currentPlayerId !== null && ids.includes(state.currentPlayerId) };

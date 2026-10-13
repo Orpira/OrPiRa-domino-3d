@@ -1,3 +1,4 @@
+import type { GameMode } from "../../../packages/rules/src/index.ts";
 import type { CompetitionView, LeagueHistoryView, LeagueView, QuickPlayHistoryEntry, QuickPlayView, SimulatedConditions, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
 import { apiUrl } from "./api.ts";
 
@@ -36,7 +37,7 @@ export function competitionCommandUrl(code: string): string { return `/api/compe
 
 export const quickPlayApi = {
   view: (token: string, signal?: AbortSignal) => request<QuickPlayView>("/api/quick-play", { token, ...(signal ? { signal } : {}) }),
-  join: (token: string) => request<QuickPlayView>("/api/quick-play/join", { method: "POST", token, body: {} }),
+  join: (token: string, mode: GameMode = "INDIVIDUAL") => request<QuickPlayView>("/api/quick-play/join", { method: "POST", token, body: { mode } }),
   cancel: (token: string) => request<QuickPlayView>("/api/quick-play/cancel", { method: "POST", token, body: {} }),
   dismiss: (token: string) => request<QuickPlayView>("/api/quick-play/dismiss", { method: "POST", token, body: {} }),
   history: (token: string) => request<readonly QuickPlayHistoryEntry[]>("/api/quick-play/history", { token }),

@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
+import type { GameMode } from "../../../packages/rules/src/index.ts";
 import type { LeagueRankId, TestAccountView } from "../../../packages/protocol/src/index.ts";
 import { RANK_NAMES, rankPips } from "./league-presentation.ts";
 import { formatCop, SIMULATED_NOTICE } from "./competition-presentation.ts";
@@ -70,4 +71,12 @@ export function RankTile({ rank, size = "small", decorative = false }: { rank: L
     {PIPS[pips]!.map(([px, py], index) => <circle key={`t${index}`} cx={8 + px * 48} cy={6 + py * 48} r="5" fill="#16221f"/>)}
     {PIPS[pips]!.map(([px, py], index) => <circle key={`b${index}`} cx={8 + px * 48} cy={62 + py * 48} r="5" fill="#16221f"/>)}
   </svg>;
+}
+
+/** Individual a 100 o parejas a 200; el servidor fija la modalidad al crear la sala o la mesa. */
+export function ModeSwitch({ mode, onChange, label }: { mode: GameMode; onChange: (mode: GameMode) => void; label: string }) {
+  return <nav className="mode-switch variant-switch" aria-label={label}>
+    <button type="button" className={mode === "INDIVIDUAL" ? "current" : ""} aria-pressed={mode === "INDIVIDUAL"} onClick={() => onChange("INDIVIDUAL")}>Individual · a 100</button>
+    <button type="button" className={mode === "PAIRS" ? "current" : ""} aria-pressed={mode === "PAIRS"} onClick={() => onChange("PAIRS")}>Parejas · a 200</button>
+  </nav>;
 }

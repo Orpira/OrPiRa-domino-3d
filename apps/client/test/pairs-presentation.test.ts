@@ -14,6 +14,11 @@ describe("textos del modo parejas", () => {
     assert.deepEqual(teams.map((team) => team.label), ["Tú y Bruno", "Luna y Vera"]);
     assert.equal(teams.filter((team) => team.active).length, 1);
   });
+  it("online, la pareja del espectador va primero aunque no ocupe el asiento 0", () => {
+    const state = startMatch("m", PLAYERS, dealFor(1), { mode: "PAIRS" }).state; const online = { P0: "Ana", P1: "Beto", P2: "Cora", P3: "Dani" };
+    assert.deepEqual(teamStandings(state, online, "P3").map((team) => team.label), ["Beto y Dani", "Ana y Cora"]);
+    assert.deepEqual(teamStandings(state, online, "P2").map((team) => team.label), ["Ana y Cora", "Beto y Dani"]);
+  });
   it("dominada, tranque y empate", () => {
     const domino = pairsRoundText({ ...base, reason: "DOMINO", winnerId: "P0", winningTeam: ["P0", "P2"], scoreDeltas: { P0: 23, P2: 23, P1: 0, P3: 0 } }, names);
     assert.equal(domino.headline, "Tú y Bruno ganan la mano"); assert.match(domino.detail, /^Dominaste tú: \+23 puntos/);

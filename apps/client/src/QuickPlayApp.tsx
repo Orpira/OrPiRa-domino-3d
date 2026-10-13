@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { GameMode } from "../../../packages/rules/src/index.ts";
 import type { QuickPlayView } from "../../../packages/protocol/src/index.ts";
 import { CompetitionApiError, QUICK_PLAY_COMMANDS, quickPlayApi } from "./competition-api.ts";
 import { competitionErrorMessage } from "./competition-presentation.ts";
@@ -8,7 +9,7 @@ import { formatCountdown } from "./turn-clock-presentation.ts";
 import { useCommandChannel } from "./use-command-channel.ts";
 import { useReducedMotion } from "./use-reduced-motion.ts";
 import type { TestAccount } from "./use-test-account.ts";
-import { DominoArt, IdentityForm, RankTile, StateCard } from "./ui.tsx";
+import { DominoArt, IdentityForm, ModeSwitch, RankTile, StateCard } from "./ui.tsx";
 import { awardBreakdown, RANK_NAMES } from "./league-presentation.ts";
 import type { QuickPlayMatchView } from "../../../packages/protocol/src/index.ts";
 
@@ -27,7 +28,7 @@ function FreePlayNote() { return <p className="muted free-note">Sin entrada, sin
 function QuickPlaySession({ token, identityId, onHome }: { token: string; identityId: string; onHome: () => void }) {
   const [view, setView] = useState<QuickPlayView | null>(null); const [connection, setConnection] = useState<Connection>("CONNECTING");
   const [error, setError] = useState(""); const [busy, setBusy] = useState(false); const [now, setNow] = useState(() => Date.now()); const [received, setReceived] = useState(() => Date.now());
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useReducedMotion(); const [mode, setMode] = useState<GameMode>("INDIVIDUAL");
   const accept = useCallback((next: QuickPlayView) => { setView(next); setReceived(Date.now()); setConnection("CONNECTED"); }, []);
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try { accept(await quickPlayApi.view(token, signal)); }
@@ -54,8 +55,8 @@ function QuickPlaySession({ token, identityId, onHome }: { token: string; identi
   if (match) {
     const names = Object.fromEntries(match.seats.map((seat) => [seat.playerId, seat.displayName]));
     const bots = match.seats.filter((seat) => seat.bot).length;
-    const context = <p className="quick-strip"><span>Práctica gratuita · sin saldo</span>{bots > 0 && <span>{bots} {bots === 1 ? "bot" : "bots"} del servidor en la mesa</span>}</p>;
-    const finaleActions = <div className="finale-actions"><button className="primary" disabled={busy} onClick={() => void run(() => quickPlayApi.join(token))}>{busy ? "Buscando…" : "Jugar otra"}</button>
+    const context = <p className="quick-strip"><span>Práctica gratuita · sin saldo{match.mode === "PAIRS" ? " · parejas" : ""}</span>{bots > 0 && <span>{bots} {bots === 1 ? "bot" : "bots"} del servidor en la mesa</span>}</p>;
+    const finaleActions = <div className="finale-actions"><button className="primary" disabled={busy} onClick={() => void run(() => quickPlayApi.join(token, match.mode))}>{busy ? "Buscando…" : match.mode === "PAIRS" ? "Jugar otra en parejas" : "Jugar otra"}</button>
       <button className="secondary" disabled={busy} onClick={() => void run(() => quickPlayApi.dismiss(token)).then(onHome)}>Volver al inicio</button></div>;
     const decorations = Object.fromEntries(Object.entries(match.ranks).map(([playerId, rank]) => [playerId, <RankTile key={playerId} rank={rank}/>]));
     return <main className="view online-shell quick-game">{connectionBadge}
@@ -69,7 +70,7 @@ function QuickPlaySession({ token, identityId, onHome }: { token: string; identi
     const elapsed = Math.max(0, now - received); const untilBots = Math.max(0, ticket.botsFillAt - (ticket.serverNow + elapsed));
     return <main className="view quick-view"><QuickHeader/>{connectionBadge}
       <section className="panel searching" aria-live="polite"><div className="search-pulse" aria-hidden="true"><DominoArt/></div>
-        <h2>Buscando jugadores…</h2><p className="progress-head"><span>Jugadores encontrados</span><strong>{ticket.waiting.length} de 4</strong></p>
+        <h2>{ticket.mode === "PAIRS" ? "Buscando jugadores para parejas…" : "Buscando jugadores…"}</h2><p className="progress-head"><span>Jugadores encontrados</span><strong>{ticket.waiting.length} de 4</strong></p>
         <ul className="member-list">{Array.from({ length: 4 }, (_, index) => { const name = ticket.waiting[index];
           return <li key={index}><span className={`presence ${name ? "online" : "empty"}`} aria-hidden="true"/><div><strong>{name ?? "Buscando…"}</strong><small>{name ? (index === (ticket.position - 1) % 4 ? "Tú" : "En espera") : "Plaza libre"}</small></div></li>; })}</ul>
         <p className="muted">{untilBots > 0 ? `Si faltan jugadores, completamos la mesa con bots en ${formatCountdown(untilBots)}.` : "Completando la mesa con bots…"}</p>
@@ -78,9 +79,10 @@ function QuickPlaySession({ token, identityId, onHome }: { token: string; identi
   }
 
   return <main className="view quick-view"><QuickHeader/>{connectionBadge}
-    <section className="panel quick-start"><DominoArt variant="trio"/><h2>Partida rápida a 100 puntos</h2>
-      <p className="muted">Te emparejamos por orden de llegada con otras tres personas. Cada turno tiene un tiempo límite; si se agota, el servidor juega por ti.</p>
-      <button className="primary wide" disabled={busy} onClick={() => void run(() => quickPlayApi.join(token))}>{busy ? "Entrando en la cola…" : "Buscar partida"} <span aria-hidden="true">›</span></button>
+    <section className="panel quick-start"><DominoArt variant="trio"/><h2>{mode === "PAIRS" ? "Partida rápida por parejas a 200 puntos" : "Partida rápida a 100 puntos"}</h2>
+      <ModeSwitch mode={mode} onChange={setMode} label="Modalidad de la partida"/>
+      <p className="muted">{mode === "PAIRS" ? "Te emparejamos por orden de llegada con otras tres personas; juegas con quien se sienta enfrente. " : "Te emparejamos por orden de llegada con otras tres personas. "}Cada turno tiene un tiempo límite; si se agota, el servidor juega por ti.</p>
+      <button className="primary wide" disabled={busy} onClick={() => void run(() => quickPlayApi.join(token, mode))}>{busy ? "Entrando en la cola…" : "Buscar partida"} <span aria-hidden="true">›</span></button>
       {error && <p className="field-error" role="alert">{error}</p>}</section><FreePlayNote/></main>;
 }
 

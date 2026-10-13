@@ -13,9 +13,9 @@ export function HomeView({ account, conditions, onQuickPlay, onPractice, onOnlin
   return <main className="view home-view">
     <header className="home-hero">
       <img className="brand-mark" src="/domino3d-orpira-brand.png" width="132" height="132" alt="Icono de Domino3D-OrPiRa: dos fichas, órbita dorada y símbolo π"/>
-      <div><h1 className="brand-title">Domino3D-<span>OrPiRa</span></h1><p className="lede">Dominó individual en mesa 3D. Cuatro jugadores, cada uno por su cuenta, compiten por llegar primero a <strong>100 puntos</strong>.</p></div>
+      <div><h1 className="brand-title">Domino3D-<span>OrPiRa</span></h1><p className="lede">Dominó en mesa 3D para cuatro jugadores: cada uno por su cuenta hasta <strong>100 puntos</strong> o por parejas hasta <strong>200</strong>.</p></div>
     </header>
-    <section className="rule-chips" aria-label="Reglas principales"><span>4 jugadores individuales</span><span>Objetivo 100 puntos</span><span>Dominada +20</span><span>Cierre +0</span><span>Abre el 6–6</span></section>
+    <section className="rule-chips" aria-label="Reglas principales"><span>Individual a 100</span><span>Parejas a 200</span><span>Dominada +20</span><span>Cierre +0</span><span>Abre el 6–6</span></section>
     <section className="quick-hero" aria-labelledby="quick-title"><div><p className="chip">Práctica gratuita</p><h2 id="quick-title">Jugar ahora</h2><p>Te sentamos en una mesa pública con otras tres personas. Sin entrada, sin saldo y sin premio; si faltan jugadores, completan bots del servidor identificados como «Bot».</p></div>
       <button className="primary quick-cta" onClick={onQuickPlay}>Jugar ahora <span aria-hidden="true">›</span></button></section>
     <p className="section-label">Más formas de jugar</p>

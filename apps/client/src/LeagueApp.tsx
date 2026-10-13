@@ -46,6 +46,7 @@ export function LeagueApp({ account, onQuickPlay, onAccount }: { account: TestAc
     <section className="panel league-rules"><h2>Cómo se puntúa</h2><ul>
       <li>Solo puntúan las partidas terminadas de «Jugar ahora». Las salas privadas y la Competición de prueba no dan puntos.</li>
       <li>Por posición final: {view.positionPoints.map((points, index) => `${index + 1}.º ${points}`).join(" · ")}. Los empates comparten la mejor posición.</li>
+      <li>En parejas los compañeros comparten marcador: cada ganador queda 1.º y cada perdedor 3.º.</li>
       <li>Se multiplica por los humanos en la mesa entre 4, redondeando hacia abajo. Terminar en modo automático da 0.</li>
       <li>Cada mes empieza una temporada nueva con 0 puntos; el rango y la posición finales quedan en tu historial.</li>
       <li>Los puntos de liga no son COP simulados, no tienen valor y no se canjean.</li></ul></section>
