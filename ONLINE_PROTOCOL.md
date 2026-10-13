@@ -9,6 +9,10 @@ usan `POST /api/lobbies/:code/join`. Los asientos P0–P3 se asignan en orden de
 entrada y la partida comienza automáticamente al entrar el cuarto jugador. El código
 solo localiza la sala: consultar o jugar siempre exige además el `sessionId` secreto.
 
+Modalidad: `POST /api/lobbies` acepta `{ "name", "mode": "INDIVIDUAL" | "PAIRS" }`
+(por defecto individual). En parejas, P0 y P2 juegan contra P1 y P3 hasta 200. La vista
+de sala incluye `mode`; las salas guardadas antes no lo tienen y son individuales.
+
 ## Autoridad y privacidad
 
 `AuthoritativeRoom` conserva el único `GameState` completo. Cada `sessionId` está

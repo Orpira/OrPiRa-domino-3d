@@ -71,6 +71,15 @@ servidor, que sigue siendo el de `v1.5-rc1` (`2240f70`). `main` ya incluye toda 
 - Corregido de paso (también en individual): con solo el 6–6 en mesa las zonas táctiles de los dos extremos se solapaban; ahora se separan.
 - Pendiente (segunda fase): parejas en online (Jugar ahora, salas, competición) y liga; bots que tengan en cuenta al compañero.
 
+## Parejas online y en la liga (14 oct 2026, rama `feature/pairs-online`, sin desplegar)
+
+- Servidor: `AuthoritativeRoom` acepta `mode` y lo conserva al restaurar; salas con código por parejas (`POST /api/lobbies` con `mode`); «Jugar ahora» con una cola por modalidad y bots por orden de llegada; el historial guarda `mode`. Sin cambios en el motor, el reloj de turno ni la competición, que sigue siendo individual.
+- Liga: la fórmula no cambia; en parejas da 40 a cada ganador y 10 a cada perdedor (× humanos/4). Decisión del propietario.
+- Cliente: selector «Individual · a 100 / Parejas · a 200» en «Jugar ahora» y en la sala con código; marcador por pareja con la del espectador primero; resultado de mano y final por pareja.
+- Defecto encontrado en la QA y corregido: la mesa online se caía al empezar la segunda mano de parejas, porque la vista 3D esperaba el 6–6 como ficha de salida.
+- QA local (servidor en 8788 con reloj rápido, Chrome a 384 px): partida de «Jugar ahora» por parejas con 3 bots hasta el final, sin errores; sala con código de cuatro personas en la que cada una ve primero a su pareja; ancho 0 px de desbordamiento. Suite: 141 pruebas aprobadas.
+- Despliegue: requiere nueva imagen del API en el VPS (plan y aprobación aparte) y Vercel al fusionar en `main`. El cliente nuevo habla con el API 1.5-rc1 sin romperse, pero sin parejas online hasta desplegar el servidor; los clientes anteriores siguen funcionando con el API nuevo.
+
 ## Implementado
 
 - Motor TypeScript puro en `packages/rules`.

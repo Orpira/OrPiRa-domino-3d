@@ -17,6 +17,9 @@ recompensas.
 | 3.º | 10 | 10 | 7 | 5 | 2 |
 | 4.º | 4 | 4 | 3 | 2 | 1 |
 
+- Parejas (decisión del propietario, 14 oct 2026): la fórmula no cambia. Los dos
+  compañeros comparten marcador, así que empatan: cada ganador queda 1.º (40) y cada
+  perdedor 3.º (10), con el mismo × humanos/4 y el mismo 0 en modo automático.
 - Un asiento que termina en modo automático recibe 0 (cuenta como partida jugada).
 - Los bots ocupan posiciones en la mesa, pero no reciben puntos ni aparecen en la
   clasificación.

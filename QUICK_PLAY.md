@@ -18,13 +18,20 @@ premio. No es la Competición de prueba y nunca la alimenta.
   mueve saldo.
 - Los bots y los asientos en modo automático usan el mismo jugador automático y el
   mismo reloj de turno descritos en `COMPETITION_CONTRACT.md`.
+- Dos modalidades con colas separadas: individual a 100 (por defecto) y parejas a 200
+  (`{ "mode": "PAIRS" }` al entrar). Nunca se mezclan: cada cola forma sus mesas y
+  cuenta su propia espera de 45 s. Quien ya está en una cola sigue en ella aunque pida
+  la otra modalidad; para cambiar, cancela y vuelve a buscar.
+- En parejas los asientos también van por orden de llegada: 0 y 2 contra 1 y 3. Con dos
+  humanos y dos bots, los humanos quedan en parejas contrarias, cada uno con un bot de
+  compañero (decisión del propietario, 14 oct 2026).
 - Nunca hay bots en Competición de prueba: sus salas solo arrancan con cuatro
   identidades que aceptan y reservan, y una sala incompleta caduca sin rellenarse.
 
 ## Historial
 
 Cada partida pública terminada se guarda en `.data/quick-play.json` con identificador,
-inicio, fin, campeón y participantes (nombre, asiento, bot, puntuación final y si terminó
+modalidad (`mode`; ausente en las anteriores a las parejas = individual), inicio, fin, campeón y participantes (nombre, asiento, bot, puntuación final y si terminó
 en modo automático). Ese historial alimenta la liga (`LEAGUE.md`).
 
 ## HTTP (Bearer con el token de la identidad de prueba)
@@ -32,7 +39,7 @@ en modo automático). Ese historial alimenta la liga (`LEAGUE.md`).
 | Ruta | Uso |
 | --- | --- |
 | `GET /api/quick-play` | Ticket en cola y/o partida actual o último resultado no cerrado |
-| `POST /api/quick-play/join` | Entrar en la cola («Buscar partida», «Jugar otra») |
+| `POST /api/quick-play/join` | Entrar en la cola («Buscar partida», «Jugar otra»); cuerpo opcional `{ "mode": "INDIVIDUAL" \| "PAIRS" }`, sin cuerpo = individual |
 | `POST /api/quick-play/cancel` | Salir de la cola |
 | `POST /api/quick-play/dismiss` | Cerrar el resultado mostrado |
 | `POST /api/quick-play/commands` | Sobre de comandos idempotente (incluye `RESUME_CONTROL`) |
