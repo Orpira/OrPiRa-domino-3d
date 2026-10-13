@@ -1,7 +1,7 @@
 # Estado actual
 
-Fecha: 13 de octubre de 2026. **Versión en producción: API 1.5-rc1, web `main` (`b893b38`) y APK 1.5-rc3.**
-El 12 oct 2026 `main` avanzó de `f0dddf1` a `81d4ae8` (toda la 1.5 y las fichas más grandes) por decisión del propietario, antes de la prueba con cuatro dispositivos, y después, desde Claude web, hasta `b893b38`: sonidos, confeti más lento, arrastre de fichas desde la mano, manos ilustradas y brillo en el extremo jugable. Vercel publica `main` automáticamente; el 13 oct se comprobó que producción sirve el mismo build que `b893b38` (`index-CxWYywkZ.js`). Ninguno de estos cambios toca el servidor (idéntico a `v1.5-rc1`), así que el VPS no necesita actualizarse. La APK instalada (1.5-rc3, `versionCode` 8) **no** incluye estas novedades: hace falta una APK nueva. Suite local tras sincronizar: 120 pruebas aprobadas, TypeScript y build correctos.
+Fecha: 14 de octubre de 2026. **Versión en producción: API 1.5-rc1, web `main` y APK 1.6-rc1 (instalada en el Samsung; la etiqueta `v1.6-rc1` falta publicarla con push).**
+El 12 oct 2026 `main` avanzó de `f0dddf1` a `81d4ae8` (toda la 1.5 y las fichas más grandes) por decisión del propietario, antes de la prueba con cuatro dispositivos, y después, desde Claude web, hasta `b893b38`: sonidos, confeti más lento, arrastre de fichas desde la mano, manos ilustradas y brillo en el extremo jugable. Vercel publica `main` automáticamente; el 13 oct se comprobó que producción sirve el mismo build que `b893b38` (`index-CxWYywkZ.js`). Ninguno de estos cambios toca el servidor (idéntico a `v1.5-rc1`), así que el VPS no necesita actualizarse. Después llegó el modo en parejas de la práctica local (`57ed999`). La APK 1.6-rc1 (`versionCode` 9) ya incluye todas estas novedades. Suite local tras sincronizar: 120 pruebas aprobadas, TypeScript y build correctos.
 
 `v1.5-rc2` (`ec52fd4`) corrige el ancho en pantallas estrechas y `v1.5-rc3` (`289ac4b`)
 oculta el aviso de modo automático cuando la partida ha terminado; ninguna cambia el
@@ -17,7 +17,13 @@ servidor, que sigue siendo el de `v1.5-rc1` (`2240f70`). `main` ya incluye toda 
   `https://orpira-domino-3d.vercel.app` (`index-B7WbB0e_.js`). Anteriores para volver
   atrás: `dpl_8Dax53PJda4DK4SVm9KuBbz3Txwd` (rc2), `dpl_H1oJq62k4s6i3RAh4MLC9sqFYGmV` (rc1) y
   `dpl_BQ9kn3vDir7wwwBBN9GpfRY57P4R` (`main`).
-- APK: 1.5-rc3 (`versionCode` 8), `artifacts/domino3d-orpira-1.5-rc3-debug.apk`, SHA-256
+- APK: 1.6-rc1 (`versionCode` 9, `78b5e74`), `artifacts/domino3d-orpira-1.6-rc1-debug.apk`, SHA-256
+  `0b1d5724fe8426cc35aa7f9af872db597e940e4db2f8092da13931c51729ac2c`, misma firma debug.
+  El 14 oct 2026 se instaló en el Samsung SM-A165F con `adb install -r` y se comprobó en el dispositivo:
+  ancho 384/384 px en Inicio y en la práctica; la práctica «Parejas · a 200» muestra los marcadores
+  «Tú y Bruno» y «Luna y Vera». Se arrastró el 6-6 desde la mano a la mesa 3D y los tres bots
+  jugaron hasta devolver el turno. El sonido no se ha verificado: el teléfono estaba en silencio.
+- APK anterior: 1.5-rc3 (`versionCode` 8), `artifacts/domino3d-orpira-1.5-rc3-debug.apk`, SHA-256
   `a53f4c789488471a1ce2d30a043ff97c0cb6cae14dacef7059b4d10dff000e24`, instalada en el
   Samsung SM-A165F. Verificado en el dispositivo sobre una partida terminada: sin aviso de
   modo automático ni «Retomar el control», y ancho 384/384 px. La 1.5-rc2 (`versionCode` 7)
