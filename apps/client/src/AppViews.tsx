@@ -7,7 +7,7 @@ import type { Conditions, TestAccount } from "./use-test-account.ts";
 import { BalanceSummary, DominoArt, IdentityForm, RankTile, SimulatedNotice, StateCard } from "./ui.tsx";
 import { useConfirm } from "./confirm-dialog.tsx";
 
-export const APP_VERSION = "1.7-rc1";
+export const APP_VERSION = "1.8-rc1";
 
 interface HomeProps { readonly account: TestAccount; readonly conditions: Conditions; readonly onQuickPlay: () => void; readonly onPractice: () => void; readonly onOnline: () => void; readonly onTables: () => void }
 export function HomeView({ account, conditions, onQuickPlay, onPractice, onOnline, onTables }: HomeProps) {
