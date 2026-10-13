@@ -90,6 +90,15 @@ describe("distribución serpenteante anclada en 6-6", () => {
     assert.ok(Math.abs(anchors.left.z) < 1e-9 && Math.abs(anchors.right.z) < 1e-9);
   });
 
+  it("con salida libre (parejas), la cadena se centra en la ficha de salida, a lo largo si no es doble", () => {
+    const chain = [tile("2-4", 2, 4), tile("4-5", 4, 5), tile("5-1", 5, 1)];
+    assert.throws(() => layoutDominoChain(chain, 1000, 420), /6-6/);
+    const layout = layoutDominoChain(chain, 1000, 420, "4-5" as TileId);
+    assert.equal(layout[1]!.x, 0); assert.equal(layout[1]!.z, 0); assert.equal(layout[1]!.rotation, 0);
+    assert.ok(layout[0]!.x < 0 && layout[2]!.x > 0);
+    const glows = endGlows(layout)!; assert.ok(glows.left.x < layout[0]!.x && glows.right.x > layout[2]!.x);
+  });
+
   it("el brillo se posa sobre el borde abierto de cada ficha extrema", () => {
     assert.equal(endGlows([]), null);
     const opening = endGlows(layoutDominoChain([tile("6-6", 6, 6)], 1000, 420))!;

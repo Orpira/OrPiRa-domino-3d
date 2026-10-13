@@ -35,9 +35,11 @@ export function soundCues(previous: SoundSnapshot | null, next: SoundSnapshot, v
   if (previous.phase === "ROUND_ACTIVE" && next.phase !== "ROUND_ACTIVE" && next.roundResult) {
     const result = next.roundResult;
     if (result.reason === "DOMINO" && added.length === 1 && isCapicua(previous, added[0]!)) cues.push("capicua");
-    const mine = (playerId: string | null) => playerId !== null && (viewerId === undefined || playerId === viewerId);
-    if (next.phase === "MATCH_ENDED" && next.matchResult) cues.push(mine(next.matchResult.championId) ? "matchWin" : "matchEnd");
-    else if (mine(result.winnerId)) cues.push(result.reason === "DOMINO" ? "roundWin" : "roundWinBlocked");
+    // En parejas, la victoria del compañero también suena como propia.
+    const mine = (playerId: string | null, team?: readonly string[]) => playerId !== null &&
+      (viewerId === undefined || (team ? team.includes(viewerId) : playerId === viewerId));
+    if (next.phase === "MATCH_ENDED" && next.matchResult) cues.push(mine(next.matchResult.championId, next.matchResult.championTeam) ? "matchWin" : "matchEnd");
+    else if (mine(result.winnerId, result.winningTeam)) cues.push(result.reason === "DOMINO" ? "roundWin" : "roundWinBlocked");
     else cues.push("roundEnd");
   }
   return cues;

@@ -36,6 +36,8 @@ interface SceneContext {
   view: CameraPose; cameraMotion: CameraMotion | null;
   /** Brillos de los destinos jugables y qué se muestra ahora (con el destino resaltado al arrastrar). */
   readonly glows: Record<DropSide, THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>>;
+  /** Ficha de salida: centro de la cadena (el 6–6 salvo salida libre en parejas). */
+  openingId: TileId;
   glowState: { readonly active: readonly DropSide[]; readonly hot: DropSide | null; readonly reduced: boolean };
 }
 
@@ -207,6 +209,18 @@ function projectAnchor(context: SceneContext, anchor: TablePoint): ScreenPoint {
   return { left: Math.max(marginX, Math.min(100 - marginX, (point.x + 1) * 50)), top: Math.max(marginY, Math.min(100 - marginY, (1 - point.y) * 50)) };
 }
 
+/** Distancia mínima (px) entre las zonas táctiles de los dos extremos: con solo un doble en mesa quedarían superpuestas. */
+const MIN_TARGET_GAP = 66;
+function separateEnds(context: SceneContext, left: ScreenPoint, right: ScreenPoint): ScreenEnds {
+  const toPx = (point: ScreenPoint) => ({ x: point.left / 100 * context.width, y: point.top / 100 * context.height });
+  const a = toPx(left); const b = toPx(right); let dx = b.x - a.x; let dy = b.y - a.y; const distance = Math.hypot(dx, dy);
+  if (distance >= MIN_TARGET_GAP) return { left, right };
+  if (distance < 1) { dx = 1; dy = 0; } else { dx /= distance; dy /= distance; }
+  const middle = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; const half = MIN_TARGET_GAP / 2;
+  const back = (x: number, y: number): ScreenPoint => ({ left: x / context.width * 100, top: y / context.height * 100 });
+  return { left: back(middle.x - dx * half, middle.y - dy * half), right: back(middle.x + dx * half, middle.y + dy * half) };
+}
+
 /** Punto, a la altura de la mano, por el que entra en la mesa una ficha jugada desde un asiento. */
 function seatEntry(camera: THREE.PerspectiveCamera, side: SeatSide, fallback: THREE.Vector3): THREE.Vector3 {
   const [x, y] = SEAT_ENTRY[side]; const ray = new THREE.Raycaster(); ray.setFromCamera(new THREE.Vector2(x, y), camera);
@@ -229,7 +243,7 @@ function dropMotion(context: SceneContext, id: TileId) { context.motions.get(id)
 
 function syncChain(context: SceneContext, chain: readonly OrientedTile[], reducedMotion: boolean, animateChange: boolean, setEnds: (ends: ScreenEnds | null) => void,
   originOf: (playedBy: string) => SeatSide = () => "BOTTOM", dropNdcOf: (tileId: TileId) => THREE.Vector2 | null = () => null) {
-  const placements = layoutDominoChain(chain, context.width, context.height); const ids = new Set(chain.map((tile) => tile.id));
+  const placements = layoutDominoChain(chain, context.width, context.height, context.openingId); const ids = new Set(chain.map((tile) => tile.id));
   for (const [id, visual] of context.visuals) if (!ids.has(id)) {
     context.scene.remove(visual.mesh); context.visuals.delete(id); dropMotion(context, id); disposeVisual(visual);
   }
@@ -281,14 +295,14 @@ function syncChain(context: SceneContext, chain: readonly OrientedTile[], reduce
   };
   if (glows) { lay("LEFT", glows.left, TILE_WIDTH * 1.5, TILE_WIDTH * 2); lay("RIGHT", glows.right, TILE_WIDTH * 1.5, TILE_WIDTH * 2); }
   lay("CENTER", { x: 0, z: 0, rotation: 0, scale: placements[0]?.scale ?? .7 }, TILE_LENGTH * 2.2, TILE_LENGTH * 2.2);
-  setEnds(glows ? { left: projectAnchor(context, glows.left), right: projectAnchor(context, glows.right) } : null);
+  setEnds(glows ? separateEnds(context, projectAnchor(context, glows.left), projectAnchor(context, glows.right)) : null);
   const moved = previous.target.distanceTo(next.target) > 1e-3 || Math.abs(previous.distance - next.distance) > 1e-3;
   if (animateCamera && moved) { context.cameraMotion = { from: previous, to: next, started: performance.now(), duration: 520 }; applyPose(context.camera, previous); }
   else { context.cameraMotion = null; context.view = next; }
   if (context.motions.size || context.cameraMotion || context.glowState.active.length) renderMotion(context); else context.renderer.render(context.scene, context.camera);
 }
 
-export function Table3D({ chain, reducedMotion, targets, players, viewerId, locatorRef, dropOrigin }: {
+export function Table3D({ chain, reducedMotion, targets, players, viewerId, locatorRef, dropOrigin, openingHint, openingId }: {
   chain: readonly OrientedTile[]; reducedMotion: boolean; targets?: PlacementTargets | undefined;
   /** Jugadores con su asiento y jugador local: deciden desde qué lado llega cada ficha. */
   players?: readonly Player[] | undefined; viewerId?: string | undefined;
@@ -296,7 +310,12 @@ export function Table3D({ chain, reducedMotion, targets, players, viewerId, loca
   locatorRef?: { current: DropLocator | null } | undefined;
   /** Último punto en que el jugador soltó una ficha. */
   dropOrigin?: DropOrigin | undefined;
+  /** Texto con la mesa vacía (p. ej. «Sale Bruno» en parejas desde la segunda mano). */
+  openingHint?: string | undefined;
+  /** Ficha con la que se salió si no fue el 6–6 (parejas desde la segunda mano). */
+  openingId?: TileId | undefined;
 }) {
+  const openingRef = useRef<TileId>("6-6"); openingRef.current = openingId ?? "6-6";
   const host = useRef<HTMLDivElement>(null); const sceneRef = useRef<SceneContext | null>(null);
   const originRef = useRef<(playedBy: string) => SeatSide>(() => "BOTTOM");
   originRef.current = (playedBy) => seatSide(players ?? [], viewerId, playedBy);
@@ -336,12 +355,12 @@ export function Table3D({ chain, reducedMotion, targets, players, viewerId, loca
     const overlay = document.createElement("div"); overlay.className = "table-hands"; element.appendChild(overlay);
     const halo = glowTexture(); const glows = { LEFT: createGlow(halo), RIGHT: createGlow(halo), CENTER: createGlow(halo) };
     Object.values(glows).forEach((mesh) => scene.add(mesh));
-    const context: SceneContext = { scene, camera, renderer, visuals: new Map(), motions: new Map(), overlay, frame: 0, glows, glowState: { active: [], hot: null, reduced: false }, width: 1, height: 1, initialized: false, view: OVERVIEW, cameraMotion: null };
+    const context: SceneContext = { scene, camera, renderer, visuals: new Map(), motions: new Map(), overlay, frame: 0, glows, glowState: { active: [], hot: null, reduced: false }, openingId: openingRef.current, width: 1, height: 1, initialized: false, view: OVERVIEW, cameraMotion: null };
     sceneRef.current = context;
     const resize = () => {
       context.width = Math.max(element.clientWidth, 1); context.height = Math.max(element.clientHeight, 1); renderer.setSize(context.width, context.height, false);
       camera.aspect = context.width / context.height; camera.fov = camera.aspect < 1.25 ? 46 : camera.aspect < 1.65 ? 42 : 36; camera.updateProjectionMatrix();
-      syncChain(context, chainRef.current, reducedRef.current, false, setEnds);
+      context.openingId = openingRef.current; syncChain(context, chainRef.current, reducedRef.current, false, setEnds);
     };
     const observer = new ResizeObserver(resize); observer.observe(element); resize();
     return () => {
@@ -351,7 +370,7 @@ export function Table3D({ chain, reducedMotion, targets, players, viewerId, loca
       renderer.dispose(); renderer.domElement.remove(); overlay.remove(); sceneRef.current = null;
     };
   }, []);
-  useEffect(() => { const context = sceneRef.current; if (context) syncChain(context, chain, reducedMotion, true, setEnds, originRef.current, dropNdcRef.current); }, [chain, reducedMotion]);
+  useEffect(() => { const context = sceneRef.current; if (!context) return; context.openingId = openingRef.current; syncChain(context, chain, reducedMotion, true, setEnds, originRef.current, dropNdcRef.current); }, [chain, reducedMotion]);
   const activeSides = (["LEFT", "RIGHT", "CENTER"] as const).filter((side) => targets?.[side === "LEFT" ? "left" : side === "RIGHT" ? "right" : "center"]);
   const activeKey = activeSides.join(","); const hot = targets?.hot ?? null;
   useEffect(() => {
@@ -363,7 +382,7 @@ export function Table3D({ chain, reducedMotion, targets, players, viewerId, loca
     <button key={side} type="button" className={`end-glow-hit ${side === "CENTER" ? "center" : ""}`}
       style={{ left: `${point.left}%`, top: `${point.top}%` }} disabled={targets?.disabled} aria-label={target.label} title={target.label} onClick={target.onPlace}/>;
   return <div className="three-stage" ref={host} aria-label={`Mesa 3D con ${chain.length} fichas`}>
-    {chain.length === 0 && !targets?.center && <p>El poseedor de 6–6 abre la ronda</p>}
+    {chain.length === 0 && !targets?.center && <p>{openingHint ?? "El poseedor de 6–6 abre la ronda"}</p>}
     {unsupported && <p>WebGL no disponible. Usa la descripción accesible de la cadena.</p>}
     {targets && (targets.left || targets.right || targets.center) && <div className="spatial-end-targets" aria-label="Elige dónde colocar la ficha">
       {targetButton("LEFT", targets.left, ends?.left)}{targetButton("RIGHT", targets.right, ends?.right)}{targetButton("CENTER", targets.center, { left: 50, top: 50 })}

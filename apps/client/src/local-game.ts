@@ -1,7 +1,7 @@
 import { chooseBotAction } from "../../../packages/bots/src/index.ts";
 import {
   DOUBLE_SIX_SET, getPlayerView, legalActions, nextRound, RULES_VERSION, shuffledDeal, startMatch, transition,
-  type Deal, type GameState, type LegalAction, type PlayerInput, type Side, type TileId,
+  type Deal, type GameMode, type GameState, type LegalAction, type PlayerInput, type Side, type TileId,
 } from "../../../packages/rules/src/index.ts";
 
 export const HUMAN_ID = "jugador";
@@ -31,9 +31,12 @@ export class LocalGame {
   private _state: GameState;
   private readonly dealFactory: DealFactory;
   readonly mode: LocalMode;
-  constructor(dealFactory: DealFactory = randomDeal, mode: LocalMode = "BOTS", restoredState?: GameState) {
+  /** Individual o parejas; una partida restaurada conserva el suyo. */
+  readonly variant: GameMode;
+  constructor(dealFactory: DealFactory = randomDeal, mode: LocalMode = "BOTS", restoredState?: GameState, variant: GameMode = "INDIVIDUAL") {
     this.dealFactory = dealFactory;
     this.mode = mode;
+    this.variant = restoredState?.mode ?? variant;
     if (restoredState && !isRestorableState(restoredState)) throw new Error("Checkpoint local inválido");
     this._state = restoredState ?? this.createMatch();
   }
@@ -45,7 +48,7 @@ export class LocalGame {
 
   private createMatch(): GameState {
     this.matchCounter += 1;
-    return startMatch(`local-${this.matchCounter}`, LOCAL_PLAYERS, this.dealFactory()).state;
+    return startMatch(`local-${this.matchCounter}`, LOCAL_PLAYERS, this.dealFactory(), { mode: this.variant }).state;
   }
   restart(): GameState { this._state = this.createMatch(); return this._state; }
   startNextRound(): GameState {
@@ -89,7 +92,12 @@ export function isRestorableState(state: GameState): boolean {
   if (!state || state.rulesVersion !== RULES_VERSION || state.players.length !== 4 || state.revision < 1) return false;
   if (new Set(state.players.map((p) => p.playerId)).size !== 4 ||
       !LOCAL_PLAYERS.every((p) => state.players.some((candidate) => candidate.playerId === p.playerId && candidate.seat === p.seat))) return false;
-  if (state.players.some((p) => p.score < 0 || p.score > 100 || p.score % 20 !== 0)) return false;
+  if (state.mode !== undefined && state.mode !== "PAIRS") return false;
+  if (state.mode === "PAIRS") {
+    // En parejas los compañeros (asientos 0–2 y 1–3) comparten marcador; una mano reparte como mucho los 168 puntos del juego.
+    const scoreOf = (seat: number) => state.players.find((p) => p.seat === seat)?.score ?? -1;
+    if (state.players.some((p) => !Number.isSafeInteger(p.score) || p.score < 0 || p.score > 200 + 168) || scoreOf(0) !== scoreOf(2) || scoreOf(1) !== scoreOf(3)) return false;
+  } else if (state.players.some((p) => p.score < 0 || p.score > 100 || p.score % 20 !== 0)) return false;
   if (!["ROUND_ACTIVE", "ROUND_ENDED", "MATCH_ENDED"].includes(state.phase) || state.consecutivePasses < 0 || state.consecutivePasses > 4) return false;
   const playerIds = new Set(state.players.map((player) => player.playerId));
   if (Object.keys(state.hands).length !== 4 || Object.keys(state.hands).some((id) => !playerIds.has(id))) return false;

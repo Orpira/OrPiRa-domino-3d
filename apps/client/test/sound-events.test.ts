@@ -43,4 +43,12 @@ describe("sonidos de la partida", () => {
     assert.deepEqual(soundCues(base, final("B"), "A"), ["matchEnd"]);
     assert.deepEqual(soundCues({ ...base, phase: "ROUND_ENDED" }, { ...base, roundNumber: 2, chain: [] }, "A"), ["shuffle"]);
   });
+  it("en parejas, la mano y la partida que gana el compañero suenan como propias", () => {
+    const ending = { ...base, chain: [tile(6, 6), tile(6, 3)] };
+    const partnerWins = { ...ending, phase: "ROUND_ENDED" as const, roundResult: { ...domino("B"), winningTeam: ["A", "B"] } };
+    assert.deepEqual(soundCues(base, partnerWins, "A").filter((cue) => cue.startsWith("round")), ["roundWin"]);
+    assert.deepEqual(soundCues(base, partnerWins, "C").filter((cue) => cue.startsWith("round")), ["roundEnd"]);
+    const match = { ...partnerWins, phase: "MATCH_ENDED" as const, matchResult: { championId: "B", finalScores: {}, championTeam: ["A", "B"] } };
+    assert.ok(soundCues(base, match, "A").includes("matchWin")); assert.ok(soundCues(base, match, "C").includes("matchEnd"));
+  });
 });

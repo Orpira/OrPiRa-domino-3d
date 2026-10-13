@@ -60,6 +60,13 @@ prueba con cuatro dispositivos. GitHub tiene las ramas `feature/interface-redesi
 - La lluvia de confeti del medallero cae más despacio (unos 8 s en total, antes 2 s) y se balancea de lado a lado.
 - Limitación conocida: con más de unas 20 fichas en un mismo brazo, el trazado compacto sobrepasa el borde dibujado de la mesa (las fichas siguen visibles).
 
+## Modo en parejas en la práctica local (13 oct 2026)
+
+- Motor (`packages/rules`): `startMatch(..., { mode: "PAIRS" })`. Compañeros enfrente (asientos 0–2 contra 1–3), partida a 200. Al dominar, la pareja ganadora suma los puntos de las cuatro manos; en tranque gana la pareja con menos puntos entre sus dos manos y se lleva todos; si empatan, nadie suma. La primera mano la abre el 6–6; desde la segunda sale quien dominó (o quien cerró el tranque) con la ficha que quiera (`freeOpening`, `openingTileId`). Sin bonificaciones (capicúa, pase corrido) por decisión de producto. El modo individual no cambia (sus estados no llevan `mode`).
+- Práctica local: selector «Individual · a 100 / Parejas · a 200» que combina con bots o relevo; marcador por pareja; resultados y medallero de pareja; en la salida libre brilla el centro de la mesa y la cadena se centra en la ficha de salida (a lo largo si no es doble). Los sonidos de victoria cuentan la del compañero como propia.
+- Corregido de paso (también en individual): con solo el 6–6 en mesa las zonas táctiles de los dos extremos se solapaban; ahora se separan.
+- Pendiente (segunda fase): parejas en online (Jugar ahora, salas, competición) y liga; bots que tengan en cuenta al compañero.
+
 ## Implementado
 
 - Motor TypeScript puro en `packages/rules`.

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { TILE_BY_ID, type GameState, type Side, type TileId } from "../../../packages/rules/src/index.ts";
+import { freeOpening, targetScore, TILE_BY_ID, type GameMode, type GameState, type Side, type TileId } from "../../../packages/rules/src/index.ts";
+import { championTeamText, openerText, pairsRoundText, teamStandings } from "./pairs-presentation.ts";
 import { HUMAN_ID, LocalGame, playerName, randomDeal, type LocalMode } from "./local-game.ts";
 import { loadSession, saveSession } from "./session-storage.ts";
 import { currentSelection, SubmissionGate, type PlacementSelection } from "./placement-interaction.ts";
@@ -75,18 +76,27 @@ export default function App() {
   const winnerName = roundResult?.winnerId ? playerName(roundResult.winnerId, mode) : null;
   const names = Object.fromEntries(state.players.map((player) => [player.playerId, playerName(player.playerId, mode)]));
   const championName = state.matchResult ? names[state.matchResult.championId] : null;
+  const pairs = game.variant === "PAIRS";
+  const pairsRound = pairs && roundResult ? pairsRoundText(roundResult, names) : null;
+  const champions = pairs && state.matchResult ? championTeamText(state.matchResult, names) : null;
+  const startedProgress = state.revision > 1 || state.players.some((player) => player.score > 0);
 
   const switchMode = (nextMode: LocalMode) => {
     if (nextMode === mode) return;
-    if ((state.revision > 1 || state.players.some((player) => player.score > 0)) &&
-        !window.confirm("Cambiar de modalidad inicia una partida nueva y sustituye el checkpoint actual. ¿Continuar?")) return;
-    const nextGame = new LocalGame(randomDeal, nextMode); gameRef.current = nextGame;
+    if (startedProgress && !window.confirm("Cambiar de modalidad inicia una partida nueva y sustituye el checkpoint actual. ¿Continuar?")) return;
+    const nextGame = new LocalGame(randomDeal, nextMode, undefined, game.variant); gameRef.current = nextGame;
     setMode(nextMode); update(nextGame.state, nextMode === "BOTS" ? "Nueva partida contra bots" : "Partida para cuatro personas", nextMode === "PASS_AND_PLAY");
+  };
+  const switchVariant = (variant: GameMode) => {
+    if (variant === game.variant) return;
+    if (startedProgress && !window.confirm("Cambiar entre individual y parejas inicia una partida nueva y sustituye el checkpoint actual. ¿Continuar?")) return;
+    const nextGame = new LocalGame(randomDeal, mode, undefined, variant); gameRef.current = nextGame;
+    update(nextGame.state, variant === "PAIRS" ? "Nueva partida en parejas, a 200" : "Nueva partida individual, a 100", mode === "PASS_AND_PLAY");
   };
   const afterHumanAction = (next: GameState, text: string) => update(next, text, mode === "PASS_AND_PLAY");
   const playTile = (tileId: TileId, side?: Side) => {
     if (botsBusy || handoff || !placementGate.current.tryLock()) return;
-    try { afterHumanAction(game.placeCurrent(tileId, side), state.chain.length === 0 ? "Apertura con 6–6" : "Ficha colocada"); }
+    try { afterHumanAction(game.placeCurrent(tileId, side), state.chain.length === 0 ? (freeOpening(state) ? "Salida" : "Apertura con 6–6") : "Ficha colocada"); }
     catch (error) { setMessage((error as Error).message); }
     finally { window.setTimeout(() => placementGate.current.release(), 0); }
   };
@@ -100,7 +110,7 @@ export default function App() {
   return <main>
     <header className="hero">
       <div><p className="eyebrow">OrPiRa · partida local 3D</p><h1>Dominó <em>Latino</em></h1></div>
-      <div className="target"><span>Objetivo</span><strong>100</strong></div>
+      <div className="target"><span>Objetivo</span><strong>{targetScore(state)}</strong></div>
     </header>
     <nav className="mode-switch" aria-label="Modalidad local">
       <button className={mode === "BOTS" ? "current" : ""} onClick={() => switchMode("BOTS")}>1 persona + 3 bots</button>
@@ -108,14 +118,23 @@ export default function App() {
       <button className="motion" onClick={() => setReducedMotion((value) => !value)}>{reducedMotion ? "Movimiento reducido" : "Movimiento suave"}</button>
       <SoundToggle/>
     </nav>
-    <section className="scoreboard" aria-label="Marcador">
+    <nav className="mode-switch variant-switch" aria-label="Forma de juego">
+      <button className={!pairs ? "current" : ""} aria-pressed={!pairs} onClick={() => switchVariant("INDIVIDUAL")}>Individual · a 100</button>
+      <button className={pairs ? "current" : ""} aria-pressed={pairs} onClick={() => switchVariant("PAIRS")}>Parejas · a 200</button>
+    </nav>
+    {pairs ? <section className="scoreboard pairs" aria-label="Marcador por parejas">
+      {teamStandings(state, names).map((team) => <div key={team.label} className={team.active ? "active-player" : ""}>
+        <span>{team.label}</span><strong>{team.score}</strong>
+        <small>{team.ids.map((id) => `${names[id]}: ${state.hands[id]!.length}`).join(" · ")} fichas</small>
+      </div>)}
+    </section> : <section className="scoreboard" aria-label="Marcador">
       {state.players.map((player) => <div key={player.playerId} className={state.currentPlayerId === player.playerId ? "active-player" : ""}>
         <span>{playerName(player.playerId, mode)}</span><strong>{player.score}</strong><small>{state.hands[player.playerId]!.length} fichas</small>
       </div>)}
-    </section>
+    </section>}
     <section className="table" aria-label="Mesa de dominó">
       <div className="table-status"><span>Ronda {state.roundNumber}</span><strong>{state.phase === "ROUND_ACTIVE" ? `Turno: ${playerName(activeId!, mode)}` : "Ronda terminada"}</strong><span>{state.leftEnd === null ? "Apertura pendiente" : `Extremos ${state.leftEnd} · ${state.rightEnd}`}</span></div>
-      <Suspense fallback={<div className="three-stage"><p>Preparando mesa 3D…</p></div>}><Table3D chain={state.chain} reducedMotion={reducedMotion} players={state.players} viewerId={mode === "BOTS" ? HUMAN_ID : undefined} targets={targets} locatorRef={drag.locatorRef} dropOrigin={drag.dropOrigin} /></Suspense>
+      <Suspense fallback={<div className="three-stage"><p>Preparando mesa 3D…</p></div>}><Table3D chain={state.chain} reducedMotion={reducedMotion} players={state.players} viewerId={mode === "BOTS" ? HUMAN_ID : undefined} targets={targets} locatorRef={drag.locatorRef} dropOrigin={drag.dropOrigin} openingId={state.openingTileId} openingHint={freeOpening(state) && state.currentPlayerId ? `${openerText(names[state.currentPlayerId]!)} con la ficha que quiera` : undefined} /></Suspense>
     </section>
     <p className="message" role="status">{botsBusy ? "El bot está pensando…" : message} <span className="saved">Guardado local automático</span></p>
     {state.phase === "ROUND_ACTIVE" && !handoff && visibleHandId && <section className="controls">
@@ -130,14 +149,16 @@ export default function App() {
     {drag.ghost}
     {state.phase === "MATCH_ENDED" && <MatchCelebration matchId={state.matchId} phase={state.phase} result={state.matchResult} reducedMotion={reducedMotion} storage={window.localStorage}/>}
     {state.phase !== "ROUND_ACTIVE" && roundResult && <section className={`result ${state.phase === "MATCH_ENDED" ? "match-finale" : ""}`} role="dialog" aria-label={state.phase === "MATCH_ENDED" ? "Resultado final de la partida" : "Resultado de ronda"}>
-      <p className="eyebrow">{roundResult.reason === "DOMINO" ? "Dominada" : "Cierre"}</p><h2>{winnerName ? `${winnerName} gana la ronda` : "Empate en el mínimo"}</h2>
-      <p>{roundResult.reason === "DOMINO" ? `${winnerName} suma 20 puntos.` : "El cierre no concede puntos."}</p>
+      <p className="eyebrow">{roundResult.reason === "DOMINO" ? "Dominada" : pairs ? "Tranque" : "Cierre"}</p><h2>{pairsRound ? pairsRound.headline : winnerName ? `${winnerName} gana la ronda` : "Empate en el mínimo"}</h2>
+      <p>{pairsRound ? pairsRound.detail : roundResult.reason === "DOMINO" ? `${winnerName} suma 20 puntos.` : "El cierre no concede puntos."}</p>
       <div className="totals">{state.players.map((player) => <span key={player.playerId}>{playerName(player.playerId, mode)}: {roundResult.handPipTotals[player.playerId]}</span>)}</div>
-      {state.phase === "ROUND_ENDED" ? <button className="primary" onClick={() => update(game.startNextRound(), "Nueva ronda: busca el 6–6", mode === "PASS_AND_PLAY")}>Siguiente ronda</button> : <><div className="champion-callout"><span className="champion-trophy" aria-hidden="true">🏆</span><strong>¡{championName} ganó la partida!</strong><span>{state.matchResult!.finalScores[state.matchResult!.championId]} puntos</span></div><p>Clasificación final</p><ol className="final-ranking">{finalRanking(state.players, names, state.matchResult!).map((player) => <li key={player.playerId}><span>{player.rank}.º · {player.name}{player.tied ? " · empate" : ""}</span><strong>{player.score} puntos</strong></li>)}</ol><button className="primary" onClick={restart}>Nueva partida</button></>}
+      {state.phase === "ROUND_ENDED" ? <button className="primary" onClick={() => { const next = game.startNextRound(); update(next, pairs ? `Nueva mano: ${openerText(names[next.currentPlayerId!]!).toLowerCase()}` : "Nueva ronda: busca el 6–6", mode === "PASS_AND_PLAY"); }}>{pairs ? "Siguiente mano" : "Siguiente ronda"}</button> : <><div className="champion-callout"><span className="champion-trophy" aria-hidden="true">🏆</span><strong>{champions ? `¡${champions.label} ganan la partida!` : `¡${championName} ganó la partida!`}</strong><span>{champions ? champions.score : state.matchResult!.finalScores[state.matchResult!.championId]} puntos</span></div><p>Clasificación final</p><ol className="final-ranking">{pairs
+        ? [...teamStandings(state, names)].sort((left, right) => right.score - left.score).map((team, index) => <li key={team.label}><span>{index + 1}.º · {team.label}</span><strong>{team.score} puntos</strong></li>)
+        : finalRanking(state.players, names, state.matchResult!).map((player) => <li key={player.playerId}><span>{player.rank}.º · {player.name}{player.tied ? " · empate" : ""}</span><strong>{player.score} puntos</strong></li>)}</ol><button className="primary" onClick={restart}>Nueva partida</button></>}
     </section>}
     {handoff && state.phase === "ROUND_ACTIVE" && <section className="handoff" role="dialog" aria-modal="true" aria-label="Relevo de jugador">
       <div><p className="eyebrow">Relevo privado</p><h2>Entrega el dispositivo a {playerName(activeId!, mode)}</h2><p>La mano anterior está oculta. Solo la siguiente persona debe continuar.</p><button autoFocus className="primary" onClick={() => setHandoff(false)}>Soy {playerName(activeId!, mode)} · mostrar mi mano</button></div>
     </section>}
-    <footer>4 jugadores · doble seis · sin pozo · turnos antihorarios</footer>
+    <footer>{pairs ? "2 parejas (compañero enfrente) · a 200 · se cuentan las 4 manos · sin pozo · turnos antihorarios" : "4 jugadores · doble seis · sin pozo · turnos antihorarios"}</footer>
   </main>;
 }

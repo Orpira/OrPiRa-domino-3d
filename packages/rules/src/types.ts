@@ -2,6 +2,8 @@ export const RULE_SET_ID = "latin-individual-double6-v1" as const;
 export const RULES_VERSION = "1.0" as const;
 
 export type Seat = 0 | 1 | 2 | 3;
+/** Individual: cada uno para sí, a 100. Parejas: asientos 0–2 contra 1–3, a 200, se cuentan las cuatro manos. */
+export type GameMode = "INDIVIDUAL" | "PAIRS";
 export type Side = "LEFT" | "RIGHT";
 export type Phase = "ROUND_ACTIVE" | "ROUND_ENDED" | "MATCH_ENDED";
 export type TileId = `${number}-${number}`;
@@ -15,10 +17,16 @@ export interface RoundResult {
   readonly tiedPlayerIds: readonly string[];
   readonly handPipTotals: Readonly<Record<string, number>>;
   readonly scoreDeltas: Readonly<Record<string, number>>;
+  /** Solo en parejas: los dos jugadores de la pareja que se lleva la mano (ausente si hay empate). */
+  readonly winningTeam?: readonly string[];
+  /** Solo en parejas: quien sale en la mano siguiente (quien dominó, o quien cerró el tranque). */
+  readonly nextOpenerId?: string;
 }
-export interface MatchResult { readonly championId: string; readonly finalScores: Readonly<Record<string, number>> }
+export interface MatchResult { readonly championId: string; readonly finalScores: Readonly<Record<string, number>>; readonly championTeam?: readonly string[] }
 export interface GameState {
   readonly rulesVersion: typeof RULES_VERSION;
+  /** Ausente en las partidas individuales (compatibilidad con estados ya guardados). */
+  readonly mode?: GameMode;
   readonly matchId: string;
   readonly roundId: string;
   readonly roundNumber: number;
@@ -30,6 +38,8 @@ export interface GameState {
   readonly leftEnd: number | null;
   readonly rightEnd: number | null;
   readonly openingPlayerId: string;
+  /** Solo con salida libre (parejas desde la 2.ª mano): la ficha con la que se salió, centro de la cadena en la mesa. */
+  readonly openingTileId?: TileId;
   readonly currentPlayerId: string | null;
   readonly consecutivePasses: number;
   readonly roundResult: RoundResult | null;

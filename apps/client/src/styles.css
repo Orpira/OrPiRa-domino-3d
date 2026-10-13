@@ -232,3 +232,6 @@ input:focus-visible { box-shadow: var(--focus); }
 .end-glow-hit.center { width: 96px; height: 96px; }
 .end-glow-hit:focus-visible { outline: 3px solid #ffe08a; outline-offset: 2px; }
 .end-glow-hit:disabled { cursor: wait; }
+/* Parejas: dos marcadores (uno por pareja) y selector de forma de juego. */
+.scoreboard.pairs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.variant-switch { margin-top: -6px; }

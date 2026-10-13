@@ -68,3 +68,33 @@ describe("partida local humano contra tres bots", () => {
     assert.equal(game.state.phase, "ROUND_ACTIVE");
   });
 });
+
+describe("Práctica local en parejas", () => {
+  const playBotsUntilRoundEnds = (game: LocalGame) => {
+    let guard = 200;
+    while (game.state.phase === "ROUND_ACTIVE" && guard-- > 0) {
+      if (game.isBotTurn) { game.playOneBotTurn(); continue; }
+      const action = game.humanActions[0]!;
+      if (action.type === "PASS") game.passHuman(); else game.placeHuman(action.tileId!, action.side);
+    }
+  };
+
+  test("crea la partida en parejas y una partida restaurada conserva su forma de juego", () => {
+    const game = new LocalGame(seededDeal(5), "BOTS", undefined, "PAIRS");
+    assert.equal(game.state.mode, "PAIRS"); assert.equal(game.variant, "PAIRS");
+    playBotsUntilRoundEnds(game);
+    const restored = new LocalGame(seededDeal(6), "BOTS", structuredClone(game.state) as GameState);
+    assert.equal(restored.variant, "PAIRS");
+    const next = restored.startNextRound();
+    assert.equal(next.currentPlayerId, game.state.roundResult!.nextOpenerId, "sale quien ganó o cerró la mano");
+    assert.equal(restored.restart().mode, "PAIRS", "una partida nueva sigue en parejas");
+  });
+
+  test("rechaza un guardado de parejas con compañeros de marcador distinto", () => {
+    const game = new LocalGame(seededDeal(5), "BOTS", undefined, "PAIRS");
+    const broken = { ...game.state, players: game.state.players.map((p) => p.seat === 0 ? { ...p, score: 30 } : p) } as GameState;
+    assert.throws(() => new LocalGame(seededDeal(5), "BOTS", broken), /Checkpoint local inválido/);
+    const individual = new LocalGame(seededDeal(5));
+    assert.equal(individual.variant, "INDIVIDUAL"); assert.equal("mode" in individual.state, false);
+  });
+});

@@ -127,15 +127,19 @@ export function frameBounds(placements: readonly ChainPlacement[]): TableBounds 
   return { minX: centerX - halfWidth, maxX: centerX + halfWidth, minZ: centerZ - halfDepth, maxZ: centerZ + halfDepth };
 }
 
-export function layoutDominoChain(chain: readonly OrientedTile[], width: number, height: number): readonly ChainPlacement[] {
+/**
+ * `openingId` es la ficha con la que se salió (el 6–6, salvo en parejas desde la segunda mano): queda en el centro
+ * y los dos brazos crecen desde ella. Un doble de salida se pone cruzado; cualquier otra ficha, a lo largo.
+ */
+export function layoutDominoChain(chain: readonly OrientedTile[], width: number, height: number, openingId: TileId = "6-6"): readonly ChainPlacement[] {
   if (chain.length > MAX_CHAIN_TILES) throw new Error(`La cadena excede ${MAX_CHAIN_TILES} fichas`);
   if (chain.length === 0) return [];
-  const openingIndex = chain.findIndex((tile) => tile.id === "6-6");
-  if (openingIndex < 0) throw new Error("La cadena no contiene el 6-6 de apertura");
+  const openingIndex = chain.findIndex((tile) => tile.id === openingId);
+  if (openingIndex < 0) throw new Error(`La cadena no contiene la ficha de salida ${openingId}`);
   const leftSlots = armSlots(width, height, "LEFT"); const rightSlots = armSlots(width, height, "RIGHT");
   const scale = leftSlots[0]!.scale;
   return chain.map((tile, index) => {
-    if (index === openingIndex) return { id: tile.id, x: 0, z: 0, tangent: 0, rotation: Math.PI / 2, scale, distanceFromOpening: 0 };
+    if (index === openingIndex) return { id: tile.id, x: 0, z: 0, tangent: 0, rotation: tile.left === tile.right ? Math.PI / 2 : 0, scale, distanceFromOpening: 0 };
     const isLeft = index < openingIndex;
     const distanceFromOpening = isLeft ? openingIndex - index : index - openingIndex;
     const outward = (isLeft ? leftSlots : rightSlots)[distanceFromOpening - 1]!;
