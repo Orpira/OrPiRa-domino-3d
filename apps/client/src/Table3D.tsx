@@ -124,7 +124,7 @@ function createHand(context: SceneContext): HTMLElement {
 
 /**
  * Coloca la mano sobre la ficha tal como se ve en pantalla: alineada con su eje largo, sujetándola por el extremo
- * más cercano al asiento de quien juega. Al final abre la mano y se retira hacia ese asiento.
+ * más cercano al asiento de quien juega. Al soltar, la mano se eleva (crece un poco) y se retira hacia ese asiento.
  */
 function placeHand(context: SceneContext, motion: Motion, progress: number) {
   const hand = motion.hand; if (!hand) return;
@@ -140,7 +140,7 @@ function placeHand(context: SceneContext, motion: Motion, progress: number) {
   const release = Math.max(0, (progress - hand.releaseAt) / (1 - hand.releaseAt)); const away = release * widthPx * 2.2;
   const x = cx - ux * away; const y = cy - uy * away; const anchorY = HAND_TILE_EDGE - lengthPx / 2 / unit;
   hand.element.style.width = `${200 * unit}px`;
-  hand.element.style.transform = `translate(${x}px, ${y}px) rotate(${turn}deg) translate(${-100 * unit}px, ${-anchorY * unit}px)`;
+  hand.element.style.transform = `translate(${x}px, ${y}px) rotate(${turn}deg) scale(${1 + release * .18}) translate(${-100 * unit}px, ${-anchorY * unit}px)`;
   hand.element.style.opacity = String(1 - release);
 }
 

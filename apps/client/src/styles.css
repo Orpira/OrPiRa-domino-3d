@@ -217,12 +217,12 @@ input:focus-visible { box-shadow: var(--focus); }
 .end-target.spatial.center { font-size: 1rem; }
 @media (prefers-reduced-motion: reduce) { .drag-ghost, .drag-ghost.returning, .end-target.spatial { transition: none; } }
 /* Mano ilustrada que sujeta la ficha (hand-art.ts): 100 unidades = ancho de la ficha. */
-.grip-hand { position: absolute; left: -50%; top: 55%; width: 200%; height: auto; overflow: visible; pointer-events: none; filter: drop-shadow(0 6px 6px #00120f73); }
+.grip-hand { position: absolute; left: -50%; top: 55%; width: 200%; height: auto; overflow: visible; pointer-events: none; filter: drop-shadow(3px 9px 6px #00120f80); }
 .hand .tile.pips { position: relative; }
 .hand { overflow-y: hidden; }
 .grip-select { animation: grip-in .26s cubic-bezier(.2, .9, .3, 1.15) both; }
 @keyframes grip-in { from { opacity: 0; transform: translateY(45%); } }
-.drag-ghost.placing .grip-hand { transform: translate(-10%, 40%) rotate(-6deg); transition: transform .2s ease-out; }
+.drag-ghost.placing .grip-hand { transform: translateY(28%) scale(1.12); transition: transform .2s ease-out; }
 .table-hands { position: absolute; z-index: 3; inset: 0; overflow: hidden; pointer-events: none; }
 .table-hand { position: absolute; left: 0; top: 0; transform-origin: 0 0; opacity: 0; will-change: transform, opacity; }
 .table-hand svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 10px 10px #00120f80); }
