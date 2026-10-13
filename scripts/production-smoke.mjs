@@ -1,8 +1,8 @@
 // Comprobaciones posteriores al despliegue (DEPLOY_PLAN.md). Uso:
-//   node scripts/production-smoke.mjs https://api-domino.orpira.es [--rate-limit]
-// Crea una identidad de prueba «QA MM-DD HH:MM» y juega una partida pública con bots.
+//   node scripts/production-smoke.mjs https://api-domino.orpira.es [--rate-limit | --pairs]
+// Crea una identidad de prueba «QA MM-DD HH:MM» y juega una partida pública con bots (con --pairs, por parejas a 200).
 const base = (process.argv[2] ?? "").replace(/\/+$/, ""); if (!base) { console.error("Falta la URL base"); process.exit(2); }
-const rateLimit = process.argv.includes("--rate-limit"); const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const rateLimit = process.argv.includes("--rate-limit"); const pairs = process.argv.includes("--pairs"); const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const expected = { currencyLabel: "COP simulados · sin valor monetario", initialCredit: 100000, entry: 5000, playerCount: 4, commissionPercent: 0, prize: 20000, targetScore: 100, expiresAfterMinutes: 15, version: 1 };
 async function call(path, { token, body } = {}) {
   const response = await fetch(`${base}${path}`, { method: body === undefined ? "GET" : "POST", headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { "content-type": "application/json" }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
@@ -28,7 +28,7 @@ const health = await call("/health"); check("GET /health", health.status === 200
 const conditions = await call("/api/simulated-conditions"); check("GET /api/simulated-conditions con los importes esperados", JSON.stringify(conditions.body) === JSON.stringify(expected), JSON.stringify(conditions.body));
 const grant = (await call("/api/test-identities", { body: { displayName: `QA ${new Date().toISOString().slice(5, 16).replace("T", " ")}` } })).body;
 check("identidad de prueba creada", Boolean(grant?.identityToken), grant?.displayName); const token = grant.identityToken;
-let view = (await call("/api/quick-play/join", { token, body: {} })).body; const started = Date.now();
+let view = (await call("/api/quick-play/join", { token, body: pairs ? { mode: "PAIRS" } : {} })).body; const started = Date.now();
 check("en cola de Jugar ahora", Boolean(view.ticket || view.match), view.ticket ? `bots en ${Math.round((view.ticket.botsFillAt - view.ticket.serverNow) / 1000)} s` : "mesa inmediata");
 let commandId = 0; let lastRevision = -1;
 while (Date.now() - started < 25 * 60_000) {
@@ -44,9 +44,15 @@ while (Date.now() - started < 25 * 60_000) {
 }
 const match = view.match; check("partida de Jugar ahora terminada", match?.status === "ENDED", match ? `${Math.round((Date.now() - started) / 1000)} s, marcador ${match.seats.map((seat) => `${seat.displayName}${seat.bot ? "[Bot]" : ""}=${match.game.players.find((player) => player.playerId === seat.playerId)?.score}`).join(" ")}` : "sin partida");
 check("mesa completada con bots identificados", (match?.seats ?? []).filter((seat) => seat.bot).every((seat) => seat.displayName.startsWith("Bot")) && (match?.seats ?? []).some((seat) => seat.bot));
+if (pairs) {
+  const result = match?.game.matchResult; const team = result?.championTeam ?? [];
+  check("partida por parejas a 200", match?.mode === "PAIRS" && match?.game.mode === "PAIRS" && team.length === 2 && result.finalScores[team[0]] >= 200 && result.finalScores[team[0]] === result.finalScores[team[1]],
+    result ? `campeones ${team.map((id) => match.seats.find((seat) => seat.playerId === id)?.displayName).join(" y ")} con ${result.finalScores[team[0]]}` : "sin resultado");
+}
 const award = match?.league; check("puntos de liga concedidos en el resultado", Boolean(award), award ? `${award.position}.º, ${award.humans} humano(s), automático ${award.automatic}, +${award.points}` : "sin concesión");
 await sleep(3_000); const first = (await call("/api/league/history", { token })).body; await sleep(5_000); const second = (await call("/api/league/history", { token })).body;
 const league = (await call("/api/league", { token })).body;
 check("concesión única por matchId", first.awards.filter((entry) => entry.matchId === match.matchId).length === 1 && second.awards.filter((entry) => entry.matchId === match.matchId).length === 1 && second.awards.length === 1);
 check("puntos de temporada = puntos concedidos", league.viewer?.points === award?.points, `temporada ${league.season?.id}, ${league.viewer?.points} pts, posición ${league.viewer?.position}`);
-const history = (await call("/api/quick-play/history", { token })).body; check("partida en el historial público", history.some((entry) => entry.matchId === match.matchId));
+const history = (await call("/api/quick-play/history", { token })).body; check("partida en el historial público", history.some((entry) => entry.matchId === match.matchId && (!pairs || entry.mode === "PAIRS")));
+if (pairs) check("liga por parejas: 1.º o 3.º, con 1 humano 10 o 2 puntos (0 si terminó en automático)", award?.automatic ? award.points === 0 : (award?.position === 1 && award.points === 10) || (award?.position === 3 && award.points === 2), award ? `${award.position}.º, +${award.points}` : "");
