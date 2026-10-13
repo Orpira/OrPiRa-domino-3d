@@ -1,6 +1,17 @@
 # Estado actual
 
-Fecha: 14 de octubre de 2026. **Versión en producción: API 1.5-rc1, web `main` y APK 1.6-rc1 (instalada en el Samsung; la etiqueta `v1.6-rc1` falta publicarla con push).**
+Fecha: 14 de octubre de 2026. **Versión en producción: API 1.7-rc1, web `main` (`e9d08e3`, `v1.7-rc1`) y APK 1.7-rc1.**
+
+## Despliegue v1.7-rc1 — parejas online (14 oct 2026, ~01:00 hora de Colombia)
+
+- API en el VPS desde `/opt/domino-3d-v1.7-rc1`, imagen `orpira/domino-api:1.7-rc1` (`sha256:5198597d…a5ba`), `healthy` a los 5 s; mismas variables que la 1.5-rc1. `DOMINO_ALLOWED_ORIGINS` incluye `https://domino-3d.orpira.es` (dominio del propietario, ya presente en la 1.5-rc1).
+- Copias previas en `/opt/backups/orpira-domino/` con STAMP `20261013-2300`: `domino-data-pre-1.7-rc1-…` (57 KB, SHA `4fe7c9fa…06ac`) y `opt-domino-3d-v1.5-rc1-pre-1.7-rc1-…` (13 MB, SHA `35a649e9…d117`).
+- Comprobado: salud; CORS 204 para los tres orígenes y 403 para uno ajeno; la liga de octubre conservó sus 7 jugadores y puntos; `production-smoke.mjs --pairs` completo (587 s, Bot 1 y Bot 3 campeones con 211, humano 3.º con +2, concesión única, historial con `mode`); sala por parejas `PE4MLY` creada desde la web de producción (queda esperando jugadores).
+- Web: Vercel publicó `e9d08e3` (`index-CEbr_Dzw.js`) en `orpira-domino-3d.vercel.app` y `domino-3d.orpira.es`.
+- APK 1.7-rc1 (`versionCode` 10, SHA `cfb5d447…da0a`) instalada en el Samsung SM-A165F: Inicio con «Individual a 100 / Parejas a 200», sala online por parejas, aviso propio al cambiar de modalidad, ancho 384/384 px.
+- Vuelta atrás: `cd /opt/domino-3d-v1.5-rc1 && sudo docker compose up -d --no-deps --no-build domino-api` (la 1.5-rc1 lee los datos de la 1.7; las partidas por parejas en curso terminarían con reglas individuales).
+- Rastro de QA en producción: identidad «QA 10-13 23:10» (+2 en la liga) y sala `PE4MLY`.
+- Pendiente: retirar del VPS `/tmp/domino-api-1.7-rc1.tar.gz` y `/tmp/domino-3d-src-v1.7-rc1.tar.gz`; limpiar los directorios antiguos de `/opt` cuando se dé por buena la 1.7.
 El 12 oct 2026 `main` avanzó de `f0dddf1` a `81d4ae8` (toda la 1.5 y las fichas más grandes) por decisión del propietario, antes de la prueba con cuatro dispositivos, y después, desde Claude web, hasta `b893b38`: sonidos, confeti más lento, arrastre de fichas desde la mano, manos ilustradas y brillo en el extremo jugable. Vercel publica `main` automáticamente; el 13 oct se comprobó que producción sirve el mismo build que `b893b38` (`index-CxWYywkZ.js`). Ninguno de estos cambios toca el servidor (idéntico a `v1.5-rc1`), así que el VPS no necesita actualizarse. Después llegó el modo en parejas de la práctica local (`57ed999`). La APK 1.6-rc1 (`versionCode` 9) ya incluye todas estas novedades. Suite local tras sincronizar: 120 pruebas aprobadas, TypeScript y build correctos.
 
 `v1.5-rc2` (`ec52fd4`) corrige el ancho en pantallas estrechas y `v1.5-rc3` (`289ac4b`)
