@@ -1,7 +1,7 @@
 # Estado actual
 
-Fecha: 12 de octubre de 2026. **Versión en producción: API 1.5-rc1, web `main` (`81d4ae8`, fichas más grandes) y APK 1.5-rc3.**
-El 12 oct 2026 `main` avanzó de `f0dddf1` a `81d4ae8` (incluye toda la 1.5 y las fichas más grandes) por decisión del propietario, antes de la prueba con cuatro dispositivos; Vercel lo publicó automáticamente (despliegue `HwsiiFwpqPZYLfQfoTJ4FBvy52vV`). La APK aún no incluye este cambio.
+Fecha: 13 de octubre de 2026. **Versión en producción: API 1.5-rc1, web `main` (`b893b38`) y APK 1.5-rc3.**
+El 12 oct 2026 `main` avanzó de `f0dddf1` a `81d4ae8` (toda la 1.5 y las fichas más grandes) por decisión del propietario, antes de la prueba con cuatro dispositivos, y después, desde Claude web, hasta `b893b38`: sonidos, confeti más lento, arrastre de fichas desde la mano, manos ilustradas y brillo en el extremo jugable. Vercel publica `main` automáticamente; el 13 oct se comprobó que producción sirve el mismo build que `b893b38` (`index-CxWYywkZ.js`). Ninguno de estos cambios toca el servidor (idéntico a `v1.5-rc1`), así que el VPS no necesita actualizarse. La APK instalada (1.5-rc3, `versionCode` 8) **no** incluye estas novedades: hace falta una APK nueva. Suite local tras sincronizar: 120 pruebas aprobadas, TypeScript y build correctos.
 
 `v1.5-rc2` (`ec52fd4`) corrige el ancho en pantallas estrechas y `v1.5-rc3` (`289ac4b`)
 oculta el aviso de modo automático cuando la partida ha terminado; ninguna cambia el
