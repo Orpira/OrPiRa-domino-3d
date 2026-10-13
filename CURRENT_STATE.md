@@ -5,10 +5,8 @@ El 12 oct 2026 `main` avanzó de `f0dddf1` a `81d4ae8` (toda la 1.5 y las fichas
 
 `v1.5-rc2` (`ec52fd4`) corrige el ancho en pantallas estrechas y `v1.5-rc3` (`289ac4b`)
 oculta el aviso de modo automático cuando la partida ha terminado; ninguna cambia el
-servidor, que sigue siendo el de `v1.5-rc1` (`2240f70`). `main` sigue en `f0dddf1` hasta la
-prueba con cuatro dispositivos. GitHub tiene las ramas `feature/interface-redesign`,
-`feature/quick-play` y `feature/league` (hasta `b519f34`) y las etiquetas `v1.5-rc1` y
-`v1.5-rc2`; falta subir `v1.5-rc3` y los commits posteriores.
+servidor, que sigue siendo el de `v1.5-rc1` (`2240f70`). `main` ya incluye toda la 1.5
+(ver párrafo anterior); la prueba con cuatro dispositivos sigue pendiente.
 
 - API: desplegada el 11 oct 2026 ~23:40 UTC en el VPS `orpira-cloud` (167.233.139.93),
   Docker Compose, proyecto `orpira-domino`, directorio `/opt/domino-3d-v1.5-rc1`, imagen
