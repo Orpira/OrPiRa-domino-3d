@@ -227,3 +227,8 @@ input:focus-visible { box-shadow: var(--focus); }
 .table-hand { position: absolute; left: 0; top: 0; transform-origin: 0 0; opacity: 0; will-change: transform, opacity; }
 .table-hand svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 10px 10px #00120f80); }
 @media (prefers-reduced-motion: reduce) { .grip-select { animation: none; } .drag-ghost.placing .grip-hand { transition: none; } }
+/* Zona táctil invisible sobre el brillo de cada extremo jugable: el brillo se dibuja en la escena 3D. */
+.end-glow-hit { position: absolute; width: 60px; height: 60px; padding: 0; border: 0; border-radius: 50%; background: transparent; transform: translate(-50%, -50%); cursor: pointer; pointer-events: auto; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.end-glow-hit.center { width: 96px; height: 96px; }
+.end-glow-hit:focus-visible { outline: 3px solid #ffe08a; outline-offset: 2px; }
+.end-glow-hit:disabled { cursor: wait; }

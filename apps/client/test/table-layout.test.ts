@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { OrientedTile, TileId } from "../../../packages/rules/src/index.ts";
-import { chainBounds, COMPACT_ASPECT, endAnchors, frameBounds, layoutDominoChain, MAX_CHAIN_TILES, MIN_FRAME_DEPTH, MIN_FRAME_WIDTH, seatSide, TILE_LENGTH } from "../src/table-layout.ts";
+import { chainBounds, COMPACT_ASPECT, endAnchors, endGlows, frameBounds, layoutDominoChain, MAX_CHAIN_TILES, MIN_FRAME_DEPTH, MIN_FRAME_WIDTH, seatSide, TILE_LENGTH } from "../src/table-layout.ts";
 
 function tile(id: TileId, left: number, right: number): OrientedTile { return { id, left, right, playedBy: "P0" }; }
 function angleDistance(a: number, b: number) { return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b))); }
@@ -88,6 +88,16 @@ describe("distribución serpenteante anclada en 6-6", () => {
     assert.ok(anchors.left.x < row[0]!.x - TILE_LENGTH * row[0]!.scale, "el botón izquierdo queda fuera de la ficha");
     assert.ok(anchors.right.x > row[2]!.x + TILE_LENGTH * row[2]!.scale, "el botón derecho queda fuera de la ficha");
     assert.ok(Math.abs(anchors.left.z) < 1e-9 && Math.abs(anchors.right.z) < 1e-9);
+  });
+
+  it("el brillo se posa sobre el borde abierto de cada ficha extrema", () => {
+    assert.equal(endGlows([]), null);
+    const opening = endGlows(layoutDominoChain([tile("6-6", 6, 6)], 1000, 420))!;
+    assert.ok(opening.left.x < 0 && opening.right.x > 0, "con solo el 6–6, un brillo a cada costado");
+    assert.ok(Math.abs(opening.right.x) < TILE_LENGTH / 2, "en el doble cruzado, a media anchura del centro");
+    const row = layoutDominoChain([tile("3-6", 3, 6), tile("6-6", 6, 6), tile("5-6", 6, 5)], 1000, 420); const glows = endGlows(row)!;
+    assert.ok(Math.abs(glows.left.x - (row[0]!.x - TILE_LENGTH / 2 * row[0]!.scale)) < 1e-9, "borde exterior de la ficha izquierda");
+    assert.ok(Math.abs(glows.right.x - (row[2]!.x + TILE_LENGTH / 2 * row[2]!.scale)) < 1e-9, "borde exterior de la ficha derecha");
   });
 
   it("los extremos de un giro apuntan en la dirección real del brazo", () => {

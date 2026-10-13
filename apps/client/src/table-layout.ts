@@ -99,6 +99,24 @@ export function endAnchors(placements: readonly ChainPlacement[], reachInTiles =
   return { left: anchor(placements[0]!, -1), right: anchor(placements.at(-1)!, 1) };
 }
 
+/** Punto de brillo sobre el extremo abierto de la cadena, girado como la ficha extrema. */
+export interface EndGlow extends TablePoint { readonly rotation: number; readonly scale: number }
+
+/**
+ * Dónde se ilumina cada extremo jugable: centrado en el borde abierto de la ficha extrema, de modo que medio brillo
+ * cae sobre la ficha y medio sobre la mesa, justo donde se apoyará la siguiente. En un doble (cruzado) el borde
+ * abierto está a media anchura del centro. Con solo el 6–6 en la mesa, cada lado brilla en un costado del doble.
+ */
+export function endGlows(placements: readonly ChainPlacement[]): { readonly left: EndGlow; readonly right: EndGlow } | null {
+  if (placements.length === 0) return null;
+  const glow = (placement: ChainPlacement, direction: -1 | 1): EndGlow => {
+    const crosswise = Math.abs(Math.sin(placement.rotation - placement.tangent)) > .5;
+    const reach = (crosswise ? TILE_WIDTH : TILE_LENGTH) / 2 * placement.scale * direction;
+    return { x: placement.x + Math.cos(placement.tangent) * reach, z: placement.z - Math.sin(placement.tangent) * reach, rotation: placement.tangent, scale: placement.scale };
+  };
+  return { left: glow(placements[0]!, -1), right: glow(placements.at(-1)!, 1) };
+}
+
 /** Zona que debe encuadrar la cámara: las fichas jugadas y el hueco de cada extremo, ampliada hasta el tamaño mínimo. */
 export function frameBounds(placements: readonly ChainPlacement[]): TableBounds | null {
   const tiles = chainBounds(placements); const anchors = endAnchors(placements, FRAME_END_REACH); if (!tiles || !anchors) return null;

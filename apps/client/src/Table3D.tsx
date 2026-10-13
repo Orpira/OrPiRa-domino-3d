@@ -4,7 +4,7 @@ import type { OrientedTile, Player, TileId } from "../../../packages/rules/src/i
 import type { DropSide, ScreenXY } from "./drop-target.ts";
 import { HAND_VIEWBOX, handMarkup } from "./hand-art.ts";
 import type { DropLocator, DropOrigin } from "./hand-drag.tsx";
-import { endAnchors, frameBounds, layoutDominoChain, seatSide, TILE_LENGTH, TILE_WIDTH, type SeatSide, type TableBounds, type TablePoint } from "./table-layout.ts";
+import { endGlows, frameBounds, layoutDominoChain, seatSide, TILE_LENGTH, TILE_WIDTH, type SeatSide, type TableBounds, type TablePoint } from "./table-layout.ts";
 
 /** Un destino donde colocar la ficha elegida. El texto accesible es completo (p. ej. «Izquierda · 3»); en pantalla solo se ve el valor. */
 export interface PlacementTarget { readonly label: string; readonly value: string | number; readonly onPlace: () => void }
@@ -34,6 +34,9 @@ interface SceneContext {
   readonly visuals: Map<TileId, Visual>; readonly motions: Map<TileId, Motion>; readonly overlay: HTMLElement;
   frame: number; width: number; height: number; initialized: boolean;
   view: CameraPose; cameraMotion: CameraMotion | null;
+  /** Brillos de los destinos jugables y qué se muestra ahora (con el destino resaltado al arrastrar). */
+  readonly glows: Record<DropSide, THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>>;
+  glowState: { readonly active: readonly DropSide[]; readonly hot: DropSide | null; readonly reduced: boolean };
 }
 
 // La cámara conserva siempre la misma inclinación; solo cambia el punto al que mira y su distancia.
@@ -144,6 +147,33 @@ function placeHand(context: SceneContext, motion: Motion, progress: number) {
   hand.element.style.opacity = String(1 - release);
 }
 
+function glowTexture() {
+  const size = 128; const canvas = document.createElement("canvas"); canvas.width = size; canvas.height = size;
+  const context = canvas.getContext("2d")!; const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  gradient.addColorStop(0, "rgba(255,236,170,1)"); gradient.addColorStop(.35, "rgba(255,214,110,.75)"); gradient.addColorStop(1, "rgba(255,200,80,0)");
+  context.fillStyle = gradient; context.fillRect(0, 0, size, size);
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; return texture;
+}
+
+/** Halo plano, en el suelo de la escena, que se suma a la luz: sobre la ficha la aclara y sobre el tapete dibuja un resplandor. */
+function createGlow(texture: THREE.Texture) {
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: texture, color: 0xffd36a, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false }));
+  mesh.visible = false; mesh.renderOrder = 5; return mesh;
+}
+
+/** Intensidad de cada brillo: late suavemente; el destino bajo la ficha arrastrada brilla más. Devuelve si hay que seguir animando. */
+function updateGlows(context: SceneContext, now: number) {
+  const { active, hot, reduced } = context.glowState; const pulse = reduced ? .5 : .5 + .5 * Math.sin(now / 1400 * Math.PI * 2);
+  for (const side of ["LEFT", "RIGHT", "CENTER"] as const) {
+    const mesh = context.glows[side]; const on = active.includes(side); mesh.visible = on; if (!on) continue;
+    const isHot = hot === side; mesh.material.opacity = isHot ? 1 : .42 + .3 * pulse;
+    const base = mesh.userData.baseScale as { x: number; y: number } | undefined;
+    if (base) mesh.scale.set(base.x * (isHot ? 1.3 : 1), base.y * (isHot ? 1.3 : 1), 1);
+  }
+  return active.length > 0 && !reduced;
+}
+
 function renderMotion(context: SceneContext) {
   if (context.frame) return;
   const tick = (now: number) => {
@@ -163,8 +193,9 @@ function renderMotion(context: SceneContext) {
       placeHand(context, motion, progress);
       if (progress === 1) { motion.hand?.element.remove(); context.motions.delete(id); }
     }
+    const glowing = updateGlows(context, now);
     context.renderer.render(context.scene, context.camera);
-    context.frame = context.motions.size || context.cameraMotion ? requestAnimationFrame(tick) : 0;
+    context.frame = context.motions.size || context.cameraMotion || glowing ? requestAnimationFrame(tick) : 0;
   };
   context.frame = requestAnimationFrame(tick);
 }
@@ -242,13 +273,19 @@ function syncChain(context: SceneContext, chain: readonly OrientedTile[], reduce
     }
   });
   context.initialized = true;
-  // Los botones de extremo se colocan con la cámara ya en su posición final.
-  const anchors = endAnchors(placements);
-  setEnds(anchors ? { left: projectAnchor(context, anchors.left), right: projectAnchor(context, anchors.right) } : null);
+  // Los brillos (y su zona táctil) se colocan con la cámara ya en su posición final.
+  const glows = endGlows(placements);
+  const lay = (side: DropSide, spot: { x: number; z: number; rotation: number; scale: number }, along: number, across: number) => {
+    const mesh = context.glows[side]; mesh.position.set(spot.x, .16, spot.z); mesh.rotation.set(-Math.PI / 2, 0, spot.rotation);
+    mesh.userData.baseScale = { x: along * spot.scale, y: across * spot.scale }; mesh.scale.set(along * spot.scale, across * spot.scale, 1);
+  };
+  if (glows) { lay("LEFT", glows.left, TILE_WIDTH * 1.5, TILE_WIDTH * 2); lay("RIGHT", glows.right, TILE_WIDTH * 1.5, TILE_WIDTH * 2); }
+  lay("CENTER", { x: 0, z: 0, rotation: 0, scale: placements[0]?.scale ?? .7 }, TILE_LENGTH * 2.2, TILE_LENGTH * 2.2);
+  setEnds(glows ? { left: projectAnchor(context, glows.left), right: projectAnchor(context, glows.right) } : null);
   const moved = previous.target.distanceTo(next.target) > 1e-3 || Math.abs(previous.distance - next.distance) > 1e-3;
   if (animateCamera && moved) { context.cameraMotion = { from: previous, to: next, started: performance.now(), duration: 520 }; applyPose(context.camera, previous); }
   else { context.cameraMotion = null; context.view = next; }
-  if (context.motions.size || context.cameraMotion) renderMotion(context); else context.renderer.render(context.scene, context.camera);
+  if (context.motions.size || context.cameraMotion || context.glowState.active.length) renderMotion(context); else context.renderer.render(context.scene, context.camera);
 }
 
 export function Table3D({ chain, reducedMotion, targets, players, viewerId, locatorRef, dropOrigin }: {
@@ -297,7 +334,9 @@ export function Table3D({ chain, reducedMotion, targets, players, viewerId, loca
     const rim = new THREE.Mesh(new THREE.TorusGeometry(5.72, .16, 12, 64), new THREE.MeshStandardMaterial({ color: 0x8e582e, roughness: .55 }));
     rim.rotation.x = Math.PI / 2; rim.position.y = -.05; scene.add(rim);
     const overlay = document.createElement("div"); overlay.className = "table-hands"; element.appendChild(overlay);
-    const context: SceneContext = { scene, camera, renderer, visuals: new Map(), motions: new Map(), overlay, frame: 0, width: 1, height: 1, initialized: false, view: OVERVIEW, cameraMotion: null };
+    const halo = glowTexture(); const glows = { LEFT: createGlow(halo), RIGHT: createGlow(halo), CENTER: createGlow(halo) };
+    Object.values(glows).forEach((mesh) => scene.add(mesh));
+    const context: SceneContext = { scene, camera, renderer, visuals: new Map(), motions: new Map(), overlay, frame: 0, glows, glowState: { active: [], hot: null, reduced: false }, width: 1, height: 1, initialized: false, view: OVERVIEW, cameraMotion: null };
     sceneRef.current = context;
     const resize = () => {
       context.width = Math.max(element.clientWidth, 1); context.height = Math.max(element.clientHeight, 1); renderer.setSize(context.width, context.height, false);
@@ -308,13 +347,21 @@ export function Table3D({ chain, reducedMotion, targets, players, viewerId, loca
     return () => {
       observer.disconnect(); if (context.frame) cancelAnimationFrame(context.frame); for (const visual of context.visuals.values()) disposeVisual(visual);
       table.geometry.dispose(); (table.material as THREE.Material).dispose(); rim.geometry.dispose(); (rim.material as THREE.Material).dispose();
+      Object.values(glows).forEach((mesh) => { mesh.geometry.dispose(); mesh.material.dispose(); }); halo.dispose();
       renderer.dispose(); renderer.domElement.remove(); overlay.remove(); sceneRef.current = null;
     };
   }, []);
   useEffect(() => { const context = sceneRef.current; if (context) syncChain(context, chain, reducedMotion, true, setEnds, originRef.current, dropNdcRef.current); }, [chain, reducedMotion]);
+  const activeSides = (["LEFT", "RIGHT", "CENTER"] as const).filter((side) => targets?.[side === "LEFT" ? "left" : side === "RIGHT" ? "right" : "center"]);
+  const activeKey = activeSides.join(","); const hot = targets?.hot ?? null;
+  useEffect(() => {
+    const context = sceneRef.current; if (!context) return;
+    context.glowState = { active: activeKey ? activeKey.split(",") as DropSide[] : [], hot, reduced: reducedMotion };
+    if (!context.frame) { updateGlows(context, performance.now()); if (context.glowState.active.length && !reducedMotion) renderMotion(context); else context.renderer.render(context.scene, context.camera); }
+  }, [activeKey, hot, reducedMotion]);
   const targetButton = (side: DropSide, target: PlacementTarget | undefined, point: ScreenPoint | undefined) => target && point &&
-    <button key={side} type="button" className={`end-target spatial ${side === "CENTER" ? "center" : ""} ${targets?.hot === side ? "hot" : ""}`}
-      style={{ left: `${point.left}%`, top: `${point.top}%` }} disabled={targets?.disabled} aria-label={target.label} title={target.label} onClick={target.onPlace}>{target.value}</button>;
+    <button key={side} type="button" className={`end-glow-hit ${side === "CENTER" ? "center" : ""}`}
+      style={{ left: `${point.left}%`, top: `${point.top}%` }} disabled={targets?.disabled} aria-label={target.label} title={target.label} onClick={target.onPlace}/>;
   return <div className="three-stage" ref={host} aria-label={`Mesa 3D con ${chain.length} fichas`}>
     {chain.length === 0 && !targets?.center && <p>El poseedor de 6–6 abre la ronda</p>}
     {unsupported && <p>WebGL no disponible. Usa la descripción accesible de la cadena.</p>}

@@ -63,7 +63,6 @@ export default function App() {
   }, [game, mode, reducedMotion, state, update]);
 
   const selected = currentSelection(selection, state.revision);
-  const selectedActions = selected ? actions.filter((action) => action.type === "PLACE" && action.tileId === selected) : [];
   const handIds = state.phase === "ROUND_ACTIVE" && visibleHandId ? state.hands[visibleHandId]! : [];
   const canPlace = state.phase === "ROUND_ACTIVE" && game.isHumanTurn && !botsBusy && !handoff;
   const sidesOf = (id: TileId) => dropSides(actions, id);
@@ -91,7 +90,6 @@ export default function App() {
     catch (error) { setMessage((error as Error).message); }
     finally { window.setTimeout(() => placementGate.current.release(), 0); }
   };
-  const playSelected = (side: Side) => { if (selected && selectedActions.some((action) => action.side === side)) playTile(selected, side); };
   // Tocar una ficha solo la levanta: el jugador la coloca arrastrándola a la mesa o eligiendo un destino.
   const selectTile = (id: TileId) => {
     if (drag.consumeClick() || !canPlace || sidesOf(id).length === 0) return;
@@ -122,13 +120,10 @@ export default function App() {
     <p className="message" role="status">{botsBusy ? "El bot está pensando…" : message} <span className="saved">Guardado local automático</span></p>
     {state.phase === "ROUND_ACTIVE" && !handoff && visibleHandId && <section className="controls">
       <div className="side-actions">
-        {selectedActions.some((action) => action.side === "LEFT") && <button onClick={() => playSelected("LEFT")}>Jugar a la izquierda ({state.leftEnd})</button>}
-        {selectedActions.some((action) => action.side === "RIGHT") && <button onClick={() => playSelected("RIGHT")}>Jugar a la derecha ({state.rightEnd})</button>}
-        {selected && selectedActions.some((action) => action.side === undefined) && <button onClick={() => playTile(selected)}>Abrir con 6–6</button>}
         <button className="pass" disabled={!canPass} onClick={() => afterHumanAction(game.passCurrent(), `${playerName(activeId!, mode)} pasa`)}>Pasar</button>
       </div>
       <h2>Mano de {playerName(visibleHandId, mode)}</h2>
-      <p className="hand-hint" aria-hidden={!canPlace} style={canPlace ? undefined : { visibility: "hidden" }}>Arrastra una ficha hasta la mesa · o tócala y elige el extremo</p>
+      <p className="hand-hint" aria-hidden={!canPlace} style={canPlace ? undefined : { visibility: "hidden" }}>Arrastra una ficha a la mesa o tócala y toca el brillo</p>
       <div className="hand">{state.hands[visibleHandId]!.map((id) => <Tile key={id} id={id} selected={selected === id} away={drag.hiddenId === id} disabled={!actions.some((action) => action.tileId === id)} onClick={() => selectTile(id)} drag={drag.bind(id)} />)}</div>
       {selected && <button className="cancel" onClick={() => setSelection(null)}>Cancelar selección</button>}
     </section>}
