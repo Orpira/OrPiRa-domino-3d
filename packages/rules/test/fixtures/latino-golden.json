@@ -1,0 +1,1283 @@
+[
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 1,
+  "rounds": 15,
+  "finalScores": {
+   "P0": 100,
+   "P1": 60,
+   "P2": 80,
+   "P3": 20
+  },
+  "champion": "P0",
+  "errors": {
+   "PASS_FORBIDDEN": 37,
+   "NOT_YOUR_TURN": 41,
+   "TILE_NOT_OWNED": 40,
+   "TILE_DOES_NOT_MATCH": 134,
+   "STALE_REVISION": 31,
+   "INVALID_OPENING": 1
+  },
+  "digest": "f857e596f7eeba8e36c92117d4dfebaf0a4548107650fb7d95ef356429fe0a84"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 2,
+  "rounds": 14,
+  "finalScores": {
+   "P0": 100,
+   "P1": 40,
+   "P2": 40,
+   "P3": 40
+  },
+  "champion": "P0",
+  "errors": {
+   "PASS_FORBIDDEN": 30,
+   "TILE_DOES_NOT_MATCH": 137,
+   "TILE_NOT_OWNED": 48,
+   "NOT_YOUR_TURN": 34,
+   "STALE_REVISION": 31,
+   "INVALID_SIDE": 1,
+   "INVALID_OPENING": 3
+  },
+  "digest": "3009556efe5689593feca611487b7d76a4129670be6ce82b8db87ca3fbbd42c0"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 3,
+  "rounds": 18,
+  "finalScores": {
+   "P0": 60,
+   "P1": 100,
+   "P2": 60,
+   "P3": 40
+  },
+  "champion": "P1",
+  "errors": {
+   "STALE_REVISION": 51,
+   "NOT_YOUR_TURN": 50,
+   "PASS_FORBIDDEN": 46,
+   "TILE_NOT_OWNED": 50,
+   "TILE_DOES_NOT_MATCH": 157,
+   "INVALID_SIDE": 7,
+   "INVALID_OPENING": 2
+  },
+  "digest": "719e3c9f063d16173f0862e2a4121344f9e673a3124c45f591d6492ece4edce9"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 4,
+  "rounds": 15,
+  "finalScores": {
+   "P0": 80,
+   "P1": 100,
+   "P2": 40,
+   "P3": 40
+  },
+  "champion": "P1",
+  "errors": {
+   "INVALID_SIDE": 15,
+   "PASS_FORBIDDEN": 45,
+   "NOT_YOUR_TURN": 43,
+   "STALE_REVISION": 37,
+   "TILE_DOES_NOT_MATCH": 150,
+   "TILE_NOT_OWNED": 43,
+   "INVALID_OPENING": 1
+  },
+  "digest": "444aad746130faed33f7c1a174e36f455c464e9825edcd488343e572ffa93286"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 5,
+  "rounds": 19,
+  "finalScores": {
+   "P0": 80,
+   "P1": 40,
+   "P2": 20,
+   "P3": 100
+  },
+  "champion": "P3",
+  "errors": {
+   "INVALID_SIDE": 17,
+   "TILE_NOT_OWNED": 40,
+   "TILE_DOES_NOT_MATCH": 163,
+   "NOT_YOUR_TURN": 44,
+   "STALE_REVISION": 59,
+   "PASS_FORBIDDEN": 45,
+   "INVALID_OPENING": 3
+  },
+  "digest": "11b895dced51260a7309586d6d2b47ebd68d8cd44cdd1ff7b251a3a0368f0f51"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 6,
+  "rounds": 16,
+  "finalScores": {
+   "P0": 100,
+   "P1": 40,
+   "P2": 80,
+   "P3": 20
+  },
+  "champion": "P0",
+  "errors": {
+   "INVALID_OPENING": 4,
+   "NOT_YOUR_TURN": 45,
+   "TILE_NOT_OWNED": 41,
+   "PASS_FORBIDDEN": 34,
+   "STALE_REVISION": 33,
+   "TILE_DOES_NOT_MATCH": 175,
+   "INVALID_SIDE": 22
+  },
+  "digest": "f26d1da74fa3c11837eff749cdd55b645aa20aff1eebd76ff72d5da8941d280a"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 7,
+  "rounds": 14,
+  "finalScores": {
+   "P0": 20,
+   "P1": 40,
+   "P2": 100,
+   "P3": 20
+  },
+  "champion": "P2",
+  "errors": {
+   "TILE_DOES_NOT_MATCH": 143,
+   "NOT_YOUR_TURN": 29,
+   "TILE_NOT_OWNED": 40,
+   "STALE_REVISION": 30,
+   "PASS_FORBIDDEN": 30,
+   "INVALID_OPENING": 2,
+   "INVALID_SIDE": 14
+  },
+  "digest": "a778c57413347c024d304f9fb11c5cd413d709d2055714c76ef0d340bda5be26"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 8,
+  "rounds": 21,
+  "finalScores": {
+   "P0": 100,
+   "P1": 80,
+   "P2": 20,
+   "P3": 60
+  },
+  "champion": "P0",
+  "errors": {
+   "STALE_REVISION": 64,
+   "PASS_FORBIDDEN": 45,
+   "TILE_DOES_NOT_MATCH": 204,
+   "TILE_NOT_OWNED": 37,
+   "NOT_YOUR_TURN": 55,
+   "INVALID_SIDE": 24,
+   "INVALID_OPENING": 2
+  },
+  "digest": "a999f136dc153ce5a785cd01dd7ffcc6437a8660385b4337eb2f22025b132a68"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 9,
+  "rounds": 16,
+  "finalScores": {
+   "P0": 20,
+   "P1": 80,
+   "P2": 100,
+   "P3": 0
+  },
+  "champion": "P2",
+  "errors": {
+   "TILE_NOT_OWNED": 47,
+   "TILE_DOES_NOT_MATCH": 164,
+   "STALE_REVISION": 42,
+   "NOT_YOUR_TURN": 29,
+   "PASS_FORBIDDEN": 31,
+   "INVALID_SIDE": 10,
+   "INVALID_OPENING": 1
+  },
+  "digest": "c82ce96320e922c51568b3e535a0b29712c5df3316483a2575b9dfdc2f063fe1"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 10,
+  "rounds": 19,
+  "finalScores": {
+   "P0": 80,
+   "P1": 100,
+   "P2": 80,
+   "P3": 80
+  },
+  "champion": "P1",
+  "errors": {
+   "TILE_NOT_OWNED": 45,
+   "PASS_FORBIDDEN": 42,
+   "TILE_DOES_NOT_MATCH": 195,
+   "NOT_YOUR_TURN": 54,
+   "STALE_REVISION": 37,
+   "INVALID_OPENING": 1,
+   "INVALID_SIDE": 8
+  },
+  "digest": "05ca902e9578027e29bd52a2f3509966f44e2710bb2ea4e0c798faa40e668b8c"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 11,
+  "rounds": 21,
+  "finalScores": {
+   "P0": 100,
+   "P1": 80,
+   "P2": 60,
+   "P3": 40
+  },
+  "champion": "P0",
+  "errors": {
+   "NOT_YOUR_TURN": 59,
+   "TILE_NOT_OWNED": 49,
+   "PASS_FORBIDDEN": 39,
+   "STALE_REVISION": 62,
+   "TILE_DOES_NOT_MATCH": 189,
+   "INVALID_OPENING": 3,
+   "INVALID_SIDE": 29
+  },
+  "digest": "11185ff83a24b38b6ed212007b6e5d66443ebf6f2357f72356b2fdc7ef17b051"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 12,
+  "rounds": 12,
+  "finalScores": {
+   "P0": 100,
+   "P1": 40,
+   "P2": 40,
+   "P3": 40
+  },
+  "champion": "P0",
+  "errors": {
+   "NOT_YOUR_TURN": 31,
+   "TILE_DOES_NOT_MATCH": 131,
+   "PASS_FORBIDDEN": 26,
+   "STALE_REVISION": 33,
+   "TILE_NOT_OWNED": 41,
+   "INVALID_SIDE": 9
+  },
+  "digest": "9d6591083710259c9a8d9e541173a7572efe218cd1098f2e7708030f18dbade0"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 13,
+  "rounds": 17,
+  "finalScores": {
+   "P0": 40,
+   "P1": 80,
+   "P2": 60,
+   "P3": 100
+  },
+  "champion": "P3",
+  "errors": {
+   "TILE_NOT_OWNED": 34,
+   "STALE_REVISION": 42,
+   "NOT_YOUR_TURN": 51,
+   "PASS_FORBIDDEN": 40,
+   "TILE_DOES_NOT_MATCH": 201,
+   "INVALID_SIDE": 2
+  },
+  "digest": "d5ef7efc97c6da49724486b95bc64c3521e633126aaab0a50a8e5d4afde5ab9a"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 14,
+  "rounds": 20,
+  "finalScores": {
+   "P0": 100,
+   "P1": 80,
+   "P2": 60,
+   "P3": 60
+  },
+  "champion": "P0",
+  "errors": {
+   "INVALID_SIDE": 22,
+   "PASS_FORBIDDEN": 57,
+   "TILE_DOES_NOT_MATCH": 206,
+   "STALE_REVISION": 54,
+   "TILE_NOT_OWNED": 49,
+   "NOT_YOUR_TURN": 61,
+   "INVALID_OPENING": 4
+  },
+  "digest": "4b2186bc21729d86ae9f012887354e49158761b6e0e094b6f74f80615270018d"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 15,
+  "rounds": 16,
+  "finalScores": {
+   "P0": 40,
+   "P1": 40,
+   "P2": 80,
+   "P3": 100
+  },
+  "champion": "P3",
+  "errors": {
+   "INVALID_SIDE": 7,
+   "NOT_YOUR_TURN": 55,
+   "TILE_DOES_NOT_MATCH": 193,
+   "TILE_NOT_OWNED": 46,
+   "STALE_REVISION": 41,
+   "PASS_FORBIDDEN": 30
+  },
+  "digest": "1a5fc4262687fecf0f9d519e8d0876ff46cc009c1181db2199248b9e836f520e"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 16,
+  "rounds": 16,
+  "finalScores": {
+   "P0": 80,
+   "P1": 20,
+   "P2": 20,
+   "P3": 100
+  },
+  "champion": "P3",
+  "errors": {
+   "PASS_FORBIDDEN": 34,
+   "NOT_YOUR_TURN": 43,
+   "STALE_REVISION": 39,
+   "TILE_NOT_OWNED": 37,
+   "TILE_DOES_NOT_MATCH": 182,
+   "INVALID_OPENING": 1,
+   "INVALID_SIDE": 21
+  },
+  "digest": "00a817160dcd0298050cf64ffab5acd9e618260d8d3d8da9c8005d32e3b51d80"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 17,
+  "rounds": 16,
+  "finalScores": {
+   "P0": 40,
+   "P1": 80,
+   "P2": 100,
+   "P3": 60
+  },
+  "champion": "P2",
+  "errors": {
+   "STALE_REVISION": 50,
+   "PASS_FORBIDDEN": 39,
+   "NOT_YOUR_TURN": 36,
+   "TILE_DOES_NOT_MATCH": 173,
+   "TILE_NOT_OWNED": 38,
+   "INVALID_SIDE": 15,
+   "INVALID_OPENING": 1
+  },
+  "digest": "a608f405598c03ac1d7ffe11400adc5024a033eec0e9fe8b21a0fe395c605b4b"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 18,
+  "rounds": 12,
+  "finalScores": {
+   "P0": 100,
+   "P1": 20,
+   "P2": 20,
+   "P3": 20
+  },
+  "champion": "P0",
+  "errors": {
+   "STALE_REVISION": 29,
+   "TILE_DOES_NOT_MATCH": 118,
+   "PASS_FORBIDDEN": 20,
+   "TILE_NOT_OWNED": 23,
+   "NOT_YOUR_TURN": 37,
+   "INVALID_SIDE": 2
+  },
+  "digest": "d66d5f5dba271166b22d7c11532d291ef8b0b39240e840946435b377cf9cca56"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 19,
+  "rounds": 11,
+  "finalScores": {
+   "P0": 20,
+   "P1": 100,
+   "P2": 40,
+   "P3": 40
+  },
+  "champion": "P1",
+  "errors": {
+   "INVALID_SIDE": 9,
+   "TILE_DOES_NOT_MATCH": 108,
+   "TILE_NOT_OWNED": 28,
+   "STALE_REVISION": 18,
+   "PASS_FORBIDDEN": 29,
+   "NOT_YOUR_TURN": 26,
+   "INVALID_OPENING": 1
+  },
+  "digest": "6bdf70b8e8751cb06ac380b9cff1e7704c085fbe17cc6095048a475e5f7fc24f"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 20,
+  "rounds": 17,
+  "finalScores": {
+   "P0": 40,
+   "P1": 60,
+   "P2": 100,
+   "P3": 40
+  },
+  "champion": "P2",
+  "errors": {
+   "INVALID_OPENING": 2,
+   "PASS_FORBIDDEN": 48,
+   "TILE_DOES_NOT_MATCH": 158,
+   "TILE_NOT_OWNED": 48,
+   "STALE_REVISION": 44,
+   "NOT_YOUR_TURN": 42,
+   "INVALID_SIDE": 36
+  },
+  "digest": "723e4412b2e35f1fdea6f604407c9aa72fa2718d2eeca39f758e617ff1bb28d3"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 21,
+  "rounds": 16,
+  "finalScores": {
+   "P0": 0,
+   "P1": 100,
+   "P2": 60,
+   "P3": 40
+  },
+  "champion": "P1",
+  "errors": {
+   "INVALID_OPENING": 2,
+   "TILE_NOT_OWNED": 37,
+   "NOT_YOUR_TURN": 48,
+   "PASS_FORBIDDEN": 42,
+   "STALE_REVISION": 43,
+   "TILE_DOES_NOT_MATCH": 157,
+   "INVALID_SIDE": 10
+  },
+  "digest": "25437142a1be29ca671317183d284038668b94303f5e1b5874b96728b360105c"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 22,
+  "rounds": 12,
+  "finalScores": {
+   "P0": 0,
+   "P1": 40,
+   "P2": 100,
+   "P3": 40
+  },
+  "champion": "P2",
+  "errors": {
+   "PASS_FORBIDDEN": 34,
+   "STALE_REVISION": 39,
+   "TILE_NOT_OWNED": 34,
+   "TILE_DOES_NOT_MATCH": 152,
+   "NOT_YOUR_TURN": 22,
+   "INVALID_SIDE": 1,
+   "INVALID_OPENING": 1
+  },
+  "digest": "da919818b7b3d0b690169a7755611857910c0c9684f01b43193b2335f8063cad"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 23,
+  "rounds": 16,
+  "finalScores": {
+   "P0": 100,
+   "P1": 20,
+   "P2": 20,
+   "P3": 60
+  },
+  "champion": "P0",
+  "errors": {
+   "TILE_NOT_OWNED": 43,
+   "PASS_FORBIDDEN": 39,
+   "NOT_YOUR_TURN": 39,
+   "STALE_REVISION": 41,
+   "TILE_DOES_NOT_MATCH": 122,
+   "INVALID_SIDE": 7
+  },
+  "digest": "96c5ef27f4ab94dc12be0489b156d4eaa8dfc07731284388758b96b38824fded"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 24,
+  "rounds": 10,
+  "finalScores": {
+   "P0": 0,
+   "P1": 100,
+   "P2": 20,
+   "P3": 20
+  },
+  "champion": "P1",
+  "errors": {
+   "TILE_DOES_NOT_MATCH": 114,
+   "NOT_YOUR_TURN": 29,
+   "TILE_NOT_OWNED": 26,
+   "PASS_FORBIDDEN": 32,
+   "INVALID_SIDE": 14,
+   "STALE_REVISION": 22
+  },
+  "digest": "42d667055bdf249623076c34fa6cd38d8079b6cebf45f2246f19d97ac15e838e"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 25,
+  "rounds": 23,
+  "finalScores": {
+   "P0": 60,
+   "P1": 80,
+   "P2": 100,
+   "P3": 60
+  },
+  "champion": "P2",
+  "errors": {
+   "NOT_YOUR_TURN": 64,
+   "PASS_FORBIDDEN": 53,
+   "TILE_NOT_OWNED": 75,
+   "STALE_REVISION": 54,
+   "INVALID_OPENING": 7,
+   "TILE_DOES_NOT_MATCH": 192,
+   "INVALID_SIDE": 10
+  },
+  "digest": "2e25b4170f58a0173b29fa605a4c2204555c9d82ece3691223de8efb62f66a8d"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 26,
+  "rounds": 19,
+  "finalScores": {
+   "P0": 100,
+   "P1": 60,
+   "P2": 80,
+   "P3": 80
+  },
+  "champion": "P0",
+  "errors": {
+   "NOT_YOUR_TURN": 39,
+   "TILE_NOT_OWNED": 42,
+   "TILE_DOES_NOT_MATCH": 171,
+   "STALE_REVISION": 51,
+   "PASS_FORBIDDEN": 41,
+   "INVALID_SIDE": 16,
+   "INVALID_OPENING": 1
+  },
+  "digest": "755ce6d7a69208a25fa4caef6d34d4d31bbeda8f68add1aa4b60b98a720a39ad"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 27,
+  "rounds": 16,
+  "finalScores": {
+   "P0": 80,
+   "P1": 100,
+   "P2": 60,
+   "P3": 20
+  },
+  "champion": "P1",
+  "errors": {
+   "NOT_YOUR_TURN": 48,
+   "STALE_REVISION": 38,
+   "TILE_DOES_NOT_MATCH": 183,
+   "TILE_NOT_OWNED": 45,
+   "INVALID_SIDE": 2,
+   "PASS_FORBIDDEN": 31,
+   "INVALID_OPENING": 1
+  },
+  "digest": "00623523c37093855b78f67248779125f6dc1e36f0b2711d4bedd1ea38d22308"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 28,
+  "rounds": 12,
+  "finalScores": {
+   "P0": 60,
+   "P1": 100,
+   "P2": 0,
+   "P3": 20
+  },
+  "champion": "P1",
+  "errors": {
+   "TILE_NOT_OWNED": 30,
+   "TILE_DOES_NOT_MATCH": 108,
+   "NOT_YOUR_TURN": 26,
+   "PASS_FORBIDDEN": 42,
+   "STALE_REVISION": 30,
+   "INVALID_OPENING": 1,
+   "INVALID_SIDE": 1
+  },
+  "digest": "aa3731c966927e15b1eea6e1de32c6e51fa3fa5f29799218220bd31e90d9f5a7"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 29,
+  "rounds": 19,
+  "finalScores": {
+   "P0": 40,
+   "P1": 100,
+   "P2": 60,
+   "P3": 80
+  },
+  "champion": "P1",
+  "errors": {
+   "INVALID_SIDE": 22,
+   "NOT_YOUR_TURN": 65,
+   "STALE_REVISION": 45,
+   "PASS_FORBIDDEN": 46,
+   "TILE_NOT_OWNED": 46,
+   "TILE_DOES_NOT_MATCH": 200
+  },
+  "digest": "d6b376104fe0ccd7322199ec619b3293238c09ead5c8ca92eb11471ebf51fa83"
+ },
+ {
+  "mode": "INDIVIDUAL",
+  "seed": 30,
+  "rounds": 19,
+  "finalScores": {
+   "P0": 100,
+   "P1": 60,
+   "P2": 60,
+   "P3": 80
+  },
+  "champion": "P0",
+  "errors": {
+   "PASS_FORBIDDEN": 43,
+   "NOT_YOUR_TURN": 49,
+   "TILE_NOT_OWNED": 57,
+   "TILE_DOES_NOT_MATCH": 193,
+   "STALE_REVISION": 61,
+   "INVALID_SIDE": 15
+  },
+  "digest": "3fa8bdc2c553d60503d42a22c19c854b2b4b373fdb690d75e19ef3a05e757b4c"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 1,
+  "rounds": 12,
+  "finalScores": {
+   "P0": 197,
+   "P1": 253,
+   "P2": 197,
+   "P3": 253
+  },
+  "champion": "P3",
+  "errors": {
+   "PASS_FORBIDDEN": 32,
+   "TILE_NOT_OWNED": 30,
+   "STALE_REVISION": 27,
+   "TILE_DOES_NOT_MATCH": 94,
+   "NOT_YOUR_TURN": 28,
+   "INVALID_SIDE": 15
+  },
+  "digest": "0899816c8fe790cfe346105d310816fe3d320be9ef6181ab07b6b07e506ea713"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 2,
+  "rounds": 13,
+  "finalScores": {
+   "P0": 280,
+   "P1": 185,
+   "P2": 280,
+   "P3": 185
+  },
+  "champion": "P2",
+  "errors": {
+   "PASS_FORBIDDEN": 33,
+   "NOT_YOUR_TURN": 34,
+   "TILE_NOT_OWNED": 24,
+   "STALE_REVISION": 35,
+   "TILE_DOES_NOT_MATCH": 132,
+   "INVALID_SIDE": 10
+  },
+  "digest": "0126e045b9159bb7a5b2ad2b14f6fd9e668cfeda7d96b8748738197bee156cc3"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 3,
+  "rounds": 13,
+  "finalScores": {
+   "P0": 184,
+   "P1": 229,
+   "P2": 184,
+   "P3": 229
+  },
+  "champion": "P3",
+  "errors": {
+   "STALE_REVISION": 43,
+   "TILE_NOT_OWNED": 30,
+   "TILE_DOES_NOT_MATCH": 129,
+   "PASS_FORBIDDEN": 30,
+   "NOT_YOUR_TURN": 34,
+   "INVALID_SIDE": 15
+  },
+  "digest": "0c1832072589f18d988483ca9909d52db0a314f0cb3394bc002a7900fadb2da8"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 4,
+  "rounds": 13,
+  "finalScores": {
+   "P0": 209,
+   "P1": 194,
+   "P2": 209,
+   "P3": 194
+  },
+  "champion": "P0",
+  "errors": {
+   "INVALID_SIDE": 17,
+   "PASS_FORBIDDEN": 28,
+   "NOT_YOUR_TURN": 38,
+   "STALE_REVISION": 36,
+   "TILE_NOT_OWNED": 41,
+   "TILE_DOES_NOT_MATCH": 112
+  },
+  "digest": "73902a907b7374d77f3de3ef00b3fd9d8cd7dd4a2242ff8b80a5a3f91e7e7e2c"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 5,
+  "rounds": 8,
+  "finalScores": {
+   "P0": 221,
+   "P1": 23,
+   "P2": 221,
+   "P3": 23
+  },
+  "champion": "P2",
+  "errors": {
+   "INVALID_SIDE": 16,
+   "STALE_REVISION": 22,
+   "NOT_YOUR_TURN": 25,
+   "TILE_NOT_OWNED": 23,
+   "PASS_FORBIDDEN": 21,
+   "TILE_DOES_NOT_MATCH": 24
+  },
+  "digest": "2689b5d0ee01820309db710fddb32e05ae42d18d66884e7de9e5f21017f608bf"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 6,
+  "rounds": 8,
+  "finalScores": {
+   "P0": 207,
+   "P1": 26,
+   "P2": 207,
+   "P3": 26
+  },
+  "champion": "P2",
+  "errors": {
+   "INVALID_OPENING": 1,
+   "NOT_YOUR_TURN": 25,
+   "TILE_NOT_OWNED": 18,
+   "PASS_FORBIDDEN": 21,
+   "TILE_DOES_NOT_MATCH": 44,
+   "STALE_REVISION": 21,
+   "INVALID_SIDE": 15
+  },
+  "digest": "5d4823021466433ae4b524988ee5a2fc9cd02769ab52cb025aed3be2c50e90ff"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 7,
+  "rounds": 10,
+  "finalScores": {
+   "P0": 214,
+   "P1": 169,
+   "P2": 214,
+   "P3": 169
+  },
+  "champion": "P0",
+  "errors": {
+   "TILE_DOES_NOT_MATCH": 86,
+   "STALE_REVISION": 24,
+   "NOT_YOUR_TURN": 26,
+   "TILE_NOT_OWNED": 27,
+   "PASS_FORBIDDEN": 16
+  },
+  "digest": "b87a0de6e85154e8b4d7e65080561a230b3849418601e73925567622d899a749"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 8,
+  "rounds": 12,
+  "finalScores": {
+   "P0": 65,
+   "P1": 244,
+   "P2": 65,
+   "P3": 244
+  },
+  "champion": "P3",
+  "errors": {
+   "TILE_NOT_OWNED": 36,
+   "NOT_YOUR_TURN": 29,
+   "STALE_REVISION": 33,
+   "TILE_DOES_NOT_MATCH": 111,
+   "PASS_FORBIDDEN": 26,
+   "INVALID_SIDE": 1
+  },
+  "digest": "2cfeeac9fa2aac477257d4b66042f498d96dc31e8c169c75c3054c42017cf0d7"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 9,
+  "rounds": 12,
+  "finalScores": {
+   "P0": 124,
+   "P1": 212,
+   "P2": 124,
+   "P3": 212
+  },
+  "champion": "P3",
+  "errors": {
+   "PASS_FORBIDDEN": 32,
+   "TILE_DOES_NOT_MATCH": 126,
+   "STALE_REVISION": 27,
+   "NOT_YOUR_TURN": 39,
+   "TILE_NOT_OWNED": 37,
+   "INVALID_SIDE": 3
+  },
+  "digest": "316188fd7a0c61976b70bc949fcb3d01c574ccfa8c09da516d5fb75e6180c7c8"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 10,
+  "rounds": 7,
+  "finalScores": {
+   "P0": 203,
+   "P1": 24,
+   "P2": 203,
+   "P3": 24
+  },
+  "champion": "P2",
+  "errors": {
+   "TILE_NOT_OWNED": 17,
+   "TILE_DOES_NOT_MATCH": 61,
+   "STALE_REVISION": 23,
+   "PASS_FORBIDDEN": 17,
+   "NOT_YOUR_TURN": 23,
+   "INVALID_SIDE": 7
+  },
+  "digest": "f198932e5fb683a87db4fa50761b3b78101098a40106b66b2f878401b7241942"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 11,
+  "rounds": 6,
+  "finalScores": {
+   "P0": 82,
+   "P1": 225,
+   "P2": 82,
+   "P3": 225
+  },
+  "champion": "P3",
+  "errors": {
+   "TILE_DOES_NOT_MATCH": 77,
+   "NOT_YOUR_TURN": 20,
+   "TILE_NOT_OWNED": 13,
+   "PASS_FORBIDDEN": 9,
+   "STALE_REVISION": 21,
+   "INVALID_SIDE": 3
+  },
+  "digest": "d406385cf07d625e5632fb863360d8d69375fca62f79b2c88fe90efec29472bf"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 12,
+  "rounds": 12,
+  "finalScores": {
+   "P0": 142,
+   "P1": 227,
+   "P2": 142,
+   "P3": 227
+  },
+  "champion": "P3",
+  "errors": {
+   "NOT_YOUR_TURN": 37,
+   "PASS_FORBIDDEN": 23,
+   "TILE_NOT_OWNED": 31,
+   "TILE_DOES_NOT_MATCH": 116,
+   "STALE_REVISION": 31,
+   "INVALID_SIDE": 16
+  },
+  "digest": "48d735b57c46512b2a060a41f0dd555c073bf476d06e4cec4915cd0dc0ade93a"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 13,
+  "rounds": 11,
+  "finalScores": {
+   "P0": 184,
+   "P1": 209,
+   "P2": 184,
+   "P3": 209
+  },
+  "champion": "P1",
+  "errors": {
+   "TILE_NOT_OWNED": 33,
+   "NOT_YOUR_TURN": 25,
+   "STALE_REVISION": 30,
+   "TILE_DOES_NOT_MATCH": 156,
+   "PASS_FORBIDDEN": 22,
+   "INVALID_SIDE": 3
+  },
+  "digest": "74f4d81e9de3ef58d6c9b828793ae7da2f0c11ecee7fb3dd4795cc7a27245aa7"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 14,
+  "rounds": 7,
+  "finalScores": {
+   "P0": 219,
+   "P1": 91,
+   "P2": 219,
+   "P3": 91
+  },
+  "champion": "P2",
+  "errors": {
+   "INVALID_SIDE": 14,
+   "PASS_FORBIDDEN": 15,
+   "STALE_REVISION": 15,
+   "TILE_NOT_OWNED": 16,
+   "TILE_DOES_NOT_MATCH": 104,
+   "NOT_YOUR_TURN": 16
+  },
+  "digest": "1906c444344e0e66ee1b91680327bd5fff168d3b408c973bf0e8460133bb559b"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 15,
+  "rounds": 14,
+  "finalScores": {
+   "P0": 220,
+   "P1": 187,
+   "P2": 220,
+   "P3": 187
+  },
+  "champion": "P0",
+  "errors": {
+   "INVALID_SIDE": 38,
+   "TILE_DOES_NOT_MATCH": 129,
+   "NOT_YOUR_TURN": 39,
+   "STALE_REVISION": 32,
+   "PASS_FORBIDDEN": 31,
+   "TILE_NOT_OWNED": 35
+  },
+  "digest": "979e85f99611e04bf282345b2efabab8000d18fde137ccc069a108bff623556e"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 16,
+  "rounds": 11,
+  "finalScores": {
+   "P0": 78,
+   "P1": 273,
+   "P2": 78,
+   "P3": 273
+  },
+  "champion": "P1",
+  "errors": {
+   "PASS_FORBIDDEN": 27,
+   "TILE_DOES_NOT_MATCH": 109,
+   "TILE_NOT_OWNED": 33,
+   "STALE_REVISION": 25,
+   "NOT_YOUR_TURN": 27,
+   "INVALID_SIDE": 9
+  },
+  "digest": "404f899e51a7f416dd0b2ed3c584f34cf3e2c7455a31189764b2b6a8bb73d04c"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 17,
+  "rounds": 8,
+  "finalScores": {
+   "P0": 218,
+   "P1": 31,
+   "P2": 218,
+   "P3": 31
+  },
+  "champion": "P2",
+  "errors": {
+   "STALE_REVISION": 21,
+   "TILE_DOES_NOT_MATCH": 104,
+   "TILE_NOT_OWNED": 26,
+   "PASS_FORBIDDEN": 17,
+   "NOT_YOUR_TURN": 29,
+   "INVALID_SIDE": 7
+  },
+  "digest": "79cd33774c6d208fd9edd6421f5f37ea2c4740f6ccff348c3dc42e469cce018b"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 18,
+  "rounds": 12,
+  "finalScores": {
+   "P0": 216,
+   "P1": 139,
+   "P2": 216,
+   "P3": 139
+  },
+  "champion": "P2",
+  "errors": {
+   "STALE_REVISION": 33,
+   "TILE_NOT_OWNED": 33,
+   "TILE_DOES_NOT_MATCH": 157,
+   "PASS_FORBIDDEN": 24,
+   "NOT_YOUR_TURN": 20,
+   "INVALID_SIDE": 10
+  },
+  "digest": "f80ff1d6bb70384943e04d66a02c3fa13cb790f6980aa9b98a4ce9f2be2aecf0"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 19,
+  "rounds": 12,
+  "finalScores": {
+   "P0": 158,
+   "P1": 225,
+   "P2": 158,
+   "P3": 225
+  },
+  "champion": "P1",
+  "errors": {
+   "INVALID_SIDE": 16,
+   "PASS_FORBIDDEN": 25,
+   "TILE_DOES_NOT_MATCH": 147,
+   "NOT_YOUR_TURN": 35,
+   "TILE_NOT_OWNED": 25,
+   "STALE_REVISION": 31
+  },
+  "digest": "dcae59daf2a7b2ee87dd7c647dc4948be475fcc4919982fe8c32a96195c1f850"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 20,
+  "rounds": 11,
+  "finalScores": {
+   "P0": 78,
+   "P1": 219,
+   "P2": 78,
+   "P3": 219
+  },
+  "champion": "P1",
+  "errors": {
+   "INVALID_OPENING": 1,
+   "STALE_REVISION": 30,
+   "PASS_FORBIDDEN": 36,
+   "TILE_NOT_OWNED": 30,
+   "NOT_YOUR_TURN": 18,
+   "TILE_DOES_NOT_MATCH": 95,
+   "INVALID_SIDE": 1
+  },
+  "digest": "34676c109e30f7414b55c6008d2ebbef4f314f8ff0fce005bc4e72e1e10a1b54"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 21,
+  "rounds": 12,
+  "finalScores": {
+   "P0": 160,
+   "P1": 216,
+   "P2": 160,
+   "P3": 216
+  },
+  "champion": "P3",
+  "errors": {
+   "INVALID_OPENING": 1,
+   "PASS_FORBIDDEN": 21,
+   "TILE_DOES_NOT_MATCH": 151,
+   "NOT_YOUR_TURN": 41,
+   "STALE_REVISION": 35,
+   "TILE_NOT_OWNED": 22,
+   "INVALID_SIDE": 9
+  },
+  "digest": "c19807d44b8f60475ff4d4660b70e30b92f999cbc4ab9972d2f8e6f43d16491a"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 22,
+  "rounds": 7,
+  "finalScores": {
+   "P0": 75,
+   "P1": 211,
+   "P2": 75,
+   "P3": 211
+  },
+  "champion": "P3",
+  "errors": {
+   "NOT_YOUR_TURN": 20,
+   "STALE_REVISION": 16,
+   "TILE_NOT_OWNED": 22,
+   "PASS_FORBIDDEN": 14,
+   "TILE_DOES_NOT_MATCH": 62,
+   "INVALID_SIDE": 2
+  },
+  "digest": "9b9c46041c027292887191ce2663568c5be174255bb6fbe515790e8c151d2b93"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 23,
+  "rounds": 9,
+  "finalScores": {
+   "P0": 107,
+   "P1": 209,
+   "P2": 107,
+   "P3": 209
+  },
+  "champion": "P3",
+  "errors": {
+   "TILE_DOES_NOT_MATCH": 118,
+   "STALE_REVISION": 24,
+   "TILE_NOT_OWNED": 21,
+   "PASS_FORBIDDEN": 20,
+   "NOT_YOUR_TURN": 15,
+   "INVALID_SIDE": 3
+  },
+  "digest": "6b32ab1774d89636d772a27f708d3a4c4386dfb75d1f09807e21cf77b2088465"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 24,
+  "rounds": 8,
+  "finalScores": {
+   "P0": 220,
+   "P1": 164,
+   "P2": 220,
+   "P3": 164
+  },
+  "champion": "P0",
+  "errors": {
+   "STALE_REVISION": 29,
+   "PASS_FORBIDDEN": 12,
+   "NOT_YOUR_TURN": 23,
+   "TILE_DOES_NOT_MATCH": 44,
+   "TILE_NOT_OWNED": 16,
+   "INVALID_SIDE": 7
+  },
+  "digest": "6168382aa731765a4bc01db460ec111786ddb83649bf9983ca2f908c43a8f3d6"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 25,
+  "rounds": 13,
+  "finalScores": {
+   "P0": 177,
+   "P1": 224,
+   "P2": 177,
+   "P3": 224
+  },
+  "champion": "P3",
+  "errors": {
+   "PASS_FORBIDDEN": 42,
+   "TILE_DOES_NOT_MATCH": 158,
+   "TILE_NOT_OWNED": 35,
+   "STALE_REVISION": 27,
+   "NOT_YOUR_TURN": 46
+  },
+  "digest": "79897ed325044993ddba3236c4e1f83c851a208793e7e249fa20c908069cd806"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 26,
+  "rounds": 9,
+  "finalScores": {
+   "P0": 51,
+   "P1": 217,
+   "P2": 51,
+   "P3": 217
+  },
+  "champion": "P3",
+  "errors": {
+   "NOT_YOUR_TURN": 22,
+   "STALE_REVISION": 29,
+   "PASS_FORBIDDEN": 23,
+   "TILE_NOT_OWNED": 18,
+   "TILE_DOES_NOT_MATCH": 92,
+   "INVALID_SIDE": 8
+  },
+  "digest": "62a31acd214ced9e64918ec7e3cf4c5701518df5211d207c05952ed5ed3f9a3e"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 27,
+  "rounds": 15,
+  "finalScores": {
+   "P0": 181,
+   "P1": 210,
+   "P2": 181,
+   "P3": 210
+  },
+  "champion": "P3",
+  "errors": {
+   "TILE_NOT_OWNED": 50,
+   "NOT_YOUR_TURN": 35,
+   "TILE_DOES_NOT_MATCH": 203,
+   "STALE_REVISION": 40,
+   "PASS_FORBIDDEN": 33,
+   "INVALID_SIDE": 1
+  },
+  "digest": "14f30db0b3c577b24fc95c4aa14c7473bda588e13046afcc0b39550bc55fa62c"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 28,
+  "rounds": 9,
+  "finalScores": {
+   "P0": 82,
+   "P1": 204,
+   "P2": 82,
+   "P3": 204
+  },
+  "champion": "P3",
+  "errors": {
+   "TILE_NOT_OWNED": 23,
+   "TILE_DOES_NOT_MATCH": 115,
+   "STALE_REVISION": 22,
+   "NOT_YOUR_TURN": 23,
+   "PASS_FORBIDDEN": 24,
+   "INVALID_SIDE": 7
+  },
+  "digest": "9f876c0e52bc4c90b535f728b3d0a547e7b34afb2815b8f4c4088851921dad20"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 29,
+  "rounds": 10,
+  "finalScores": {
+   "P0": 219,
+   "P1": 144,
+   "P2": 219,
+   "P3": 144
+  },
+  "champion": "P2",
+  "errors": {
+   "INVALID_SIDE": 21,
+   "STALE_REVISION": 29,
+   "NOT_YOUR_TURN": 27,
+   "PASS_FORBIDDEN": 21,
+   "TILE_DOES_NOT_MATCH": 125,
+   "TILE_NOT_OWNED": 21
+  },
+  "digest": "874073c8b52b6ff18d4b117cab0400dac7bcda31cbcb92f62e9feda78f33b71b"
+ },
+ {
+  "mode": "PAIRS",
+  "seed": 30,
+  "rounds": 6,
+  "finalScores": {
+   "P0": 215,
+   "P1": 19,
+   "P2": 215,
+   "P3": 19
+  },
+  "champion": "P0",
+  "errors": {
+   "PASS_FORBIDDEN": 11,
+   "STALE_REVISION": 11,
+   "TILE_DOES_NOT_MATCH": 64,
+   "NOT_YOUR_TURN": 19,
+   "TILE_NOT_OWNED": 17
+  },
+  "digest": "93deae7fa47cca45fb84068d85f76cb40e0c7e15d65f2d999423ff23a1ed506e"
+ }
+]
