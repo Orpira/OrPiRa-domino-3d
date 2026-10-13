@@ -4,6 +4,11 @@ export const RULES_VERSION = "1.0" as const;
 export type Seat = 0 | 1 | 2 | 3;
 /** Individual: cada uno para sí, a 100. Parejas: asientos 0–2 contra 1–3, a 200, se cuentan las cuatro manos. */
 export type GameMode = "INDIVIDUAL" | "PAIRS";
+/** Reglas de la mano. Latino: sin pozo, todo repartido. Con robo: 5 fichas por jugador, 8 al pozo, solo individual. */
+export type RulesId = "LATINO" | "DRAW";
+/** Objetivos de partida que se pueden elegir al configurar una mesa. */
+export const TARGET_OPTIONS = [100, 150, 200] as const;
+export type TargetScore = typeof TARGET_OPTIONS[number];
 export type Side = "LEFT" | "RIGHT";
 export type Phase = "ROUND_ACTIVE" | "ROUND_ENDED" | "MATCH_ENDED";
 export type TileId = `${number}-${number}`;
@@ -27,6 +32,10 @@ export interface GameState {
   readonly rulesVersion: typeof RULES_VERSION;
   /** Ausente en las partidas individuales (compatibilidad con estados ya guardados). */
   readonly mode?: GameMode;
+  /** Ausente en Latino. */
+  readonly rules?: Exclude<RulesId, "LATINO">;
+  /** Ausente si la partida usa el objetivo por defecto (100 individual, 200 parejas). */
+  readonly targetScore?: TargetScore;
   readonly matchId: string;
   readonly roundId: string;
   readonly roundNumber: number;
@@ -34,11 +43,13 @@ export interface GameState {
   readonly phase: Phase;
   readonly players: readonly Player[];
   readonly hands: Readonly<Record<string, readonly TileId[]>>;
+  /** Solo con robo: fichas sin repartir, en el orden en que se roban. Privado: nunca llega a las vistas. */
+  readonly boneyard?: readonly TileId[];
   readonly chain: readonly OrientedTile[];
   readonly leftEnd: number | null;
   readonly rightEnd: number | null;
   readonly openingPlayerId: string;
-  /** Solo con salida libre (parejas desde la 2.ª mano): la ficha con la que se salió, centro de la cadena en la mesa. */
+  /** Ficha con la que se salió cuando no es el 6–6 obligatorio (salida libre en parejas, o con robo): centro de la cadena en la mesa. */
   readonly openingTileId?: TileId;
   readonly currentPlayerId: string | null;
   readonly consecutivePasses: number;
@@ -49,7 +60,7 @@ export interface GameState {
 export type ErrorCode =
   | "INVALID_CONFIGURATION" | "INVALID_DEAL" | "WRONG_PHASE" | "NOT_YOUR_TURN"
   | "TILE_NOT_OWNED" | "INVALID_OPENING" | "INVALID_SIDE" | "TILE_DOES_NOT_MATCH"
-  | "PASS_FORBIDDEN" | "STALE_REVISION";
+  | "PASS_FORBIDDEN" | "STALE_REVISION" | "DRAW_FORBIDDEN";
 export interface RuleError { readonly code: ErrorCode; readonly message: string }
 export interface DomainEvent { readonly type: string; readonly [key: string]: unknown }
 export type Transition =
@@ -58,10 +69,13 @@ export type Transition =
 
 export type Command =
   | { readonly type: "PLACE"; readonly actorId: string; readonly tileId: TileId; readonly side?: Side; readonly expectedRevision?: number }
-  | { readonly type: "PASS"; readonly actorId: string; readonly expectedRevision?: number };
+  | { readonly type: "PASS"; readonly actorId: string; readonly expectedRevision?: number }
+  | { readonly type: "DRAW"; readonly actorId: string; readonly expectedRevision?: number };
 
-export interface LegalAction { readonly type: "PLACE" | "PASS"; readonly tileId?: TileId; readonly side?: Side }
-export interface PlayerView extends Omit<GameState, "hands"> {
+export interface LegalAction { readonly type: "PLACE" | "PASS" | "DRAW"; readonly tileId?: TileId; readonly side?: Side }
+export interface PlayerView extends Omit<GameState, "hands" | "boneyard"> {
   readonly ownHand: readonly TileId[] | null;
   readonly handCounts: Readonly<Record<string, number>>;
+  /** Solo con robo: cuántas fichas quedan en el pozo. */
+  readonly boneyardCount?: number;
 }
