@@ -2,14 +2,19 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPoi
 import { createPortal } from "react-dom";
 import { TILE_BY_ID, type TileId } from "../../../packages/rules/src/index.ts";
 import { DominoFace } from "./DominoFace.tsx";
+import { HandGrip } from "./HandGrip.tsx";
 import type { PlacementTargets } from "./Table3D.tsx";
 import { dragIntent, nearestDrop, type DropSide, type ScreenXY } from "./drop-target.ts";
 
 /** Lo que la mesa 3D responde sobre un punto de la pantalla: si está dentro y dónde se ven los extremos. */
-export interface DropProbe { readonly inside: boolean; readonly anchors: Partial<Record<DropSide, ScreenXY>> }
+export interface DropProbe {
+  readonly inside: boolean; readonly anchors: Partial<Record<DropSide, ScreenXY>>;
+  /** Punto relativo a la mesa (0–1 en cada eje): sigue valiendo aunque la página se desplace al cambiar de turno. */
+  readonly local: ScreenXY;
+}
 export type DropLocator = (clientX: number, clientY: number) => DropProbe;
 /** Punto de la pantalla donde se soltó la ficha: la mesa la hace aparecer ahí y la asienta en su sitio. */
-export interface DropOrigin { readonly tileId: TileId; readonly clientX: number; readonly clientY: number; readonly at: number }
+export interface DropOrigin { readonly tileId: TileId; readonly local: ScreenXY; readonly at: number }
 
 interface Gesture {
   readonly tileId: TileId; readonly pointerId: number; readonly pointerType: string; readonly source: HTMLElement;
@@ -57,9 +62,9 @@ export function useHandDrag({ enabled, sidesOf, onDrop, handIds, reducedMotion }
 
   const probe = (clientX: number, clientY: number, tileId: TileId) => {
     const locate = locatorRef.current; const sides = latest.current.sidesOf(tileId);
-    if (!locate || sides.length === 0) return { inside: false, side: null };
+    if (!locate || sides.length === 0) return { inside: false, side: null, local: null };
     const result = locate(clientX, clientY);
-    return { inside: result.inside, side: result.inside ? nearestDrop(sides, { x: clientX, y: clientY }, result.anchors) : null };
+    return { inside: result.inside, side: result.inside ? nearestDrop(sides, { x: clientX, y: clientY }, result.anchors) : null, local: result.local };
   };
 
   useEffect(() => {
@@ -85,11 +90,11 @@ export function useHandDrag({ enabled, sidesOf, onDrop, handIds, reducedMotion }
       const current = gesture.current; if (!current || event.pointerId !== current.pointerId) return;
       if (!current.active) { gesture.current = null; return; }
       window.setTimeout(() => { suppressClick.current = false; }, 0);
-      const { side } = event.type === "pointerup" && latest.current.enabled ? probe(event.clientX, event.clientY, current.tileId) : { side: null };
+      const { side, local } = event.type === "pointerup" && latest.current.enabled ? probe(event.clientX, event.clientY, current.tileId) : { side: null, local: null };
       setHot(null);
-      if (side) {
+      if (side && local) {
         position.current = { ...position.current, tilt: 0 }; paint(1);
-        setDropOrigin({ tileId: current.tileId, clientX: event.clientX, clientY: event.clientY, at: performance.now() });
+        setDropOrigin({ tileId: current.tileId, local, at: performance.now() });
         setGhost({ tileId: current.tileId, width: current.width, height: current.height, phase: "PLACING" });
         window.clearTimeout(timer.current); timer.current = window.setTimeout(finish, PLACING_TIMEOUT_MS);
         latest.current.onDrop(current.tileId, side);
@@ -126,7 +131,7 @@ export function useHandDrag({ enabled, sidesOf, onDrop, handIds, reducedMotion }
   const tile = ghost ? TILE_BY_ID.get(ghost.tileId) : undefined;
   const ghostNode = ghost && tile ? createPortal(<div ref={(element) => { ghostEl.current = element; if (element) paint(ghost.phase === "DRAGGING" ? (hot ? 1.04 : 1.16) : 1); }}
     className={`drag-ghost ${ghost.phase.toLowerCase()} ${hot ? "over-target" : ""}`} style={{ width: ghost.width, height: ghost.height }} aria-hidden="true">
-    <DominoFace a={tile.a} b={tile.b}/></div>, document.body) : null;
+    <DominoFace a={tile.a} b={tile.b}/><HandGrip/></div>, document.body) : null;
 
   return { bind, consumeClick, locatorRef, dropOrigin, hot, draggingId: ghost?.phase === "DRAGGING" ? ghost.tileId : null,
     hiddenId: ghost ? ghost.tileId : null, ghost: ghostNode };
