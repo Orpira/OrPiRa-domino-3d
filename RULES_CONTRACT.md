@@ -13,11 +13,12 @@ versión 1.0. Este resumen no la sustituye.
   reinicia los pases; el cuarto pase consecutivo cierra la ronda.
 - Dominada: quien vacía su mano recibe exactamente 20 puntos. Cierre: mínimo único
   gana la ronda; mínimo empatado no tiene ganador. Todo cierre da cero puntos.
-- La partida termina en la misma transición en que un marcador llega a 100.
+- La partida termina en la misma transición en que un marcador llega al objetivo (100 por
+  defecto; 150 o 200 si se elige al crear la mesa).
 - Una ronda nueva conserva marcadores y reinicia reparto, cadena, pases y resultado.
 - El núcleo no usa red, reloj, almacenamiento, renderizador ni información de modalidad.
 
-No se han añadido reglas regionales, robos, pases voluntarios, bonificaciones,
+En Latino no se han añadido reglas regionales, robos, pases voluntarios, bonificaciones,
 desempates, penalizaciones, límite de rondas ni consecuencias por desconexión.
 
 ## Modalidades (desde el 14 oct 2026)
