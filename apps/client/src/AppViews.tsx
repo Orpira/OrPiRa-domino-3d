@@ -6,7 +6,7 @@ import { competitionRecords, formatCop, formatDateTime, formatSignedCop, MOVEMEN
 import type { Conditions, TestAccount } from "./use-test-account.ts";
 import { BalanceSummary, DominoArt, IdentityForm, RankTile, SimulatedNotice, StateCard } from "./ui.tsx";
 
-export const APP_VERSION = "1.5-rc3";
+export const APP_VERSION = "1.6-rc1";
 
 interface HomeProps { readonly account: TestAccount; readonly conditions: Conditions; readonly onQuickPlay: () => void; readonly onPractice: () => void; readonly onOnline: () => void; readonly onTables: () => void }
 export function HomeView({ account, conditions, onQuickPlay, onPractice, onOnline, onTables }: HomeProps) {
