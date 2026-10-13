@@ -8,6 +8,7 @@ import { useCommandChannel } from "./use-command-channel.ts";
 import { useReducedMotion } from "./use-reduced-motion.ts";
 import type { Conditions, TestAccount } from "./use-test-account.ts";
 import { AmountRow, BalanceSummary, DominoArt, IdentityForm, RankTile, SimulatedNotice, StateCard } from "./ui.tsx";
+import { useConfirm } from "./confirm-dialog.tsx";
 
 const roomKey = (identityId: string) => `orpira-domino-3d:competition-room:v1:${identityId}`;
 const pendingKey = (identityId: string) => `orpira-domino-3d:competition-pending:v1:${identityId}`;
@@ -88,7 +89,7 @@ function CompetitionRoom({ code, identity, account, onClose }: { code: string; i
   const [view, setView] = useState<CompetitionView | null>(null); const [connection, setConnection] = useState<Connection>("CONNECTING");
   const [operation, setOperation] = useState<null | "accept" | "leave" | "cancel" | "annul">(null); const [operationError, setOperationError] = useState("");
   const [agreed, setAgreed] = useState(false); const [copied, setCopied] = useState(false);
-  const reducedMotion = useReducedMotion(); const lastStatus = useRef<string | null>(null);
+  const reducedMotion = useReducedMotion(); const lastStatus = useRef<string | null>(null); const confirm = useConfirm();
   const { refresh: refreshAccount } = account; const closeRef = useRef(onClose); closeRef.current = onClose;
   const refresh = useCallback(async (signal?: AbortSignal) => {
     try { const next = await competitionApi.view(code, identity.identityToken, signal); setView(next); setConnection("CONNECTED"); }
@@ -155,8 +156,8 @@ function CompetitionRoom({ code, identity, account, onClose }: { code: string; i
         <button className="primary wide" disabled={!agreed || operation !== null || insufficient || !breakdown.consistent || connection !== "CONNECTED"} onClick={() => void run("accept")}>{operation === "accept" ? "Reservando entrada…" : `Aceptar y reservar ${formatCop(conditions.entry)}`}</button></>}
       {operation && operation !== "accept" && <p className="muted" role="status">Operación pendiente de confirmación…</p>}
       {operationError && <p className="field-error" role="alert">{operationError}</p>}
-      <div className="room-actions"><button className="secondary" disabled={operation !== null} onClick={() => { if (window.confirm(viewerAccepted ? "Saldrás de la sala y se devolverá tu entrada reservada. ¿Continuar?" : "¿Salir de la sala?")) void run("leave"); }}>Salir de la sala</button>
-        {me?.seat === 0 && <button className="danger" disabled={operation !== null} onClick={() => { if (window.confirm("Se cancelará la sala para todos y se devolverán las reservas. ¿Continuar?")) void run("cancel"); }}>Cancelar sala para todos</button>}</div>
+      <div className="room-actions"><button className="secondary" disabled={operation !== null} onClick={() => confirm({ title: "¿Salir de la sala?", message: viewerAccepted ? "Se devolverá tu entrada reservada y tu plaza quedará libre." : "Tu plaza quedará libre para otro jugador.", confirmLabel: "Salir de la sala", cancelLabel: "Quedarme", tone: "danger", onConfirm: () => void run("leave") })}>Salir de la sala</button>
+        {me?.seat === 0 && <button className="danger" disabled={operation !== null} onClick={() => confirm({ title: "¿Cancelar la sala para todos?", message: "La sala se cerrará y se devolverán las entradas reservadas de todos los jugadores.", confirmLabel: "Cancelar la sala", cancelLabel: "Mantener la sala", tone: "danger", onConfirm: () => void run("cancel") })}>Cancelar sala para todos</button>}</div>
     </section></main>;
 
   const game = view.game;
@@ -165,7 +166,7 @@ function CompetitionRoom({ code, identity, account, onClose }: { code: string; i
   const context = <div className="competition-strip"><div><span>Bolsa</span><strong>{formatCop(breakdown.pool)}</strong></div><div><span>Premio</span><strong>{formatCop(conditions.prize)}</strong></div><div><span>Tu entrada</span><strong>{formatCop(conditions.entry)} {view.settlement ? "aplicada a la bolsa" : "reservada"}</strong></div><SimulatedNotice compact/>
     {view.status === "PLAYING" && view.members.some((member) => !member.connected) && <p className="waiting-note" role="status">Sin conexión reciente: {view.members.filter((member) => !member.connected).map((member) => member.displayName).join(", ")}. Si no vuelven, el servidor jugará sus turnos al agotarse el tiempo; la partida no se detiene.</p>}
     {view.status === "PLAYING" && <details className="annul"><summary>Problemas con la partida</summary><p>Los turnos agotados se resuelven con jugadas automáticas y la partida siempre termina. Solo se anula si los cuatro lo aceptan; entonces se devuelven las entradas y no hay campeón. Acuerdos: {annulments} de {conditions.playerCount}.</p>
-      <button className="secondary" disabled={me?.annulmentAccepted || operation !== null} onClick={() => { if (window.confirm("¿Proponer o aceptar la anulación? Solo se aplica con el acuerdo de los cuatro.")) void run("annul"); }}>{me?.annulmentAccepted ? "Has aceptado anular" : "Proponer o aceptar anulación"}</button>{operationError && <p className="field-error" role="alert">{operationError}</p>}</details>}</div>;
+      <button className="secondary" disabled={me?.annulmentAccepted || operation !== null} onClick={() => confirm({ title: "¿Proponer o aceptar la anulación?", message: "Solo se aplica si los cuatro jugadores la aceptan; entonces se devuelven las entradas.", confirmLabel: "Proponer o aceptar", cancelLabel: "Seguir jugando", onConfirm: () => void run("annul") })}>{me?.annulmentAccepted ? "Has aceptado anular" : "Proponer o aceptar anulación"}</button>{operationError && <p className="field-error" role="alert">{operationError}</p>}</details>}</div>;
   const finale = <section className="settlement" aria-label="Liquidación simulada"><h3>Liquidación simulada</h3>
     {outcome ? <><dl className="amounts"><AmountRow label="Campeón" value={names[view.settlement!.championIdentityId] ?? "—"}/><AmountRow label="Premio bruto de la mesa" value={formatCop(outcome.grossPrize)}/><AmountRow label="Comisión" value={formatSignedCop(-outcome.commission)}/><AmountRow label="Tu entrada" value={formatSignedCop(-outcome.entry)}/><AmountRow label="Premio recibido por ti" value={formatCop(outcome.prizeReceived)}/><AmountRow label="Tu resultado neto" value={formatSignedCop(outcome.net)} strong hint="Premio recibido − tu entrada"/></dl>
       <p className="muted">Confirmada por el servidor. {outcome.isChampion ? "El premio recibido incluye la devolución de tu propia entrada; tu beneficio neto es el premio menos la entrada." : "La entrada se aplicó a la bolsa del campeón."}</p></>

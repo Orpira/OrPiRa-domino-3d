@@ -235,3 +235,15 @@ input:focus-visible { box-shadow: var(--focus); }
 /* Parejas: dos marcadores (uno por pareja) y selector de forma de juego. */
 .scoreboard.pairs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .variant-switch { margin-top: -6px; }
+/* Diálogo de confirmación propio (sustituye a window.confirm). */
+.confirm-backdrop { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: max(var(--space-4), var(--safe-t)) max(var(--space-4), var(--safe-r)) max(var(--space-4), var(--safe-b)) max(var(--space-4), var(--safe-l)); background: #031512d9; backdrop-filter: blur(10px); animation: confirm-fade .16s ease-out; }
+.confirm-dialog { width: min(460px, 100%); display: grid; gap: var(--space-3); padding: var(--space-6) var(--space-5) var(--space-5); border: 1px solid #eac56a66; border-radius: var(--radius-l); background: linear-gradient(180deg, var(--c-surface-2), var(--c-bg-1)); color: var(--c-text); box-shadow: 0 25px 80px #000a, inset 0 1px 0 #ffffff14; animation: confirm-rise .2s ease-out; }
+.confirm-dialog.danger-tone { border-color: #ff9f9266; }
+.confirm-dialog h2 { margin: 0; font-size: clamp(1.25rem, 4.5vw, 1.55rem); line-height: 1.25; color: var(--c-ivory); }
+.confirm-dialog p { margin: 0; color: var(--c-muted); }
+.confirm-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-3); }
+.confirm-actions button:focus-visible { outline: none; box-shadow: var(--focus); }
+@media (max-width: 480px) { .confirm-actions { flex-direction: column-reverse; } .confirm-actions button { width: 100%; } }
+@keyframes confirm-fade { from { opacity: 0; } }
+@keyframes confirm-rise { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .confirm-backdrop, .confirm-dialog { animation: none; } }

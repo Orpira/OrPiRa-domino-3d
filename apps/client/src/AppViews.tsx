@@ -5,6 +5,7 @@ import { RANK_NAMES } from "./league-presentation.ts";
 import { competitionRecords, formatCop, formatDateTime, formatSignedCop, MOVEMENT_LABELS, RECORD_LABELS } from "./competition-presentation.ts";
 import type { Conditions, TestAccount } from "./use-test-account.ts";
 import { BalanceSummary, DominoArt, IdentityForm, RankTile, SimulatedNotice, StateCard } from "./ui.tsx";
+import { useConfirm } from "./confirm-dialog.tsx";
 
 export const APP_VERSION = "1.6-rc1";
 
@@ -51,7 +52,7 @@ export function HistoryView({ account, onAccount }: { account: TestAccount; onAc
 }
 
 export function AccountView({ account }: { account: TestAccount }) {
-  const [showCode, setShowCode] = useState(false); const [recovery, setRecovery] = useState(""); const recoveryId = useId();
+  const [showCode, setShowCode] = useState(false); const [recovery, setRecovery] = useState(""); const recoveryId = useId(); const confirm = useConfirm();
   const data = account.account.data;
   const explainer = <section className="panel test-explainer"><h2>Esta es una cuenta de prueba</h2><ul>
     <li>Los importes son <strong>COP simulados · sin valor monetario</strong>. No se compran, no se retiran, no se transfieren entre usuarios y no se canjean por premios.</li>
@@ -69,7 +70,7 @@ export function AccountView({ account }: { account: TestAccount }) {
     {explainer}
     <section className="panel"><h2>Acceso en otros dispositivos</h2><p className="muted">Guarda este código para recuperar la cuenta si borras los datos del navegador. Quien lo tenga puede usar tu cuenta de prueba.</p>
       {showCode ? <code className="recovery-code">{account.identity.identityToken}</code> : <button className="secondary" onClick={() => setShowCode(true)}>Mostrar código de recuperación</button>}
-      <button className="danger" onClick={() => { if (window.confirm("Se olvidará la cuenta en este dispositivo. Sin el código de recuperación no podrás volver a ella. ¿Continuar?")) account.forget(); }}>Olvidar cuenta en este dispositivo</button></section>
+      <button className="danger" onClick={() => confirm({ title: "¿Olvidar la cuenta en este dispositivo?", message: "Sin el código de recuperación no podrás volver a ella.", confirmLabel: "Olvidar cuenta", tone: "danger", onConfirm: account.forget })}>Olvidar cuenta en este dispositivo</button></section>
     <p className="meta">Domino3D-OrPiRa {APP_VERSION} · cuenta y saldo de prueba</p>
   </main>;
 }

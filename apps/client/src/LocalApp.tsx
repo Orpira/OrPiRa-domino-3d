@@ -10,6 +10,7 @@ import { DominoFace } from "./DominoFace.tsx";
 import { HandGrip } from "./HandGrip.tsx";
 import { SoundToggle, useGameSounds } from "./sound.tsx";
 import { dropSides, type DropSide } from "./drop-target.ts";
+import { useConfirm } from "./confirm-dialog.tsx";
 import { placementTargets, useHandDrag } from "./hand-drag.tsx";
 const Table3D = lazy(() => import("./Table3D.tsx").then((module) => ({ default: module.Table3D })));
 
@@ -79,19 +80,27 @@ export default function App() {
   const pairs = game.variant === "PAIRS";
   const pairsRound = pairs && roundResult ? pairsRoundText(roundResult, names) : null;
   const champions = pairs && state.matchResult ? championTeamText(state.matchResult, names) : null;
+  const confirm = useConfirm();
   const startedProgress = state.revision > 1 || state.players.some((player) => player.score > 0);
 
+  // Cambiar de forma de juego con una partida empezada la sustituye: se pide confirmación antes.
+  const afterConfirming = (title: string, apply: () => void) => {
+    if (!startedProgress) return apply();
+    confirm({ title, message: "Empezará una partida nueva y se perderá la partida guardada en este dispositivo.", confirmLabel: "Empezar partida nueva", cancelLabel: "Seguir jugando", onConfirm: apply });
+  };
   const switchMode = (nextMode: LocalMode) => {
     if (nextMode === mode) return;
-    if (startedProgress && !window.confirm("Cambiar de modalidad inicia una partida nueva y sustituye el checkpoint actual. ¿Continuar?")) return;
-    const nextGame = new LocalGame(randomDeal, nextMode, undefined, game.variant); gameRef.current = nextGame;
-    setMode(nextMode); update(nextGame.state, nextMode === "BOTS" ? "Nueva partida contra bots" : "Partida para cuatro personas", nextMode === "PASS_AND_PLAY");
+    afterConfirming(nextMode === "BOTS" ? "¿Cambiar a 1 persona + 3 bots?" : "¿Cambiar a 4 personas por relevo?", () => {
+      const nextGame = new LocalGame(randomDeal, nextMode, undefined, game.variant); gameRef.current = nextGame;
+      setMode(nextMode); update(nextGame.state, nextMode === "BOTS" ? "Nueva partida contra bots" : "Partida para cuatro personas", nextMode === "PASS_AND_PLAY");
+    });
   };
   const switchVariant = (variant: GameMode) => {
     if (variant === game.variant) return;
-    if (startedProgress && !window.confirm("Cambiar entre individual y parejas inicia una partida nueva y sustituye el checkpoint actual. ¿Continuar?")) return;
-    const nextGame = new LocalGame(randomDeal, mode, undefined, variant); gameRef.current = nextGame;
-    update(nextGame.state, variant === "PAIRS" ? "Nueva partida en parejas, a 200" : "Nueva partida individual, a 100", mode === "PASS_AND_PLAY");
+    afterConfirming(variant === "PAIRS" ? "¿Cambiar a parejas, a 200?" : "¿Cambiar a individual, a 100?", () => {
+      const nextGame = new LocalGame(randomDeal, mode, undefined, variant); gameRef.current = nextGame;
+      update(nextGame.state, variant === "PAIRS" ? "Nueva partida en parejas, a 200" : "Nueva partida individual, a 100", mode === "PASS_AND_PLAY");
+    });
   };
   const afterHumanAction = (next: GameState, text: string) => update(next, text, mode === "PASS_AND_PLAY");
   const playTile = (tileId: TileId, side?: Side) => {
