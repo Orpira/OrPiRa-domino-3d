@@ -1,4 +1,4 @@
-import type { DomainEvent, ErrorCode, LegalAction, PlayerView, Seat, Side, TileId } from "../../rules/src/index.ts";
+import type { DomainEvent, ErrorCode, GameMode, LegalAction, PlayerView, Seat, Side, TileId } from "../../rules/src/index.ts";
 
 export type ClientCommand =
   | { readonly type: "PLACE"; readonly tileId: TileId; readonly side?: Side }
@@ -36,6 +36,7 @@ export interface TurnClockView {
 export interface LobbyPlayer { readonly playerId: string; readonly name: string; readonly seat: Seat; readonly connected: boolean }
 export interface LobbyView {
   readonly code: string;
+  readonly mode: GameMode;
   readonly status: "WAITING" | "PLAYING" | "ENDED";
   readonly players: readonly LobbyPlayer[];
   readonly viewerPlayerId: string;
@@ -84,9 +85,9 @@ export interface CompetitionResultSummary {
 
 // Jugar ahora: práctica gratuita, sin entrada, saldo ni premio.
 export interface QuickPlaySeat { readonly playerId: string; readonly displayName: string; readonly seat: Seat; readonly bot: boolean }
-export interface QuickPlayTicket { readonly ticketId: string; readonly joinedAt: number; readonly position: number; readonly waiting: readonly string[]; readonly botsFillAt: number; readonly serverNow: number }
+export interface QuickPlayTicket { readonly mode: GameMode; readonly ticketId: string; readonly joinedAt: number; readonly position: number; readonly waiting: readonly string[]; readonly botsFillAt: number; readonly serverNow: number }
 export interface QuickPlayMatchView {
-  readonly matchId: string; readonly status: "PLAYING" | "ENDED"; readonly viewerPlayerId: string; readonly seats: readonly QuickPlaySeat[];
+  readonly matchId: string; readonly mode: GameMode; readonly status: "PLAYING" | "ENDED"; readonly viewerPlayerId: string; readonly seats: readonly QuickPlaySeat[];
   readonly game: PlayerView; readonly legalActions: readonly LegalAction[]; readonly clock: TurnClockView;
   // Rango de liga de cada asiento humano (los bots no tienen) y puntos concedidos al espectador al terminar.
   readonly ranks: Readonly<Record<string, LeagueRankId>>; readonly league: LeagueAwardView | null;
@@ -94,6 +95,8 @@ export interface QuickPlayMatchView {
 export interface QuickPlayView { readonly ticket: QuickPlayTicket | null; readonly match: QuickPlayMatchView | null }
 export interface QuickPlayHistoryEntry {
   readonly matchId: string; readonly startedAt: number; readonly endedAt: number; readonly championPlayerId: string;
+  // Ausente en partidas anteriores a las parejas: individuales. En parejas, los compañeros comparten marcador.
+  readonly mode?: GameMode;
   readonly participants: readonly { readonly playerId: string; readonly displayName: string; readonly seat: Seat; readonly bot: boolean; readonly score: number; readonly endedAutomatic: boolean }[];
 }
 

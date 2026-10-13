@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import type { GameMode } from "../../../packages/rules/src/index.ts";
 import type { CommandEnvelope } from "../../../packages/protocol/src/index.ts";
 import { AuthoritativeRoom } from "./authoritative-room.ts";
 import type { LobbyManager } from "./lobby.ts";
@@ -24,6 +25,11 @@ function json(response: ServerResponse, status: number, value: unknown, headers:
 async function body(request: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+}
+// «Jugar ahora» aceptaba el alta sin cuerpo; los clientes anteriores siguen funcionando.
+async function optionalBody(request: IncomingMessage): Promise<unknown> {
+  const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
+  const text = Buffer.concat(chunks).toString("utf8").trim(); return text ? JSON.parse(text) : {};
 }
 function session(request: IncomingMessage) { const value = request.headers.authorization; return value?.startsWith("Bearer ") ? value.slice(7) : null; }
 
@@ -68,7 +74,7 @@ export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: Lo
         const action = quickRoute[1]; const identityToken = session(request); if (!identityToken) return send(401, { code: "UNAUTHENTICATED" });
         if (request.method === "GET" && !action) return send(200, await quickPlay.view(identityToken));
         if (request.method === "GET" && action === "history") return send(200, await quickPlay.historyFor(identityToken));
-        if (request.method === "POST" && action === "join") return send(200, await quickPlay.join(identityToken));
+        if (request.method === "POST" && action === "join") { const input = await optionalBody(request) as { mode?: GameMode }; return send(200, await quickPlay.join(identityToken, input.mode ?? "INDIVIDUAL")); }
         if (request.method === "POST" && action === "cancel") return send(200, await quickPlay.cancel(identityToken));
         if (request.method === "POST" && action === "dismiss") return send(200, await quickPlay.dismiss(identityToken));
         if (request.method === "POST" && action === "commands") { const result = await quickPlay.command(identityToken, await body(request) as CommandEnvelope); return send(result.ok ? 200 : 409, result); }
@@ -86,7 +92,7 @@ export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: Lo
         if (request.method === "POST" && action === "commands") { const result = await competitionManager.command(code, identityToken, await body(request) as CommandEnvelope); return send(result.ok ? 200 : 409, result); }
       }
       if (lobbyManager && request.method === "POST" && request.url === "/api/lobbies") {
-        const input = await body(request) as { name?: string }; return send(201, await lobbyManager.create(input.name ?? ""));
+        const input = await body(request) as { name?: string; mode?: GameMode }; return send(201, await lobbyManager.create(input.name ?? "", input.mode ?? "INDIVIDUAL"));
       }
       const lobbyRoute = request.url?.match(/^\/api\/lobbies\/([A-Za-z0-9]+)(?:\/(join|commands))?$/);
       if (lobbyManager && lobbyRoute) {

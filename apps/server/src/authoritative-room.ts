@@ -1,6 +1,6 @@
 import {
   getPlayerView, nextRound, startMatch, transition,
-  type Deal, type DomainEvent, type GameState, type PlayerInput, type RuleError,
+  type Deal, type DomainEvent, type GameMode, type GameState, type PlayerInput, type RuleError,
 } from "../../../packages/rules/src/index.ts";
 import type { AutomaticMove, AutomaticReason, CommandEnvelope, CommandResponse, ServerErrorCode, TurnClockView } from "../../../packages/protocol/src/index.ts";
 import { chooseAutomaticAction } from "./auto-player.ts";
@@ -21,7 +21,8 @@ export class MemoryMatchStore implements MatchStore {
   async load(matchId: string) { return structuredClone(this.values.get(matchId) ?? null); }
   async save(matchId: string, snapshot: RoomSnapshot) { this.values.set(matchId, structuredClone(snapshot)); }
 }
-export interface RoomOptions { readonly clock?: TurnClockConfig; readonly now?: () => number; readonly botPlayerIds?: readonly string[] }
+// `mode` solo cuenta al crear la partida; al restaurarla viene en el estado guardado.
+export interface RoomOptions { readonly clock?: TurnClockConfig; readonly now?: () => number; readonly botPlayerIds?: readonly string[]; readonly mode?: GameMode }
 
 type DealFactory = () => Deal;
 export interface Cached { readonly fingerprint: string; readonly response: CommandResponse }
@@ -43,7 +44,7 @@ export class AuthoritativeRoom {
 
   static async create(matchId: string, sessions: readonly SessionPlayer[], dealFactory: DealFactory, store: MatchStore = new MemoryMatchStore(), options: RoomOptions = {}) {
     if (new Set(sessions.map((entry) => entry.sessionId)).size !== 4) throw new Error("Las cuatro sesiones deben ser únicas");
-    const state = startMatch(matchId, sessions.map(({ playerId, seat }) => ({ playerId, seat })), dealFactory()).state;
+    const state = startMatch(matchId, sessions.map(({ playerId, seat }) => ({ playerId, seat })), dealFactory(), { mode: options.mode ?? "INDIVIDUAL" }).state;
     const now = (options.now ?? Date.now)(); const bots = new Set(options.botPlayerIds ?? []);
     const control: RoomControl = { seats: sessions.map(({ playerId }) => ({ playerId, bot: bots.has(playerId), automatic: false, consecutiveTimeouts: 0, resumeRequested: false, lastSeen: now })),
       clockRevision: -1, deadline: null, deadlineKind: null, automaticMoves: [] };
