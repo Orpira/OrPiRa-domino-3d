@@ -1,5 +1,4 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import type { GameMode } from "../../../packages/rules/src/index.ts";
 import type { CommandEnvelope } from "../../../packages/protocol/src/index.ts";
 import { AuthoritativeRoom } from "./authoritative-room.ts";
 import type { LobbyManager } from "./lobby.ts";
@@ -74,7 +73,7 @@ export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: Lo
         const action = quickRoute[1]; const identityToken = session(request); if (!identityToken) return send(401, { code: "UNAUTHENTICATED" });
         if (request.method === "GET" && !action) return send(200, await quickPlay.view(identityToken));
         if (request.method === "GET" && action === "history") return send(200, await quickPlay.historyFor(identityToken));
-        if (request.method === "POST" && action === "join") { const input = await optionalBody(request) as { mode?: GameMode }; return send(200, await quickPlay.join(identityToken, input.mode ?? "INDIVIDUAL")); }
+        if (request.method === "POST" && action === "join") { const input = await optionalBody(request) as { mode?: unknown; rules?: unknown }; return send(200, await quickPlay.join(identityToken, input)); }
         if (request.method === "POST" && action === "cancel") return send(200, await quickPlay.cancel(identityToken));
         if (request.method === "POST" && action === "dismiss") return send(200, await quickPlay.dismiss(identityToken));
         if (request.method === "POST" && action === "commands") { const result = await quickPlay.command(identityToken, await body(request) as CommandEnvelope); return send(result.ok ? 200 : 409, result); }
@@ -92,7 +91,7 @@ export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: Lo
         if (request.method === "POST" && action === "commands") { const result = await competitionManager.command(code, identityToken, await body(request) as CommandEnvelope); return send(result.ok ? 200 : 409, result); }
       }
       if (lobbyManager && request.method === "POST" && request.url === "/api/lobbies") {
-        const input = await body(request) as { name?: string; mode?: GameMode }; return send(201, await lobbyManager.create(input.name ?? "", input.mode ?? "INDIVIDUAL"));
+        const input = await body(request) as { name?: string; mode?: unknown; rules?: unknown; targetScore?: unknown }; return send(201, await lobbyManager.create(input.name ?? "", input));
       }
       const lobbyRoute = request.url?.match(/^\/api\/lobbies\/([A-Za-z0-9]+)(?:\/(join|commands))?$/);
       if (lobbyManager && lobbyRoute) {

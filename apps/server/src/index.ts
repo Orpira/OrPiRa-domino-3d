@@ -7,3 +7,4 @@ export * from "./rate-limit.ts";
 export * from "./auto-player.ts";
 export * from "./quick-play.ts";
 export * from "./league.ts";
+export * from "./table-config.ts";

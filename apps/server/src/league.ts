@@ -110,7 +110,8 @@ export class LeagueManager {
   archivedSeasonIds(): readonly string[] { return [...this.archive.keys()].sort(); }
 
   private award(entry: QuickPlayHistoryEntry): boolean {
-    if (this.awards.has(entry.matchId)) return false;
+    // Solo Latino (individual y parejas) puntúa; las modalidades casuales (con robo) no dan puntos de liga.
+    if (this.awards.has(entry.matchId) || (entry.rules ?? "LATINO") !== "LATINO") return false;
     const seasonId = seasonIdAt(entry.endedAt, this.config.timeZone);
     // Una partida terminada antes del inicio de la temporada abierta (por ejemplo, tras una larga caída) no reabre un archivo.
     const target = seasonId < this.currentSeasonId ? this.currentSeasonId : seasonId;

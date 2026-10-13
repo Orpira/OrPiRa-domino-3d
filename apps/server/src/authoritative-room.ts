@@ -1,6 +1,6 @@
 import {
   getPlayerView, nextRound, startMatch, transition,
-  type Deal, type DomainEvent, type GameMode, type GameState, type PlayerInput, type RuleError,
+  type Command, type Deal, type DomainEvent, type GameMode, type GameState, type RulesId, type Side, type TargetScore, type TileId, type PlayerInput, type RuleError,
 } from "../../../packages/rules/src/index.ts";
 import type { AutomaticMove, AutomaticReason, CommandEnvelope, CommandResponse, ServerErrorCode, TurnClockView } from "../../../packages/protocol/src/index.ts";
 import { chooseAutomaticAction } from "./auto-player.ts";
@@ -22,10 +22,14 @@ export class MemoryMatchStore implements MatchStore {
   async save(matchId: string, snapshot: RoomSnapshot) { this.values.set(matchId, structuredClone(snapshot)); }
 }
 // `mode` solo cuenta al crear la partida; al restaurarla viene en el estado guardado.
-export interface RoomOptions { readonly clock?: TurnClockConfig; readonly now?: () => number; readonly botPlayerIds?: readonly string[]; readonly mode?: GameMode }
+export interface RoomOptions { readonly clock?: TurnClockConfig; readonly now?: () => number; readonly botPlayerIds?: readonly string[]; readonly mode?: GameMode; readonly rules?: RulesId; readonly targetScore?: TargetScore }
 
 type DealFactory = () => Deal;
 export interface Cached { readonly fingerprint: string; readonly response: CommandResponse }
+function toRuleCommand(action: { readonly type: "PLACE" | "PASS" | "DRAW"; readonly tileId?: TileId | undefined; readonly side?: Side | undefined }, actorId: string, expectedRevision: number): Command {
+  if (action.type !== "PLACE") return { type: action.type, actorId, expectedRevision };
+  return { type: "PLACE", actorId, tileId: action.tileId!, ...(action.side ? { side: action.side } : {}), expectedRevision };
+}
 const CONNECTED_MS = 5_000; const KEPT_AUTOMATIC_MOVES = 12;
 
 export class AuthoritativeRoom {
@@ -44,7 +48,7 @@ export class AuthoritativeRoom {
 
   static async create(matchId: string, sessions: readonly SessionPlayer[], dealFactory: DealFactory, store: MatchStore = new MemoryMatchStore(), options: RoomOptions = {}) {
     if (new Set(sessions.map((entry) => entry.sessionId)).size !== 4) throw new Error("Las cuatro sesiones deben ser únicas");
-    const state = startMatch(matchId, sessions.map(({ playerId, seat }) => ({ playerId, seat })), dealFactory(), { mode: options.mode ?? "INDIVIDUAL" }).state;
+    const state = startMatch(matchId, sessions.map(({ playerId, seat }) => ({ playerId, seat })), dealFactory(), { mode: options.mode ?? "INDIVIDUAL", ...(options.rules ? { rules: options.rules } : {}), ...(options.targetScore ? { targetScore: options.targetScore } : {}) }).state;
     const now = (options.now ?? Date.now)(); const bots = new Set(options.botPlayerIds ?? []);
     const control: RoomControl = { seats: sessions.map(({ playerId }) => ({ playerId, bot: bots.has(playerId), automatic: false, consecutiveTimeouts: 0, resumeRequested: false, lastSeen: now })),
       clockRevision: -1, deadline: null, deadlineKind: null, automaticMoves: [] };
@@ -106,10 +110,7 @@ export class AuthoritativeRoom {
       const result = nextRound(this._state, this.dealFactory());
       if ("error" in result) error = result.error; else { this._state = result.state; events = result.events; }
     } else {
-      const command = envelope.command.type === "PASS"
-        ? { type: "PASS" as const, actorId, expectedRevision: envelope.expectedRevision }
-        : { type: "PLACE" as const, actorId, tileId: envelope.command.tileId, ...(envelope.command.side ? { side: envelope.command.side } : {}), expectedRevision: envelope.expectedRevision };
-      const result = transition(this._state, command);
+      const result = transition(this._state, toRuleCommand(envelope.command, actorId, envelope.expectedRevision));
       if (!result.ok) error = result.error; else { this._state = result.state; events = result.events; this.seat(actorId).consecutiveTimeouts = 0; }
     }
     this.refreshClock();
@@ -133,13 +134,16 @@ export class AuthoritativeRoom {
         const seat = this.seat(this._state.currentPlayerId);
         const reason: AutomaticReason = seat.bot ? "BOT" : seat.automatic ? "AUTO_MODE" : "TIMEOUT";
         if (reason === "TIMEOUT") { seat.consecutiveTimeouts += 1; if (seat.consecutiveTimeouts >= this.clock.timeoutsForAuto) { seat.automatic = true; seat.resumeRequested = false; } }
-        const action = chooseAutomaticAction(this._state, seat.playerId, this._state.matchId);
-        const result = transition(this._state, action.type === "PASS" ? { type: "PASS", actorId: seat.playerId, expectedRevision: this._state.revision }
-          : { type: "PLACE", actorId: seat.playerId, tileId: action.tileId!, ...(action.side ? { side: action.side } : {}), expectedRevision: this._state.revision });
-        if (!result.ok) throw new Error(`Jugada automática rechazada: ${result.error.code}`);
-        this.control.automaticMoves.push({ revision: this._state.revision, playerId: seat.playerId, reason, action: action.type, ...(action.tileId ? { tileId: action.tileId } : {}), ...(action.side ? { side: action.side } : {}), at: now });
+        // Con robo, la jugada automática completa el turno: roba hasta poder y después coloca o pasa (cuenta como un solo turno).
+        let action;
+        do {
+          action = chooseAutomaticAction(this._state, seat.playerId, this._state.matchId);
+          const result = transition(this._state, toRuleCommand(action, seat.playerId, this._state.revision));
+          if (!result.ok) throw new Error(`Jugada automática rechazada: ${result.error.code}`);
+          this.control.automaticMoves.push({ revision: this._state.revision, playerId: seat.playerId, reason, action: action.type, ...(action.tileId ? { tileId: action.tileId } : {}), ...(action.side ? { side: action.side } : {}), at: now });
+          this._state = result.state;
+        } while (action.type === "DRAW" && this._state.currentPlayerId === seat.playerId);
         if (this.control.automaticMoves.length > KEPT_AUTOMATIC_MOVES) this.control.automaticMoves.splice(0, this.control.automaticMoves.length - KEPT_AUTOMATIC_MOVES);
-        this._state = result.state;
       } else break;
       changed = true; this.refreshClock();
     }

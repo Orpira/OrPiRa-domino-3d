@@ -1,13 +1,14 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { legalActions, shuffledDeal, type Deal, type GameMode, type Seat } from "../../../packages/rules/src/index.ts";
+import { legalActions, shuffledDeal, targetScore, type Deal, type Seat } from "../../../packages/rules/src/index.ts";
 import type { CommandEnvelope, CommandResponse, LobbyView, SessionGrant } from "../../../packages/protocol/src/index.ts";
+import { tableConfig, type TableConfig } from "./table-config.ts";
 import { AuthoritativeRoom, DEFAULT_TURN_CLOCK, type MatchStore, type SessionPlayer, type TurnClockConfig } from "./authoritative-room.ts";
 
 interface Member extends SessionPlayer { readonly name: string; lastSeen: number }
-// Las salas guardadas antes de las parejas no tienen `mode`: son individuales.
-interface LobbyRecord { readonly code: string; readonly matchId: string; readonly members: Member[]; started: boolean; readonly mode?: GameMode }
+// Las salas guardadas antes de las parejas no tienen `mode` (individual); las anteriores a las modalidades, ni `rules` (Latino) ni `targetScore`.
+interface LobbyRecord { readonly code: string; readonly matchId: string; readonly members: Member[]; started: boolean; readonly mode?: TableConfig["mode"]; readonly rules?: TableConfig["rules"]; readonly targetScore?: TableConfig["targetScore"] }
 interface SavedLobbies { readonly lobbies: readonly LobbyRecord[] }
 const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const makeDeal = (players: readonly SessionPlayer[]): Deal => {
@@ -30,22 +31,22 @@ export class LobbyManager {
     } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
     return manager;
   }
-  async create(name: string, mode: GameMode = "INDIVIDUAL"): Promise<SessionGrant> {
-    if (mode !== "INDIVIDUAL" && mode !== "PAIRS") throw new Error("INVALID_MODE");
-    const code = this.uniqueCode(); const member = this.member(name, 0); const record: LobbyRecord = { code, matchId: `online-${randomUUID()}`, members: [member], started: false, mode };
+  async create(name: string, options: { readonly mode?: unknown; readonly rules?: unknown; readonly targetScore?: unknown } = {}): Promise<SessionGrant> {
+    const config = tableConfig(options);
+    const code = this.uniqueCode(); const member = this.member(name, 0); const record: LobbyRecord = { code, matchId: `online-${randomUUID()}`, members: [member], started: false, ...config };
     this.lobbies.set(code, record); await this.persist(); return { code, sessionId: member.sessionId, playerId: member.playerId };
   }
   async join(codeInput: string, name: string): Promise<SessionGrant> {
     const code = codeInput.trim().toUpperCase(); const lobby = this.lobbies.get(code); if (!lobby) throw new Error("ROOM_NOT_FOUND");
     if (lobby.started || lobby.members.length >= 4) throw new Error("ROOM_FULL");
     const member = this.member(name, lobby.members.length as Seat); lobby.members.push(member);
-    if (lobby.members.length === 4) { lobby.started = true; this.rooms.set(code, await AuthoritativeRoom.create(lobby.matchId, lobby.members, () => makeDeal(lobby.members), this.roomStore, { ...this.roomOptions(), mode: lobby.mode ?? "INDIVIDUAL" })); }
+    if (lobby.members.length === 4) { lobby.started = true; this.rooms.set(code, await AuthoritativeRoom.create(lobby.matchId, lobby.members, () => makeDeal(lobby.members), this.roomStore, { ...this.roomOptions(), mode: lobby.mode ?? "INDIVIDUAL", rules: lobby.rules ?? "LATINO", ...(lobby.targetScore ? { targetScore: lobby.targetScore } : {}) })); }
     await this.persist(); return { code, sessionId: member.sessionId, playerId: member.playerId };
   }
   async view(codeInput: string, sessionId: string): Promise<LobbyView | null> {
     const code = codeInput.toUpperCase(); const lobby = this.lobbies.get(code); const member = lobby?.members.find((candidate) => candidate.sessionId === sessionId);
     if (!lobby || !member) return null; member.lastSeen = this.now(); const room = this.rooms.get(code); const game = room?.connect(sessionId) ?? null;
-    return { code, mode: lobby.mode ?? "INDIVIDUAL", status: !room ? "WAITING" : room.state.phase === "MATCH_ENDED" ? "ENDED" : "PLAYING", viewerPlayerId: member.playerId,
+    return { code, mode: lobby.mode ?? "INDIVIDUAL", rules: lobby.rules ?? "LATINO", targetScore: targetScore({ mode: lobby.mode ?? "INDIVIDUAL", ...(lobby.targetScore ? { targetScore: lobby.targetScore } : {}) }), status: !room ? "WAITING" : room.state.phase === "MATCH_ENDED" ? "ENDED" : "PLAYING", viewerPlayerId: member.playerId,
       players: lobby.members.map((entry) => ({ playerId: entry.playerId, name: entry.name, seat: entry.seat, connected: this.now() - entry.lastSeen < 5_000 })),
       game, legalActions: game && game.currentPlayerId === member.playerId ? legalActions(room!.state, member.playerId) : [], clock: room?.clockView() ?? null };
   }

@@ -59,7 +59,7 @@ describe("Parejas online: salas, Jugar ahora y liga", () => {
   test("una sala con código por parejas: los asientos 0 y 2 contra 1 y 3; por defecto sigue siendo individual", async () => {
     const directory = await mkdtemp(join(tmpdir(), "domino-pairs-lobby-")); try {
       const lobbies = await LobbyManager.open(join(directory, "lobbies.json"), new JsonFileMatchStore(join(directory, "matches")));
-      const host = await lobbies.create("Ana", "PAIRS"); const guests = [];
+      const host = await lobbies.create("Ana", { mode: "PAIRS" }); const guests = [];
       assert.equal((await lobbies.view(host.code, host.sessionId))!.mode, "PAIRS");
       for (const name of ["Beto", "Cora", "Dani"]) guests.push(await lobbies.join(host.code, name));
       const view = (await lobbies.view(host.code, host.sessionId))!; assert.equal(view.status, "PLAYING"); assert.equal(view.game!.mode, "PAIRS");
@@ -67,29 +67,29 @@ describe("Parejas online: salas, Jugar ahora y liga", () => {
       const reopened = await LobbyManager.open(join(directory, "lobbies.json"), new JsonFileMatchStore(join(directory, "matches")));
       assert.equal((await reopened.view(host.code, guests[1]!.sessionId))!.game!.mode, "PAIRS");
       const individual = await lobbies.create("Eva"); assert.equal((await lobbies.view(individual.code, individual.sessionId))!.mode, "INDIVIDUAL");
-      await assert.rejects(() => lobbies.create("Fede", "TRIOS" as "PAIRS"), /INVALID_MODE/);
+      await assert.rejects(() => lobbies.create("Fede", { mode: "TRIOS" }), /INVALID_MODE/);
     } finally { await rm(directory, { recursive: true, force: true }); }
   });
 
   test("Jugar ahora mantiene una cola por modalidad: nunca mezcla individuales con parejas", async () => {
     const state = await setup(); try {
       const grants = await state.people("Ana", "Beto", "Cora", "Dani", "Eva", "Fede", "Gina");
-      for (const grant of grants.slice(0, 3)) await state.quick.join(grant.identityToken, "PAIRS");
+      for (const grant of grants.slice(0, 3)) await state.quick.join(grant.identityToken, { mode: "PAIRS" });
       const solo = await state.quick.join(grants[3]!.identityToken); assert.equal(solo.ticket!.mode, "INDIVIDUAL"); assert.equal(solo.ticket!.position, 1); assert.equal(solo.match, null);
       const third = await state.quick.view(grants[2]!.identityToken); assert.equal(third.ticket!.mode, "PAIRS"); assert.equal(third.ticket!.position, 3); assert.deepEqual(third.ticket!.waiting, ["Ana", "Beto", "Cora"]);
       // Pedir otra modalidad sin salir de la cola no duplica la plaza.
-      assert.equal((await state.quick.join(grants[0]!.identityToken, "INDIVIDUAL")).ticket!.mode, "PAIRS"); assert.equal(state.quick.queueSize(), 4);
-      const full = await state.quick.join(grants[4]!.identityToken, "PAIRS"); assert.ok(full.match); assert.equal(full.match!.mode, "PAIRS"); assert.equal(full.match!.game.mode, "PAIRS");
+      assert.equal((await state.quick.join(grants[0]!.identityToken, { mode: "INDIVIDUAL" })).ticket!.mode, "PAIRS"); assert.equal(state.quick.queueSize(), 4);
+      const full = await state.quick.join(grants[4]!.identityToken, { mode: "PAIRS" }); assert.ok(full.match); assert.equal(full.match!.mode, "PAIRS"); assert.equal(full.match!.game.mode, "PAIRS");
       assert.deepEqual(full.match!.seats.map((seat) => [seat.displayName, seat.seat, seat.bot]), [["Ana", 0, false], ["Beto", 1, false], ["Cora", 2, false], ["Eva", 3, false]]);
       assert.equal((await state.quick.view(grants[3]!.identityToken)).ticket!.mode, "INDIVIDUAL"); assert.equal(state.quick.queueSize(), 1);
-      await assert.rejects(() => state.quick.join(grants[5]!.identityToken, "TRIOS" as "PAIRS"), /INVALID_MODE/);
+      await assert.rejects(() => state.quick.join(grants[5]!.identityToken, { mode: "TRIOS" }), /INVALID_MODE/);
     } finally { await state.close(); }
   });
 
   test("tras la espera, la mesa por parejas se completa con bots por orden de llegada y la partida termina a 200", async () => {
     const state = await setup(); try {
       const [ana, beto] = await state.people("Ana", "Beto"); const start = state.clock.t;
-      await state.quick.join(ana!.identityToken, "PAIRS"); await state.quick.join(beto!.identityToken, "PAIRS");
+      await state.quick.join(ana!.identityToken, { mode: "PAIRS" }); await state.quick.join(beto!.identityToken, { mode: "PAIRS" });
       state.clock.t = start + DEFAULT_QUICK_PLAY.fillAfterMs; await state.quick.tick();
       const started = (await state.quick.view(ana!.identityToken)).match!;
       assert.deepEqual(started.seats.map((seat) => [seat.displayName, seat.bot]), [["Ana", false], ["Beto", false], ["Bot 1", true], ["Bot 2", true]]);
@@ -106,7 +106,7 @@ describe("Parejas online: salas, Jugar ahora y liga", () => {
   test("liga por parejas con cuatro humanos: 40 a cada ganador y 10 a cada perdedor", async () => {
     const state = await setup(); try {
       const grants = await state.people("Ana", "Beto", "Cora", "Dani");
-      for (const grant of grants) await state.quick.join(grant.identityToken, "PAIRS");
+      for (const grant of grants) await state.quick.join(grant.identityToken, { mode: "PAIRS" });
       const ended = await playOut(state, grants); const team = ended.game.matchResult!.championTeam!;
       for (const grant of grants) {
         const award = state.league.awardFor(ended.matchId, grant.identityId)!;

@@ -1,8 +1,10 @@
-import type { DomainEvent, ErrorCode, GameMode, LegalAction, PlayerView, Seat, Side, TileId } from "../../rules/src/index.ts";
+import type { DomainEvent, ErrorCode, GameMode, LegalAction, RulesId, PlayerView, Seat, Side, TileId } from "../../rules/src/index.ts";
 
 export type ClientCommand =
   | { readonly type: "PLACE"; readonly tileId: TileId; readonly side?: Side }
   | { readonly type: "PASS" }
+  // Con robo: roba una ficha del pozo (solo sin jugada posible y con fichas en el pozo).
+  | { readonly type: "DRAW" }
   | { readonly type: "NEXT_ROUND" }
   // Pide recuperar el control de un asiento en modo automático; se aplica desde su siguiente turno.
   | { readonly type: "RESUME_CONTROL" };
@@ -21,7 +23,7 @@ export type CommandResponse =
 export type AutomaticReason = "TIMEOUT" | "AUTO_MODE" | "BOT";
 export interface AutomaticMove {
   readonly revision: number; readonly playerId: string; readonly reason: AutomaticReason;
-  readonly action: "PLACE" | "PASS"; readonly tileId?: TileId; readonly side?: Side; readonly at: number;
+  readonly action: "PLACE" | "PASS" | "DRAW"; readonly tileId?: TileId; readonly side?: Side; readonly at: number;
 }
 export interface SeatControlView {
   readonly playerId: string; readonly bot: boolean; readonly automatic: boolean;
@@ -37,6 +39,9 @@ export interface LobbyPlayer { readonly playerId: string; readonly name: string;
 export interface LobbyView {
   readonly code: string;
   readonly mode: GameMode;
+  readonly rules: RulesId;
+  /** Objetivo efectivo de la partida (el elegido o el de la modalidad). */
+  readonly targetScore: number;
   readonly status: "WAITING" | "PLAYING" | "ENDED";
   readonly players: readonly LobbyPlayer[];
   readonly viewerPlayerId: string;
@@ -85,9 +90,9 @@ export interface CompetitionResultSummary {
 
 // Jugar ahora: práctica gratuita, sin entrada, saldo ni premio.
 export interface QuickPlaySeat { readonly playerId: string; readonly displayName: string; readonly seat: Seat; readonly bot: boolean }
-export interface QuickPlayTicket { readonly mode: GameMode; readonly ticketId: string; readonly joinedAt: number; readonly position: number; readonly waiting: readonly string[]; readonly botsFillAt: number; readonly serverNow: number }
+export interface QuickPlayTicket { readonly mode: GameMode; readonly rules: RulesId; readonly ticketId: string; readonly joinedAt: number; readonly position: number; readonly waiting: readonly string[]; readonly botsFillAt: number; readonly serverNow: number }
 export interface QuickPlayMatchView {
-  readonly matchId: string; readonly mode: GameMode; readonly status: "PLAYING" | "ENDED"; readonly viewerPlayerId: string; readonly seats: readonly QuickPlaySeat[];
+  readonly matchId: string; readonly mode: GameMode; readonly rules: RulesId; readonly status: "PLAYING" | "ENDED"; readonly viewerPlayerId: string; readonly seats: readonly QuickPlaySeat[];
   readonly game: PlayerView; readonly legalActions: readonly LegalAction[]; readonly clock: TurnClockView;
   // Rango de liga de cada asiento humano (los bots no tienen) y puntos concedidos al espectador al terminar.
   readonly ranks: Readonly<Record<string, LeagueRankId>>; readonly league: LeagueAwardView | null;
@@ -97,6 +102,8 @@ export interface QuickPlayHistoryEntry {
   readonly matchId: string; readonly startedAt: number; readonly endedAt: number; readonly championPlayerId: string;
   // Ausente en partidas anteriores a las parejas: individuales. En parejas, los compañeros comparten marcador.
   readonly mode?: GameMode;
+  // Ausente en partidas anteriores a las modalidades: Latino. Solo Latino puntúa en la liga.
+  readonly rules?: RulesId;
   readonly participants: readonly { readonly playerId: string; readonly displayName: string; readonly seat: Seat; readonly bot: boolean; readonly score: number; readonly endedAutomatic: boolean }[];
 }
 
