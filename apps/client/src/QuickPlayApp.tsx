@@ -61,7 +61,7 @@ function QuickPlaySession({ token, identityId, onHome }: { token: string; identi
     const decorations = Object.fromEntries(Object.entries(match.ranks).map(([playerId, rank]) => [playerId, <RankTile key={playerId} rank={rank}/>]));
     return <main className="view online-shell quick-game">{connectionBadge}
       <GameBoard game={match.game} actions={match.legalActions} names={names} viewerId={match.viewerPlayerId} sending={channel.sending} message={channel.message} reducedMotion={reducedMotion}
-        celebrationStorage={persistentStorage()} onCommand={(command) => void channel.send(command)} onLeave={onHome} context={context} clock={match.clock} finaleActions={finaleActions} nameDecorations={decorations} finaleDetails={<LeagueAward match={match}/>}/>
+        celebrationStorage={persistentStorage()} onCommand={(command) => void channel.send(command)} onLeave={onHome} context={context} clock={match.clock} finaleActions={finaleActions} nameDecorations={decorations} finaleDetails={<LeagueAward match={match}/>} chatConnection={{ path: `/api/chat/quick/${match.matchId}`, token }}/>
       {error && <p className="field-error" role="alert">{error}</p>}</main>;
   }
 

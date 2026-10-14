@@ -7,8 +7,11 @@ import type { QuickPlayManager } from "./quick-play.ts";
 import type { LeagueManager } from "./league.ts";
 import type { SocialManager } from "./social.ts";
 import { FixedWindowLimiter, requestSource, type WindowLimit } from "./rate-limit.ts";
+import type { ChatManager } from "./chat.ts";
+import type { ChatChannel } from "../../../packages/protocol/src/chat.ts";
 
 export interface HttpServerOptions {
+  readonly chatManager?: ChatManager;
   readonly allowedOrigins?: readonly string[]; readonly competitionManager?: CompetitionManager; readonly quickPlayManager?: QuickPlayManager; readonly leagueManager?: LeagueManager; readonly socialManager?: SocialManager;
   // Límites por origen (IP); `max: 0` o ausencia los desactiva. `trustProxy` solo con un proxy propio delante.
   readonly requestLimit?: WindowLimit; readonly identityLimit?: WindowLimit; readonly trustProxy?: boolean; readonly now?: () => number;
@@ -33,6 +36,8 @@ async function optionalBody(request: IncomingMessage): Promise<unknown> {
 }
 const CONFLICTS = new Set(["USERNAME_TAKEN", "USERNAME_ALREADY_SET", "ALREADY_IN_ROOM", "BLOCKED_BY_YOU", "ROOM_FULL_FOR_INVITE"]);
 const NOT_FOUND = new Set(["USER_NOT_FOUND", "FRIENDSHIP_NOT_FOUND"]);
+/** Fallo del sistema de archivos (no de las reglas, que también llevan `code`). */
+function isStorageError(error: unknown) { const value = error as NodeJS.ErrnoException; return typeof value?.errno === "number" || typeof value?.syscall === "string"; }
 function session(request: IncomingMessage) { const value = request.headers.authorization; return value?.startsWith("Bearer ") ? value.slice(7) : null; }
 
 export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: LobbyManager, options: HttpServerOptions = {}) {
@@ -50,6 +55,37 @@ export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: Lo
       const source = requestSource(request, options.trustProxy ?? false);
       const limited = (code: string, retryAfterSeconds: number) => { response.setHeader("retry-after", String(retryAfterSeconds)); return send(429, { code, retryAfterSeconds }); };
       const requestDecision = requestLimiter?.take(source); if (requestDecision && !requestDecision.allowed) return limited("RATE_LIMITED", requestDecision.retryAfterSeconds);
+      const chatRoute = request.url?.match(/^\/api\/chat\/(lobby|private|competition|quick)(?:\/([A-Za-z0-9-]+))?(?:\/(mute|report))?$/);
+      if (options.chatManager && chatRoute) {
+        const token = session(request); if (!token) return send(401, { code: "UNAUTHENTICATED" });
+        const kind = chatRoute[1]; const key = chatRoute[2];
+        const lobbyAction = kind === "lobby" && (key === "mute" || key === "report") && !chatRoute[3] ? key : undefined;
+        const action = chatRoute[3] ?? lobbyAction;
+        let channel: ChatChannel;
+        if (kind === "lobby" && (!key || lobbyAction)) channel = { type: "LOBBY" };
+        else if (kind === "private" && key) channel = { type: "PRIVATE", code: key };
+        else if (kind === "competition" && key) channel = { type: "COMPETITION", code: key };
+        else if (kind === "quick" && key) channel = { type: "QUICK", matchId: key };
+        else return send(400, { code: "CHAT_INVALID_CHANNEL" });
+        const chat = options.chatManager;
+        // Los códigos del chat tienen su propio estado HTTP; no afectan al resto de rutas (p. ej. la Competición responde 400).
+        try {
+          if (request.method === "GET" && !action) return send(200, chat.view(channel, token));
+          if (request.method === "POST" && !action) return send(201, chat.send(channel, token, await body(request)));
+          if (request.method === "POST" && action === "mute") { await chat.mute(channel, token, await body(request)); return send(200, chat.view(channel, token)); }
+          if (request.method === "POST" && action === "report") { await chat.report(channel, token, await body(request)); return send(200, { ok: true }); }
+          return send(405, { code: "METHOD_NOT_ALLOWED" });
+        } catch (error) {
+          const code = (error as Error).message || "CHAT_INVALID_CONTENT";
+          if (code === "CHAT_RATE_LIMITED") return send(429, { code });
+          if (code === "UNAUTHENTICATED" || code === "NOT_A_MEMBER") return send(401, { code: "UNAUTHENTICATED" });
+          if (code === "NOT_A_PARTICIPANT" || code === "CHAT_QUICK_ONLY" || code === "CHAT_PHRASES_ONLY" || code === "CHAT_FINISHED_MATCH_REQUIRED") return send(403, { code });
+          if (code === "CHAT_MESSAGE_NOT_FOUND" || code === "MATCH_NOT_FOUND" || code === "COMPETITION_NOT_FOUND") return send(404, { code });
+          if (code === "CHAT_TABLE_CLOSED") return send(409, { code });
+          if (isStorageError(error)) { console.error("Error de almacenamiento del chat:", error); return send(500, { code: "STORAGE_ERROR" }); }
+          return send(400, { code });
+        }
+      }
       const competitionManager = options.competitionManager;
       if (competitionManager && request.method === "GET" && request.url === "/api/simulated-conditions") return send(200, competitionManager.conditions());
       if (competitionManager && request.method === "POST" && request.url === "/api/test-identities") {

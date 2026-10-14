@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import { legalActions, shuffledDeal, type Deal, type Seat } from "../../../packages/rules/src/index.ts";
 import type { CommandEnvelope, CommandResponse, CompetitionResultSummary, CompetitionView, LeagueRankId, SimulatedConditions, SimulatedMovement, SimulatedMovementKind, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
 import { AuthoritativeRoom, DEFAULT_TURN_CLOCK, type MatchStore, type SessionPlayer, type TurnClockConfig } from "./authoritative-room.ts";
+import type { TableChatContext } from "./chat.ts";
 
 export const SIMULATED_CONDITIONS: SimulatedConditions = Object.freeze({
   currencyLabel: "COP simulados · sin valor monetario", initialCredit: 100000, entry: 5000,
@@ -17,7 +18,7 @@ export function settlementAmounts(terms: SimulatedConditions) {
   return { pool, commission, prize: terms.prize };
 }
 
-interface Identity { readonly identityId: string; readonly token: string; readonly displayName: string; available: number; reserved: number }
+interface Identity { readonly identityId: string; readonly token: string; readonly displayName: string; available: number; reserved: number; mutedIdentityIds?: readonly string[] }
 interface Member { readonly identityId: string; readonly seat: Seat; accepted: boolean; annulmentAccepted: boolean; lastSeen: number }
 interface Settlement { readonly championIdentityId: string; readonly matchId: string; readonly settledAt: number; readonly automaticIdentityIds: readonly string[]; readonly entry: number; readonly grossPrize: number; readonly commission: number; readonly netPrize: number }
 interface Competition {
@@ -69,6 +70,23 @@ export class CompetitionManager {
   /** Identidad de prueba asociada a un token, para modalidades sin saldo como «Jugar ahora». */
   displayNameOf(identityId: string): string | null { return this.identities.get(identityId)?.displayName ?? null; }
   identify(token: string): { identityId: string; displayName: string } | null { const id = this.tokens.get(token); const identity = id ? this.identities.get(id) : null; return identity ? { identityId: identity.identityId, displayName: identity.displayName } : null; }
+  chatMuted(identityId: string): readonly string[] { return this.identities.get(identityId)?.mutedIdentityIds ?? []; }
+  setChatMuted(identityId: string, ids: readonly string[]): Promise<void> { return this.serial(async () => {
+    const identity = this.identities.get(identityId); if (!identity) throw new Error("UNAUTHENTICATED");
+    const previous = identity.mutedIdentityIds; identity.mutedIdentityIds = ids;
+    try { await this.persist(); } catch (error) { if (previous) identity.mutedIdentityIds = previous; else delete identity.mutedIdentityIds; throw error; }
+  }); }
+  hasFinishedMatch(identityId: string): boolean {
+    return [...this.competitions.values()].some((entry) => entry.settlement && entry.members.some((member) => member.identityId === identityId));
+  }
+  chatCompetitionOf(identityId: string): boolean {
+    return [...this.competitions.values()].some((entry) => (entry.status === "WAITING" || entry.status === "PLAYING") && entry.members.some((member) => member.identityId === identityId));
+  }
+  tableChat(codeInput: string, token: string): TableChatContext {
+    const identity = this.identity(token); const competition = this.competition(codeInput); this.member(competition, identity);
+    return { matchId: competition.matchId, identityId: identity.identityId, displayName: identity.displayName, playerId: identity.identityId,
+      phase: () => this.rooms.get(competition.code)?.state.phase ?? "WAITING", closed: () => competition.status === "CANCELLED" || competition.status === "EXPIRED" };
+  }
   account(token: string): Promise<TestAccountView> { return this.serial(async () => { this.expireDue(); await this.persist(); const identity = this.identity(token); return this.accountView(identity); }); }
   create(token: string): Promise<CompetitionView> { return this.serial(async () => {
     this.expireDue(); const identity = this.identity(token); const createdAt = this.now(); const code = this.uniqueCode();

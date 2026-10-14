@@ -173,7 +173,7 @@ function CompetitionRoom({ code, identity, account, onClose }: { code: string; i
       : <StateCard tone="warning" title="Liquidación pendiente">El servidor todavía no ha confirmado la liquidación. No se muestra ningún importe hasta entonces.</StateCard>}<SimulatedNotice compact/></section>;
   return <main className="view online-shell competition-game">{connectionBadge}
     <GameBoard game={game} actions={view.legalActions} names={names} viewerId={view.viewerIdentityId} sending={channel.sending} message={channel.message} reducedMotion={reducedMotion}
-      celebrationStorage={persistentStorage()} onCommand={(command) => void channel.send(command)} onLeave={() => onClose()} context={context} finaleDetails={finale} clock={view.clock}
+      celebrationStorage={persistentStorage()} onCommand={(command) => void channel.send(command)} onLeave={() => onClose()} context={context} finaleDetails={finale} clock={view.clock} chatConnection={{ path: `/api/chat/competition/${code}`, token: identity.identityToken }}
       nameDecorations={Object.fromEntries(Object.entries(view.ranks ?? {}).map(([playerId, rank]) => [playerId, <RankTile key={playerId} rank={rank}/>]))}/>
     {view.status === "ENDED" && game.phase !== "MATCH_ENDED" && <StateCard title="Competición finalizada" action={<button className="primary" onClick={() => onClose()}>Volver al lobby</button>}/>}
     <p className="meta">Sala creada {formatDateTime(view.createdAt)}</p>

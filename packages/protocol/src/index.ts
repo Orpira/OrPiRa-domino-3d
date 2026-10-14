@@ -1,4 +1,5 @@
 import type { DomainEvent, ErrorCode, GameMode, LegalAction, RulesId, PlayerView, Seat, Side, TileId } from "../../rules/src/index.ts";
+export * from "./chat.ts";
 
 export type ClientCommand =
   | { readonly type: "PLACE"; readonly tileId: TileId; readonly side?: Side }

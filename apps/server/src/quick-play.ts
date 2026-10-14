@@ -5,6 +5,7 @@ import { legalActions, shuffledDeal, type Deal, type GameMode, type RulesId, typ
 import type { CommandEnvelope, CommandResponse, LeagueAwardView, LeagueRankId, QuickPlayHistoryEntry, QuickPlayMatchView, QuickPlayView } from "../../../packages/protocol/src/index.ts";
 import { tableConfig } from "./table-config.ts";
 import { AuthoritativeRoom, DEFAULT_TURN_CLOCK, type MatchStore, type TurnClockConfig } from "./authoritative-room.ts";
+import type { TableChatContext } from "./chat.ts";
 
 export interface QuickPlayConfig { readonly fillAfterMs: number }
 // Espera provisional antes de completar la mesa con bots del servidor.
@@ -95,6 +96,18 @@ export class QuickPlayManager {
     }
   }); }
   queueSize() { return this.queue.length; }
+  hasFinishedMatch(identityId: string): boolean { return this.history.some((entry) => entry.participants.some((seat) => seat.playerId === identityId && !seat.bot)); }
+  chatHandActive(identityId: string): boolean {
+    const match = this.activeMatch(identityId); return !!match && this.rooms.get(match.matchId)?.state.phase === "ROUND_ACTIVE";
+  }
+  tableChat(matchId: string, token: string): TableChatContext {
+    const player = this.player(token); const match = this.matches.get(matchId);
+    const seat = match?.seats.find((entry) => entry.playerId === player.identityId && !entry.bot);
+    if (!match || !seat || match.dismissed.includes(player.identityId)) throw new Error("NOT_A_PARTICIPANT");
+    const room = this.rooms.get(matchId) ?? this.endedRooms.get(matchId); if (!room) throw new Error("MATCH_NOT_FOUND");
+    return { matchId, identityId: player.identityId, displayName: player.displayName, playerId: seat.playerId,
+      phase: () => room.state.phase, closed: () => match.dismissed.length >= match.seats.filter((entry) => !entry.bot).length };
+  }
   historyEntries(): readonly QuickPlayHistoryEntry[] { return this.history; }
   attachLeague(league: LeagueBridge) { this.league = league; }
   private league: LeagueBridge | null = null;

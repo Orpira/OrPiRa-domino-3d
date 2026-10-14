@@ -10,6 +10,7 @@ import { InviteView } from "./invite-ui.tsx";
 import { SocialProvider, useSocialState } from "./social-context.tsx";
 import { InvitationBanner } from "./friends-ui.tsx";
 import { parseInvitation, type Invitation } from "./invite-link.ts";
+import { LobbyChat } from "./chat-ui.tsx";
 
 type View = "HOME" | "QUICK" | "PRACTICE" | "ONLINE" | "TABLES" | "LEAGUE" | "HISTORY" | "ACCOUNT" | "INVITE";
 type Tab = "HOME" | "TABLES" | "LEAGUE" | "HISTORY" | "ACCOUNT";
@@ -42,13 +43,14 @@ export default function App() {
     if (view === "HISTORY" || view === "ACCOUNT" || view === "HOME") void account.refresh();
   }, [view]);
   const active = tabOf(view);
-  return <SocialProvider token={account.identity?.identityToken ?? null}><div className="app-shell">
+  return <SocialProvider token={account.identity?.identityToken ?? null}><div className={`app-shell ${account.identity && !(view === "PRACTICE" || view === "ONLINE" || view === "QUICK" || view === "TABLES" || view === "INVITE") ? "with-lobby-chat" : ""}`}>
     <a className="skip-link" href="#contenido">Saltar al contenido</a>
     <nav className="app-nav" aria-label="Navegación principal">
       <div className="nav-brand"><img src="/icons/icon-192.png" width="40" height="40" alt=""/><span>Domino3D-<b>OrPiRa</b></span></div>
       <ul>{TABS.map((item) => <li key={item.tab}><button className={active === item.tab ? "current" : ""} aria-current={active === item.tab ? "page" : undefined} onClick={() => invitation ? leaveInvitation(item.tab) : go(item.tab)}>{item.icon}<span>{item.label}</span>{item.tab === "ACCOUNT" && <SocialBadge/>}</button></li>)}</ul>
       <p className="nav-note">COP simulados · sin valor monetario</p>
     </nav>
+    <LobbyChat key={account.identity?.identityId ?? "anonymous"} token={account.identity?.identityToken ?? null} hidden={view === "PRACTICE" || view === "ONLINE" || view === "QUICK" || view === "TABLES" || view === "INVITE"}/>
     <div className="app-content" id="contenido" ref={content} tabIndex={-1}>
       {view !== "INVITE" && <InvitationBanner onJoin={(next) => { setInvitation({ code: next.code, inviter: next.fromUsername }); go("INVITE"); }}/>}
       {(view === "PRACTICE" || view === "ONLINE" || view === "QUICK") && <div className="subnav"><button className="ghost back" onClick={() => go("HOME")}>← Inicio</button><span>{view === "PRACTICE" ? "Práctica sin conexión" : view === "QUICK" ? "Jugar ahora · práctica gratuita" : "Partida online · sin saldo"}</span></div>}

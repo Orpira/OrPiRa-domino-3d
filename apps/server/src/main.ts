@@ -1,4 +1,6 @@
 import { resolve } from "node:path";
+import { ChatManager } from "./chat.ts";
+import { chatResolver } from "./chat-access.ts";
 import { CompetitionManager, createDominoHttpServer, DEFAULT_IDENTITY_LIMIT, DEFAULT_LEAGUE, LeagueManager, DEFAULT_REQUEST_LIMIT, DEFAULT_TURN_CLOCK, JsonFileMatchStore, JsonSocialRepository, LobbyManager, SocialManager, QuickPlayManager, RoomRegistry } from "./index.ts";
 
 const port = Number(process.env.PORT ?? 8787);
@@ -20,10 +22,12 @@ const league = await LeagueManager.open(resolve(dataDirectory, "league.json"), D
 const social = new SocialManager(await JsonSocialRepository.open(resolve(dataDirectory, "social.json")), (token) => competitions.identify(token), (identityId) => competitions.displayNameOf(identityId));
 lobbies.attachSocial(social); social.attachRooms((code, identityId) => lobbies.memberPreview(code, identityId));
 quickPlay.attachLeague(league); competitions.attachRanks((identityId) => league.rankOf(identityId));
+const chat = await ChatManager.open(resolve(dataDirectory, "chat-reports.json"), chatResolver(competitions, lobbies, quickPlay));
 // Reconciliación al arrancar: puntos de partidas terminadas que no llegaron a concederse y cierres de temporada vencidos.
 await league.sync(quickPlay.historyEntries());
 // Reloj de turno: el servidor resuelve turnos vencidos, asientos automáticos y bots aunque nadie consulte.
 const ticker = setInterval(() => { void Promise.allSettled([lobbies.tick(), competitions.tick(), quickPlay.tick(), league.sync([])]).then((results) => {
+  chat.prune();
   for (const result of results) if (result.status === "rejected") console.error("Reloj de turno:", result.reason);
 }); }, Number(process.env.DOMINO_CLOCK_TICK_MS ?? 500)); ticker.unref();
 const allowedOrigins = (process.env.DOMINO_ALLOWED_ORIGINS ?? "http://localhost:5173,http://127.0.0.1:5173")
@@ -33,7 +37,7 @@ const limit = (max: string | undefined, seconds: string | undefined, defaultMax:
 const requestLimit = limit(process.env.DOMINO_RATE_LIMIT_MAX, process.env.DOMINO_RATE_LIMIT_WINDOW_SECONDS, DEFAULT_REQUEST_LIMIT.max, DEFAULT_REQUEST_LIMIT.windowMs / 1000);
 const identityLimit = limit(process.env.DOMINO_IDENTITY_LIMIT_MAX, process.env.DOMINO_IDENTITY_LIMIT_WINDOW_SECONDS, DEFAULT_IDENTITY_LIMIT.max, DEFAULT_IDENTITY_LIMIT.windowMs / 1000);
 const trustProxy = process.env.DOMINO_TRUST_PROXY === "true";
-const server = createDominoHttpServer(new RoomRegistry(), lobbies, { allowedOrigins, competitionManager: competitions, quickPlayManager: quickPlay, leagueManager: league, socialManager: social, requestLimit, identityLimit, trustProxy });
+const server = createDominoHttpServer(new RoomRegistry(), lobbies, { allowedOrigins, competitionManager: competitions, quickPlayManager: quickPlay, leagueManager: league, socialManager: social, chatManager: chat, requestLimit, identityLimit, trustProxy });
 server.listen(port, host, () => console.log(`Dominó online local: http://${host}:${port}`));
 const shutdown = (signal: string) => server.close(() => { console.log(`Servidor detenido por ${signal}`); process.exit(0); });
 process.once("SIGTERM", () => shutdown("SIGTERM")); process.once("SIGINT", () => shutdown("SIGINT"));

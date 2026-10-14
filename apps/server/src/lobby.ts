@@ -6,9 +6,10 @@ import type { CommandEnvelope, CommandResponse, LobbyPreview, LobbyView, Session
 import type { SocialManager } from "./social.ts";
 import { tableConfig, type TableConfig } from "./table-config.ts";
 import { AuthoritativeRoom, DEFAULT_TURN_CLOCK, type MatchStore, type SessionPlayer, type TurnClockConfig } from "./authoritative-room.ts";
+import type { TableChatContext } from "./chat.ts";
 
 // `identityId`: cuenta de prueba de quien entró con ella (necesaria para las amistades por invitación).
-interface Member extends SessionPlayer { readonly name: string; lastSeen: number; readonly identityId?: string }
+interface Member extends SessionPlayer { readonly name: string; lastSeen: number; readonly identityId?: string; mutedIdentityIds?: readonly string[] }
 // Las salas guardadas antes de las parejas no tienen `mode` (individual); las anteriores a las modalidades, ni `rules` (Latino) ni `targetScore`.
 interface LobbyRecord { readonly code: string; readonly matchId: string; readonly members: Member[]; started: boolean; readonly mode?: TableConfig["mode"]; readonly rules?: TableConfig["rules"]; readonly targetScore?: TableConfig["targetScore"] }
 interface SavedLobbies { readonly lobbies: readonly LobbyRecord[] }
@@ -35,6 +36,30 @@ export class LobbyManager {
   }
   attachSocial(social: SocialManager) { this.social = social; }
   private social: SocialManager | null = null;
+  tableChat(codeInput: string, sessionId: string): TableChatContext {
+    const lobby = this.lobbies.get(codeInput.toUpperCase()); const member = lobby?.members.find((entry) => entry.sessionId === sessionId);
+    if (!lobby || !member) throw new Error("UNAUTHENTICATED");
+    return { matchId: lobby.matchId, identityId: member.identityId ?? `guest-${lobby.matchId}-${member.playerId}`, playerId: member.playerId, displayName: member.name,
+      phase: () => this.rooms.get(lobby.code)?.state.phase ?? "WAITING", closed: () => false };
+  }
+  chatMuted(code: string, sessionId: string): readonly string[] {
+    this.tableChat(code, sessionId); return this.lobbies.get(code.toUpperCase())!.members.find((entry) => entry.sessionId === sessionId)!.mutedIdentityIds ?? [];
+  }
+  private chatQueue: Promise<void> = Promise.resolve();
+  setChatMuted(code: string, sessionId: string, ids: readonly string[]): Promise<void> {
+    const result = this.chatQueue.then(async () => {
+      this.tableChat(code, sessionId); const member = this.lobbies.get(code.toUpperCase())!.members.find((entry) => entry.sessionId === sessionId)!;
+      const previous = member.mutedIdentityIds; member.mutedIdentityIds = ids;
+      try { await this.persist(); } catch (error) { if (previous) member.mutedIdentityIds = previous; else delete member.mutedIdentityIds; throw error; }
+    });
+    this.chatQueue = result.then(() => {}, () => {}); return result;
+  }
+  hasFinishedMatch(identityId: string): boolean {
+    return [...this.lobbies.values()].some((entry) => this.rooms.get(entry.code)?.state.phase === "MATCH_ENDED" && entry.members.some((member) => member.identityId === identityId));
+  }
+  chatHandActive(identityId: string): boolean {
+    return [...this.lobbies.values()].some((entry) => this.rooms.get(entry.code)?.state.phase === "ROUND_ACTIVE" && entry.members.some((member) => member.identityId === identityId));
+  }
   async create(name: string, options: { readonly mode?: unknown; readonly rules?: unknown; readonly targetScore?: unknown } = {}, identityId?: string): Promise<SessionGrant> {
     const config = tableConfig(options);
     const code = this.uniqueCode(); const member = this.member(name, 0, identityId); const record: LobbyRecord = { code, matchId: `online-${randomUUID()}`, members: [member], started: false, ...config };
