@@ -1,3 +1,18 @@
+# Plan de despliegue — Domino3D-OrPiRa v1.11-rc1 (amigos completos)
+
+Mismo procedimiento que la 1.10-rc1; directorio nuevo `/opt/domino-3d-v1.11-rc1`, vuelta atrás a `/opt/domino-3d-v1.10-rc1`.
+
+| Archivo | SHA-256 |
+| --- | --- |
+| `domino-api-1.11-rc1.tar.gz` (imagen `sha256:2a6a663c3cbeea0795c56d8d17a01c831143be39e397e1355a356e49810daeb3`) | `c6511b624065aea82e430757002a686304af182075503c27dde34d0f019a613e` |
+| `domino-3d-src-v1.11-rc1.tar.gz` (`v1.11-rc1`; `compose.yaml` sin cambios) | `fa101a4fb5c78440fab115d33991ae80fa2c00bfb646221c8646c983dc398098` |
+| `domino3d-orpira-1.11-rc1-debug.apk` (`versionCode` 14) | `d3757f61526c131c84c194b8602b7b310d7a00b121b833a788f6af46c020662a` |
+
+- Sin cambios de formato: `social.json` puede tener relaciones PENDING y BLOCKED, que la 1.10 ya
+  sabe leer (las ignora salvo BLOCKED en invitaciones). Presencia e invitaciones viven en memoria.
+
+---
+
 # Plan de despliegue — Domino3D-OrPiRa v1.10-rc1 (All Fives)
 
 Mismo procedimiento que la 1.9-rc1; directorio nuevo `/opt/domino-3d-v1.10-rc1`, vuelta atrás a `/opt/domino-3d-v1.9-rc1`.
