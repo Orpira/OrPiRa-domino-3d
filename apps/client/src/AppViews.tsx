@@ -9,7 +9,7 @@ import { useConfirm } from "./confirm-dialog.tsx";
 import { useSocial } from "./invite-ui.tsx";
 import { CompetitionApiError, socialApi } from "./competition-api.ts";
 
-export const APP_VERSION = "1.8-rc1";
+export const APP_VERSION = "1.9-rc1";
 
 interface HomeProps { readonly account: TestAccount; readonly conditions: Conditions; readonly onQuickPlay: () => void; readonly onPractice: () => void; readonly onOnline: () => void; readonly onTables: () => void }
 export function HomeView({ account, conditions, onQuickPlay, onPractice, onOnline, onTables }: HomeProps) {
