@@ -61,6 +61,11 @@ export class LobbyManager {
     return { code: lobby.code, mode: lobby.mode ?? "INDIVIDUAL", rules: lobby.rules ?? "LATINO", targetScore: targetScore({ mode: lobby.mode ?? "INDIVIDUAL", ...(lobby.targetScore ? { targetScore: lobby.targetScore } : {}) }),
       status: !room ? "WAITING" : room.state.phase === "MATCH_ENDED" ? "ENDED" : "PLAYING", players: lobby.members.map((member) => member.name), freeSeats: 4 - lobby.members.length, inviter: inviter?.name ?? null };
   }
+  /** Vista de la sala para invitar a un amigo: solo si esa cuenta ocupa una plaza en ella. */
+  async memberPreview(codeInput: string, identityId: string): Promise<LobbyPreview | null> {
+    const lobby = this.lobbies.get(codeInput.trim().toUpperCase()); if (!lobby?.members.some((member) => member.identityId === identityId)) return null;
+    return this.preview(lobby.code);
+  }
   private async inviterIn(lobby: LobbyRecord, username: string): Promise<Member | null> {
     const id = await this.social?.identityOfUsername(username); return id ? lobby.members.find((member) => member.identityId === id) ?? null : null;
   }

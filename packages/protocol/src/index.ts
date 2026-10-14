@@ -132,8 +132,26 @@ export interface LeagueArchivedSeason { readonly seasonId: string; readonly labe
 export interface LeagueHistoryView { readonly awards: readonly LeagueAwardView[]; readonly seasons: readonly LeagueArchivedSeason[] }
 
 // Perfil social mínimo: nombre de usuario único sobre la cuenta de prueba, y amistades aceptadas.
-export interface FriendView { readonly username: string | null; readonly displayName: string; readonly since: number }
-export interface SocialView { readonly username: string | null; readonly displayName: string; readonly friends: readonly FriendView[] }
+/** Otra persona en una relación: `friendshipId` identifica la relación para aceptar, rechazar, eliminar o bloquear. */
+export interface SocialPerson { readonly friendshipId: string; readonly username: string | null; readonly displayName: string }
+export interface FriendView extends SocialPerson {
+  readonly since: number;
+  /** Visto en el último minuto (la app consulta cada 25 s mientras está abierta). */
+  readonly online: boolean;
+}
+/** Invitación a una sala con código enviada por un amigo; vive en memoria del servidor 10 minutos. */
+export interface RoomInvitation {
+  readonly invitationId: string; readonly fromName: string; readonly fromUsername: string | null; readonly code: string;
+  readonly mode: GameMode; readonly rules: RulesId; readonly targetScore: number; readonly createdAt: number; readonly expiresAt: number;
+}
+export interface SocialView {
+  readonly username: string | null; readonly displayName: string; readonly friends: readonly FriendView[];
+  readonly incoming: readonly SocialPerson[]; readonly outgoing: readonly SocialPerson[]; readonly blocked: readonly SocialPerson[];
+  readonly invitations: readonly RoomInvitation[];
+}
+/** Relación con quien aparece en una búsqueda: NONE, solicitud enviada o recibida, amigos, o bloqueado por mí. */
+export type SocialRelation = "NONE" | "PENDING_OUT" | "PENDING_IN" | "FRIEND" | "BLOCKED";
+export interface SocialSearchResult { readonly username: string; readonly displayName: string; readonly relation: SocialRelation; readonly friendshipId: string | null }
 /** Vista pública de una sala para quien abre una invitación: sin sesiones ni identidades. */
 export interface LobbyPreview {
   readonly code: string; readonly mode: GameMode; readonly rules: RulesId; readonly targetScore: number;

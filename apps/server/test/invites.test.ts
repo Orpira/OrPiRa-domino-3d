@@ -71,7 +71,8 @@ describe("Invitaciones a salas con código", () => {
       const anonymous = await state.lobbies.join(host.code, "Eva", undefined, { inviter: "ana" }); assert.equal(anonymous.friendWith, undefined);
       const friendsOf = async (grant: TestIdentityGrant) => (await state.social.view(grant.identityToken)).friends.map((friend) => friend.displayName);
       assert.deepEqual(await friendsOf(ana!), ["Beto"]); assert.deepEqual(await friendsOf(beto!), ["Ana", "Cora"]); assert.deepEqual(await friendsOf(cora!), ["Beto"]);
-      assert.deepEqual((await state.social.view(ana!.identityToken)).friends[0], { username: "beto", displayName: "Beto", since: (await state.social.view(ana!.identityToken)).friends[0]!.since });
+      const friend = (await state.social.view(ana!.identityToken)).friends[0]!;
+      assert.deepEqual({ ...friend, friendshipId: "x", since: 0 }, { friendshipId: "x", username: "beto", displayName: "Beto", since: 0, online: true });
       // Sala nueva sin invitación: no crea amistad.
       const other = await state.lobbies.create("Ana", {}, ana!.identityId); await state.lobbies.join(other.code, "Dani", dani!.identityId); assert.deepEqual(await friendsOf(dani!), []);
     } finally { await state.close(); }

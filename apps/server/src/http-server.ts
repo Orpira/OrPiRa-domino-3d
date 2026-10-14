@@ -31,7 +31,8 @@ async function optionalBody(request: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
   const text = Buffer.concat(chunks).toString("utf8").trim(); return text ? JSON.parse(text) : {};
 }
-const CONFLICTS = new Set(["USERNAME_TAKEN", "USERNAME_ALREADY_SET", "ALREADY_IN_ROOM"]);
+const CONFLICTS = new Set(["USERNAME_TAKEN", "USERNAME_ALREADY_SET", "ALREADY_IN_ROOM", "BLOCKED_BY_YOU", "ROOM_FULL_FOR_INVITE"]);
+const NOT_FOUND = new Set(["USER_NOT_FOUND", "FRIENDSHIP_NOT_FOUND"]);
 function session(request: IncomingMessage) { const value = request.headers.authorization; return value?.startsWith("Bearer ") ? value.slice(7) : null; }
 
 export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: LobbyManager, options: HttpServerOptions = {}) {
@@ -105,12 +106,20 @@ export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: Lo
         const inviter = new URLSearchParams(previewRoute[2] ?? "").get("de") ?? undefined;
         const preview = await lobbyManager.preview(previewRoute[1]!, inviter); return preview ? send(200, preview) : send(404, { code: "ROOM_NOT_FOUND" });
       }
-      const social = options.socialManager; const socialRoute = request.url?.match(/^\/api\/social(?:\/(username))?$/);
-      if (social && socialRoute) {
+      const social = options.socialManager; const socialPath = request.url?.match(/^\/api\/social(\/[^?]*)?(?:\?(.*))?$/);
+      if (social && socialPath) {
         const token = session(request); if (!token || !options.competitionManager?.identify(token)) return send(401, { code: "UNAUTHENTICATED" });
-        if (request.method === "GET" && !socialRoute[1]) return send(200, await social.view(token));
-        if (request.method === "POST" && socialRoute[1] === "username") { const input = await body(request) as { username?: string }; return send(200, await social.claimUsername(token, input.username ?? "")); }
-        return send(405, { code: "METHOD_NOT_ALLOWED" });
+        const path = socialPath[1] ?? ""; const get = request.method === "GET"; const post = request.method === "POST";
+        const relation = path.match(/^\/friendships\/([0-9a-f-]{36})\/(accept|decline|remove|block|unblock)$/); const dismiss = path.match(/^\/invitations\/([0-9a-f-]{36})\/dismiss$/);
+        if (get && path === "") return send(200, await social.view(token));
+        if (get && path === "/search") return send(200, await social.search(token, new URLSearchParams(socialPath[2] ?? "").get("q") ?? ""));
+        if (post && path === "/username") { const input = await body(request) as { username?: string }; return send(200, await social.claimUsername(token, input.username ?? "")); }
+        if (post && path === "/requests") { const input = await body(request) as { username?: string }; return send(200, await social.request(token, input.username ?? "")); }
+        if (post && path === "/block") { const input = await body(request) as { username?: string }; return send(200, await social.blockUsername(token, input.username ?? "")); }
+        if (post && relation) return send(200, await social.act(token, relation[1]!, relation[2] as "accept"));
+        if (post && path === "/invitations") { const input = await body(request) as { friendshipId?: string; code?: string }; return send(200, await social.invite(token, input.friendshipId ?? "", input.code ?? "")); }
+        if (post && dismiss) return send(200, await social.dismissInvitation(token, dismiss[1]!));
+        return send(path === "" || path === "/search" || path === "/username" ? 405 : 404, { code: path === "" ? "METHOD_NOT_ALLOWED" : "NOT_FOUND" });
       }
       const lobbyRoute = request.url?.match(/^\/api\/lobbies\/([A-Za-z0-9]+)(?:\/(join|commands))?$/);
       if (lobbyManager && lobbyRoute) {
@@ -134,7 +143,7 @@ export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: Lo
       return send(405, { code: "METHOD_NOT_ALLOWED" });
     } catch (error) {
       const code = (error as Error).message || "INVALID_MESSAGE";
-      return send(CONFLICTS.has(code) ? 409 : 400, { code });
+      return send(CONFLICTS.has(code) ? 409 : NOT_FOUND.has(code) ? 404 : 400, { code });
     }
   });
 }

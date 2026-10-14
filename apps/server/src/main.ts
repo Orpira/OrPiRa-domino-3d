@@ -18,7 +18,7 @@ const league = await LeagueManager.open(resolve(dataDirectory, "league.json"), D
   positionPoints: numbers(process.env.DOMINO_LEAGUE_POSITION_POINTS, DEFAULT_LEAGUE.positionPoints),
   rankThresholds: numbers(process.env.DOMINO_LEAGUE_RANK_THRESHOLDS, DEFAULT_LEAGUE.rankThresholds), timeZone: process.env.DOMINO_LEAGUE_TIME_ZONE ?? DEFAULT_LEAGUE.timeZone });
 const social = new SocialManager(await JsonSocialRepository.open(resolve(dataDirectory, "social.json")), (token) => competitions.identify(token), (identityId) => competitions.displayNameOf(identityId));
-lobbies.attachSocial(social);
+lobbies.attachSocial(social); social.attachRooms((code, identityId) => lobbies.memberPreview(code, identityId));
 quickPlay.attachLeague(league); competitions.attachRanks((identityId) => league.rankOf(identityId));
 // Reconciliación al arrancar: puntos de partidas terminadas que no llegaron a concederse y cierres de temporada vencidos.
 await league.sync(quickPlay.historyEntries());
