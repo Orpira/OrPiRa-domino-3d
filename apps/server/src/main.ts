@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { CompetitionManager, createDominoHttpServer, DEFAULT_IDENTITY_LIMIT, DEFAULT_LEAGUE, LeagueManager, DEFAULT_REQUEST_LIMIT, DEFAULT_TURN_CLOCK, JsonFileMatchStore, LobbyManager, QuickPlayManager, RoomRegistry } from "./index.ts";
+import { CompetitionManager, createDominoHttpServer, DEFAULT_IDENTITY_LIMIT, DEFAULT_LEAGUE, LeagueManager, DEFAULT_REQUEST_LIMIT, DEFAULT_TURN_CLOCK, JsonFileMatchStore, JsonSocialRepository, LobbyManager, SocialManager, QuickPlayManager, RoomRegistry } from "./index.ts";
 
 const port = Number(process.env.PORT ?? 8787);
 const host = process.env.HOST ?? "0.0.0.0";
@@ -17,6 +17,8 @@ const numbers = (value: string | undefined, fallback: readonly number[]) => valu
 const league = await LeagueManager.open(resolve(dataDirectory, "league.json"), Date.now, { ...DEFAULT_LEAGUE,
   positionPoints: numbers(process.env.DOMINO_LEAGUE_POSITION_POINTS, DEFAULT_LEAGUE.positionPoints),
   rankThresholds: numbers(process.env.DOMINO_LEAGUE_RANK_THRESHOLDS, DEFAULT_LEAGUE.rankThresholds), timeZone: process.env.DOMINO_LEAGUE_TIME_ZONE ?? DEFAULT_LEAGUE.timeZone });
+const social = new SocialManager(await JsonSocialRepository.open(resolve(dataDirectory, "social.json")), (token) => competitions.identify(token), (identityId) => competitions.displayNameOf(identityId));
+lobbies.attachSocial(social);
 quickPlay.attachLeague(league); competitions.attachRanks((identityId) => league.rankOf(identityId));
 // Reconciliación al arrancar: puntos de partidas terminadas que no llegaron a concederse y cierres de temporada vencidos.
 await league.sync(quickPlay.historyEntries());
@@ -31,7 +33,7 @@ const limit = (max: string | undefined, seconds: string | undefined, defaultMax:
 const requestLimit = limit(process.env.DOMINO_RATE_LIMIT_MAX, process.env.DOMINO_RATE_LIMIT_WINDOW_SECONDS, DEFAULT_REQUEST_LIMIT.max, DEFAULT_REQUEST_LIMIT.windowMs / 1000);
 const identityLimit = limit(process.env.DOMINO_IDENTITY_LIMIT_MAX, process.env.DOMINO_IDENTITY_LIMIT_WINDOW_SECONDS, DEFAULT_IDENTITY_LIMIT.max, DEFAULT_IDENTITY_LIMIT.windowMs / 1000);
 const trustProxy = process.env.DOMINO_TRUST_PROXY === "true";
-const server = createDominoHttpServer(new RoomRegistry(), lobbies, { allowedOrigins, competitionManager: competitions, quickPlayManager: quickPlay, leagueManager: league, requestLimit, identityLimit, trustProxy });
+const server = createDominoHttpServer(new RoomRegistry(), lobbies, { allowedOrigins, competitionManager: competitions, quickPlayManager: quickPlay, leagueManager: league, socialManager: social, requestLimit, identityLimit, trustProxy });
 server.listen(port, host, () => console.log(`Dominó online local: http://${host}:${port}`));
 const shutdown = (signal: string) => server.close(() => { console.log(`Servidor detenido por ${signal}`); process.exit(0); });
 process.once("SIGTERM", () => shutdown("SIGTERM")); process.once("SIGINT", () => shutdown("SIGINT"));

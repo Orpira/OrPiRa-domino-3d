@@ -49,7 +49,11 @@ export interface LobbyView {
   readonly legalActions: readonly LegalAction[];
   readonly clock: TurnClockView | null;
 }
-export interface SessionGrant { readonly code: string; readonly sessionId: string; readonly playerId: string }
+export interface SessionGrant {
+  readonly code: string; readonly sessionId: string; readonly playerId: string;
+  /** Al entrar por invitación con cuenta: con quién quedó la amistad (ausente si no hubo). */
+  readonly friendWith?: string;
+}
 
 // Valores provisionales del prototipo, fijados por el servidor; el cliente nunca los decide.
 export interface SimulatedConditions {
@@ -126,3 +130,14 @@ export interface LeagueView {
 }
 export interface LeagueArchivedSeason { readonly seasonId: string; readonly label: string; readonly points: number; readonly position: number; readonly rank: LeagueRankId; readonly totalPlayers: number }
 export interface LeagueHistoryView { readonly awards: readonly LeagueAwardView[]; readonly seasons: readonly LeagueArchivedSeason[] }
+
+// Perfil social mínimo: nombre de usuario único sobre la cuenta de prueba, y amistades aceptadas.
+export interface FriendView { readonly username: string | null; readonly displayName: string; readonly since: number }
+export interface SocialView { readonly username: string | null; readonly displayName: string; readonly friends: readonly FriendView[] }
+/** Vista pública de una sala para quien abre una invitación: sin sesiones ni identidades. */
+export interface LobbyPreview {
+  readonly code: string; readonly mode: GameMode; readonly rules: RulesId; readonly targetScore: number;
+  readonly status: "WAITING" | "PLAYING" | "ENDED"; readonly players: readonly string[]; readonly freeSeats: number;
+  /** Nombre visible de quien invita, si el enlace lo indica y está en la sala. */
+  readonly inviter: string | null;
+}

@@ -67,6 +67,7 @@ export class CompetitionManager {
   private rankOf: ((identityId: string) => LeagueRankId) | null = null;
   conditions(): SimulatedConditions { return this.terms; }
   /** Identidad de prueba asociada a un token, para modalidades sin saldo como «Jugar ahora». */
+  displayNameOf(identityId: string): string | null { return this.identities.get(identityId)?.displayName ?? null; }
   identify(token: string): { identityId: string; displayName: string } | null { const id = this.tokens.get(token); const identity = id ? this.identities.get(id) : null; return identity ? { identityId: identity.identityId, displayName: identity.displayName } : null; }
   account(token: string): Promise<TestAccountView> { return this.serial(async () => { this.expireDue(); await this.persist(); const identity = this.identity(token); return this.accountView(identity); }); }
   create(token: string): Promise<CompetitionView> { return this.serial(async () => {

@@ -2,11 +2,13 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { legalActions, shuffledDeal, targetScore, type Deal, type Seat } from "../../../packages/rules/src/index.ts";
-import type { CommandEnvelope, CommandResponse, LobbyView, SessionGrant } from "../../../packages/protocol/src/index.ts";
+import type { CommandEnvelope, CommandResponse, LobbyPreview, LobbyView, SessionGrant } from "../../../packages/protocol/src/index.ts";
+import type { SocialManager } from "./social.ts";
 import { tableConfig, type TableConfig } from "./table-config.ts";
 import { AuthoritativeRoom, DEFAULT_TURN_CLOCK, type MatchStore, type SessionPlayer, type TurnClockConfig } from "./authoritative-room.ts";
 
-interface Member extends SessionPlayer { readonly name: string; lastSeen: number }
+// `identityId`: cuenta de prueba de quien entró con ella (necesaria para las amistades por invitación).
+interface Member extends SessionPlayer { readonly name: string; lastSeen: number; readonly identityId?: string }
 // Las salas guardadas antes de las parejas no tienen `mode` (individual); las anteriores a las modalidades, ni `rules` (Latino) ni `targetScore`.
 interface LobbyRecord { readonly code: string; readonly matchId: string; readonly members: Member[]; started: boolean; readonly mode?: TableConfig["mode"]; readonly rules?: TableConfig["rules"]; readonly targetScore?: TableConfig["targetScore"] }
 interface SavedLobbies { readonly lobbies: readonly LobbyRecord[] }
@@ -31,17 +33,42 @@ export class LobbyManager {
     } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
     return manager;
   }
-  async create(name: string, options: { readonly mode?: unknown; readonly rules?: unknown; readonly targetScore?: unknown } = {}): Promise<SessionGrant> {
+  attachSocial(social: SocialManager) { this.social = social; }
+  private social: SocialManager | null = null;
+  async create(name: string, options: { readonly mode?: unknown; readonly rules?: unknown; readonly targetScore?: unknown } = {}, identityId?: string): Promise<SessionGrant> {
     const config = tableConfig(options);
-    const code = this.uniqueCode(); const member = this.member(name, 0); const record: LobbyRecord = { code, matchId: `online-${randomUUID()}`, members: [member], started: false, ...config };
+    const code = this.uniqueCode(); const member = this.member(name, 0, identityId); const record: LobbyRecord = { code, matchId: `online-${randomUUID()}`, members: [member], started: false, ...config };
     this.lobbies.set(code, record); await this.persist(); return { code, sessionId: member.sessionId, playerId: member.playerId };
   }
-  async join(codeInput: string, name: string): Promise<SessionGrant> {
+  /**
+   * Entra en la sala. Con cuenta (`identityId`) y por invitación, queda amistad aceptada con quien invitó: el miembro con ese
+   * nombre de usuario si está en la sala, o si no, quien la creó con cuenta.
+   */
+  async join(codeInput: string, name: string, identityId?: string, invitation?: { readonly inviter?: string | undefined }): Promise<SessionGrant> {
     const code = codeInput.trim().toUpperCase(); const lobby = this.lobbies.get(code); if (!lobby) throw new Error("ROOM_NOT_FOUND");
     if (lobby.started || lobby.members.length >= 4) throw new Error("ROOM_FULL");
-    const member = this.member(name, lobby.members.length as Seat); lobby.members.push(member);
+    if (identityId && lobby.members.some((existing) => existing.identityId === identityId)) throw new Error("ALREADY_IN_ROOM");
+    const member = this.member(name, lobby.members.length as Seat, identityId); lobby.members.push(member);
     if (lobby.members.length === 4) { lobby.started = true; this.rooms.set(code, await AuthoritativeRoom.create(lobby.matchId, lobby.members, () => makeDeal(lobby.members), this.roomStore, { ...this.roomOptions(), mode: lobby.mode ?? "INDIVIDUAL", rules: lobby.rules ?? "LATINO", ...(lobby.targetScore ? { targetScore: lobby.targetScore } : {}) })); }
-    await this.persist(); return { code, sessionId: member.sessionId, playerId: member.playerId };
+    await this.persist();
+    const friend = identityId && invitation ? await this.befriendInviter(lobby, identityId, invitation.inviter ?? "") : null;
+    return { code, sessionId: member.sessionId, playerId: member.playerId, ...(friend ? { friendWith: friend } : {}) };
+  }
+  /** Vista pública para la página de invitación. `null` si el código no existe. */
+  async preview(codeInput: string, inviterUsername?: string): Promise<LobbyPreview | null> {
+    const lobby = this.lobbies.get(codeInput.trim().toUpperCase()); if (!lobby) return null; const room = this.rooms.get(lobby.code);
+    const inviter = inviterUsername ? await this.inviterIn(lobby, inviterUsername) : null;
+    return { code: lobby.code, mode: lobby.mode ?? "INDIVIDUAL", rules: lobby.rules ?? "LATINO", targetScore: targetScore({ mode: lobby.mode ?? "INDIVIDUAL", ...(lobby.targetScore ? { targetScore: lobby.targetScore } : {}) }),
+      status: !room ? "WAITING" : room.state.phase === "MATCH_ENDED" ? "ENDED" : "PLAYING", players: lobby.members.map((member) => member.name), freeSeats: 4 - lobby.members.length, inviter: inviter?.name ?? null };
+  }
+  private async inviterIn(lobby: LobbyRecord, username: string): Promise<Member | null> {
+    const id = await this.social?.identityOfUsername(username); return id ? lobby.members.find((member) => member.identityId === id) ?? null : null;
+  }
+  private async befriendInviter(lobby: LobbyRecord, guestId: string, inviterUsername: string): Promise<string | null> {
+    if (!this.social) return null;
+    const inviter = (inviterUsername ? await this.inviterIn(lobby, inviterUsername) : null) ?? (lobby.members[0]?.identityId ? lobby.members[0] : null);
+    if (!inviter?.identityId || inviter.identityId === guestId) return null;
+    return await this.social.befriendByInvitation(inviter.identityId, guestId) ? inviter.name : null;
   }
   async view(codeInput: string, sessionId: string): Promise<LobbyView | null> {
     const code = codeInput.toUpperCase(); const lobby = this.lobbies.get(code); const member = lobby?.members.find((candidate) => candidate.sessionId === sessionId);
@@ -58,9 +85,9 @@ export class LobbyManager {
     return room.submit(sessionId, envelope);
   }
   private roomOptions() { return { clock: this.clock, now: this.now }; }
-  private member(nameInput: string, seat: Seat): Member {
+  private member(nameInput: string, seat: Seat, identityId?: string): Member {
     const name = nameInput.trim().slice(0, 24); if (!name) throw new Error("INVALID_NAME");
-    return { playerId: `P${seat}`, seat, sessionId: randomUUID(), name, lastSeen: this.now() };
+    return { playerId: `P${seat}`, seat, sessionId: randomUUID(), name, lastSeen: this.now(), ...(identityId ? { identityId } : {}) };
   }
   private uniqueCode() { let code = ""; do { const bytes = randomBytes(6); code = [...bytes].map((value) => alphabet[value % alphabet.length]).join(""); } while (this.lobbies.has(code)); return code; }
   private async persist() { await mkdir(dirname(this.metadataPath), { recursive: true }); const temporary = `${this.metadataPath}.tmp`;

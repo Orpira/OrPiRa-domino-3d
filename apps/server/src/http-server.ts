@@ -5,10 +5,11 @@ import type { LobbyManager } from "./lobby.ts";
 import type { CompetitionManager } from "./competition.ts";
 import type { QuickPlayManager } from "./quick-play.ts";
 import type { LeagueManager } from "./league.ts";
+import type { SocialManager } from "./social.ts";
 import { FixedWindowLimiter, requestSource, type WindowLimit } from "./rate-limit.ts";
 
 export interface HttpServerOptions {
-  readonly allowedOrigins?: readonly string[]; readonly competitionManager?: CompetitionManager; readonly quickPlayManager?: QuickPlayManager; readonly leagueManager?: LeagueManager;
+  readonly allowedOrigins?: readonly string[]; readonly competitionManager?: CompetitionManager; readonly quickPlayManager?: QuickPlayManager; readonly leagueManager?: LeagueManager; readonly socialManager?: SocialManager;
   // Límites por origen (IP); `max: 0` o ausencia los desactiva. `trustProxy` solo con un proxy propio delante.
   readonly requestLimit?: WindowLimit; readonly identityLimit?: WindowLimit; readonly trustProxy?: boolean; readonly now?: () => number;
 }
@@ -30,6 +31,7 @@ async function optionalBody(request: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = []; for await (const chunk of request) chunks.push(Buffer.from(chunk));
   const text = Buffer.concat(chunks).toString("utf8").trim(); return text ? JSON.parse(text) : {};
 }
+const CONFLICTS = new Set(["USERNAME_TAKEN", "USERNAME_ALREADY_SET", "ALREADY_IN_ROOM"]);
 function session(request: IncomingMessage) { const value = request.headers.authorization; return value?.startsWith("Bearer ") ? value.slice(7) : null; }
 
 export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: LobbyManager, options: HttpServerOptions = {}) {
@@ -90,13 +92,34 @@ export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: Lo
         if (request.method === "POST" && action === "annul") return send(200, await competitionManager.requestAnnulment(code, identityToken));
         if (request.method === "POST" && action === "commands") { const result = await competitionManager.command(code, identityToken, await body(request) as CommandEnvelope); return send(result.ok ? 200 : 409, result); }
       }
+      // Crear o entrar en una sala con la cuenta de prueba (Bearer opcional): enlaza la plaza a la identidad para las amistades.
+      const bearer = session(request); const identity = bearer ? options.competitionManager?.identify(bearer) ?? null : undefined;
+      const lobbyEntry = request.method === "POST" && (request.url === "/api/lobbies" || /^\/api\/lobbies\/[A-Za-z0-9]+\/join$/.test(request.url ?? ""));
+      if (lobbyManager && lobbyEntry && identity === null) return send(401, { code: "UNAUTHENTICATED" });
+      const optionalIdentity = () => identity ?? undefined;
       if (lobbyManager && request.method === "POST" && request.url === "/api/lobbies") {
-        const input = await body(request) as { name?: string; mode?: unknown; rules?: unknown; targetScore?: unknown }; return send(201, await lobbyManager.create(input.name ?? "", input));
+        const input = await body(request) as { name?: string; mode?: unknown; rules?: unknown; targetScore?: unknown }; return send(201, await lobbyManager.create(input.name ?? "", input, optionalIdentity()?.identityId));
+      }
+      const previewRoute = request.url?.match(/^\/api\/lobbies\/([A-Za-z0-9]+)\/preview(?:\?(.*))?$/);
+      if (lobbyManager && previewRoute && request.method === "GET") {
+        const inviter = new URLSearchParams(previewRoute[2] ?? "").get("de") ?? undefined;
+        const preview = await lobbyManager.preview(previewRoute[1]!, inviter); return preview ? send(200, preview) : send(404, { code: "ROOM_NOT_FOUND" });
+      }
+      const social = options.socialManager; const socialRoute = request.url?.match(/^\/api\/social(?:\/(username))?$/);
+      if (social && socialRoute) {
+        const token = session(request); if (!token || !options.competitionManager?.identify(token)) return send(401, { code: "UNAUTHENTICATED" });
+        if (request.method === "GET" && !socialRoute[1]) return send(200, await social.view(token));
+        if (request.method === "POST" && socialRoute[1] === "username") { const input = await body(request) as { username?: string }; return send(200, await social.claimUsername(token, input.username ?? "")); }
+        return send(405, { code: "METHOD_NOT_ALLOWED" });
       }
       const lobbyRoute = request.url?.match(/^\/api\/lobbies\/([A-Za-z0-9]+)(?:\/(join|commands))?$/);
       if (lobbyManager && lobbyRoute) {
         const code = lobbyRoute[1]!; const action = lobbyRoute[2];
-        if (request.method === "POST" && action === "join") { const input = await body(request) as { name?: string }; return send(200, await lobbyManager.join(code, input.name ?? "")); }
+        if (request.method === "POST" && action === "join") {
+          const input = await body(request) as { name?: string; invitation?: { inviter?: unknown } }; const identity = optionalIdentity();
+          const invitation = input.invitation ? { inviter: typeof input.invitation.inviter === "string" ? input.invitation.inviter : undefined } : undefined;
+          return send(200, await lobbyManager.join(code, input.name ?? identity?.displayName ?? "", identity?.identityId, invitation));
+        }
         const sessionId = session(request); if (!sessionId) return send(401, { code: "UNAUTHENTICATED" });
         if (request.method === "GET" && !action) { const view = await lobbyManager.view(code, sessionId); return view ? send(200, view) : send(401, { code: "UNAUTHENTICATED" }); }
         if (request.method === "POST" && action === "commands") { const result = await lobbyManager.command(code, sessionId, await body(request) as CommandEnvelope); return result ? send(result.ok ? 200 : 409, result) : send(401, { code: "UNAUTHENTICATED" }); }
@@ -109,6 +132,9 @@ export function createDominoHttpServer(registry: RoomRegistry, lobbyManager?: Lo
         const result = await room.submit(sessionId, await body(request) as CommandEnvelope); return send(result.ok ? 200 : 409, result);
       }
       return send(405, { code: "METHOD_NOT_ALLOWED" });
-    } catch (error) { return send(400, { code: (error as Error).message || "INVALID_MESSAGE" }); }
+    } catch (error) {
+      const code = (error as Error).message || "INVALID_MESSAGE";
+      return send(CONFLICTS.has(code) ? 409 : 400, { code });
+    }
   });
 }

@@ -8,3 +8,4 @@ export * from "./auto-player.ts";
 export * from "./quick-play.ts";
 export * from "./league.ts";
 export * from "./table-config.ts";
+export * from "./social.ts";
