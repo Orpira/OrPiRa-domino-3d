@@ -1,6 +1,14 @@
 # Estado actual
 
-Fecha: 14 de octubre de 2026. **Versión en producción: API 1.10-rc1, web `main` (`v1.10-rc1`) y APK 1.10-rc1.**
+Fecha: 14 de octubre de 2026. **Versión en producción: API 1.11-rc1, web `main` (`v1.11-rc1`) y APK 1.11-rc1.**
+
+## Despliegue v1.11-rc1 — amigos completos (14 oct 2026, ~03:40 en el VPS)
+
+- Ver `SOCIAL.md`: buscar por usuario, solicitudes, eliminar, bloquear y desbloquear, presencia por consulta cada 25 s («en línea» = visto en el último minuto), invitar a un amigo a la sala con aviso dentro de la app (10 min, en memoria) e insignia en Cuenta.
+- API desde `/opt/domino-3d-v1.11-rc1`, imagen `sha256:2a6a663c…daeb3`, `healthy`. Copia previa: `domino-data-pre-1.11-rc1-20261014-0135.tar.gz` (90 KB, SHA `6e3a7ba9…50e4`). Vuelta atrás: `cd /opt/domino-3d-v1.10-rc1 && sudo docker compose up -d --no-deps --no-build domino-api`.
+- Comprobado en producción: salud, CORS (tres orígenes 204, ajeno 403), liga intacta (9 jugadores), sala `3R4766` intacta; búsqueda, solicitud y aceptación entre «QA amigos A» (`@qa_amigos_a`) y «QA amigos B» (`@qa_amigos_b`), «en línea», invitación a la sala All Fives `Q9YAXE` recibida por B.
+- Web `index-IPxUrxoh.js`. APK 1.11-rc1 (`versionCode` 14, SHA `d3757f61…662a`) instalada en el Samsung: Cuenta con búsqueda de amigos, ancho 384/384 px.
+- Rastro de QA: identidades «QA amigos A» y «QA amigos B» (amigos) y la sala `Q9YAXE` esperando jugadores.
 
 ## Despliegue v1.10-rc1 — All Fives (14 oct 2026, ~03:10 en el VPS)
 
