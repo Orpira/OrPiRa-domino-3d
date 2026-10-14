@@ -1,3 +1,19 @@
+# Plan de despliegue — Domino3D-OrPiRa v1.9-rc1 (invitaciones, nombre de usuario y amigos)
+
+Aprobado por el propietario («ve desplegando tan pronto vamos confirmando»). Mismo procedimiento
+que la 1.8-rc1; directorio nuevo `/opt/domino-3d-v1.9-rc1`, vuelta atrás a `/opt/domino-3d-v1.8-rc1`.
+
+| Archivo | SHA-256 |
+| --- | --- |
+| `domino-api-1.9-rc1.tar.gz` (imagen `sha256:58a7460bcdf5dcf5e3d4b8dfe5cd9db9af132cf39bb0301df1a90e4bf08e7ca2`) | `7e5044f7dc96955162c5885726ce73086bd95bd502a408291d4161de49210f38` |
+| `domino-3d-src-v1.9-rc1.tar.gz` (`v1.9-rc1`, `0afd4e1`; `compose.yaml` sin cambios) | `98c07e62583a39c9a6302e0cdc9d07553201ee59c611d143f6074d8d32d89c94` |
+| `domino3d-orpira-1.9-rc1-debug.apk` (`versionCode` 12) | `a9a18cd5859569ad0aa4f8c4b9f8ef69b21e1d96bfcb272db7d64854c705a4c1` |
+
+- Datos nuevos: `social.json` (perfiles y amistades) y `identityId` opcional en las plazas de `lobbies.json`.
+  La 1.8 ignora ambos, así que volver atrás no rompe nada; solo deja de ver usuarios y amigos.
+
+---
+
 # Plan de despliegue — Domino3D-OrPiRa v1.8-rc1 (modalidades: Latino y Con robo)
 
 Estado: **aprobado por el propietario el 14 oct 2026** («ve desplegando tan pronto vamos
