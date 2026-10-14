@@ -1,6 +1,14 @@
 # Estado actual
 
-Fecha: 14 de octubre de 2026. **Versión en producción: API 1.9-rc1, web `main` (`v1.9-rc1`) y APK 1.9-rc1.**
+Fecha: 14 de octubre de 2026. **Versión en producción: API 1.10-rc1, web `main` (`v1.10-rc1`) y APK 1.10-rc1.**
+
+## Despliegue v1.10-rc1 — All Fives (14 oct 2026, ~03:10 en el VPS)
+
+- Reglas en `RULES_CONTRACT.md` (spinner, brazos UP/DOWN, puntos por extremos múltiplos de 5, victoria en el acto, fin de mano redondeado a 5). Mesa 3D centrada en el spinner, cuatro brillos, «+N» flotante, suma de extremos y marcador en la mesa; el tablero se encoge si los brazos no caben.
+- API desde `/opt/domino-3d-v1.10-rc1`, imagen `sha256:d2c1f657…04ad`, `healthy`. Copia previa: `domino-data-pre-1.10-rc1-20261014-0107.tar.gz` (87 KB, SHA `202a8382…8c23`). Vuelta atrás: `cd /opt/domino-3d-v1.9-rc1 && sudo docker compose up -d --no-deps --no-build domino-api`.
+- Comprobado en producción: salud, CORS (tres orígenes 204, ajeno 403), liga intacta (9 jugadores), sala `3R4766` y su vista previa intactas, `production-smoke.mjs --fives` (191 s, puntos múltiplos de 5, sin liga, historial con `rules`).
+- Web `index-CN8xH3QV.js`. APK 1.10-rc1 (`versionCode` 13, SHA `070c025a…1b89`) instalada en el Samsung: práctica All Fives con la cruz de cuatro brazos dentro de la mesa, ancho 384/384 px.
+- Rastro de QA: identidad «QA 10-14 01:10».
 
 ## Despliegue v1.9-rc1 — invitaciones por enlace, nombre de usuario y amigos (14 oct 2026, ~02:45 en el VPS)
 
