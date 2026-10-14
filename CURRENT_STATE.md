@@ -1,6 +1,14 @@
 # Estado actual
 
-Fecha: 14 de octubre de 2026. **Versión en producción: API 1.8-rc1, web `main` (`v1.8-rc1`) y APK 1.8-rc1.**
+Fecha: 14 de octubre de 2026. **Versión en producción: API 1.9-rc1, web `main` (`v1.9-rc1`) y APK 1.9-rc1.**
+
+## Despliegue v1.9-rc1 — invitaciones por enlace, nombre de usuario y amigos (14 oct 2026, ~02:45 en el VPS)
+
+- Ver `SOCIAL.md`. Servidor: `social.ts` (repositorio JSON atómico tras la interfaz `SocialRepository`), salas enlazadas a la cuenta, vista previa pública, amistad al entrar por invitación. Cliente: panel «Invitar» (compartir/copiar, WhatsApp, enlace), página `/invitar/:codigo`, nombre de usuario y amigos en Cuenta.
+- API desde `/opt/domino-3d-v1.9-rc1`, imagen `sha256:58a7460b…7ca2`, `healthy`. Copia previa: `domino-data-pre-1.9-rc1-20261014-0042.tar.gz` (86 KB, SHA `3c0b2d7b…65e2`). Vuelta atrás: `cd /opt/domino-3d-v1.8-rc1 && sudo docker compose up -d --no-deps --no-build domino-api` (la 1.8 ignora `social.json`).
+- Comprobado en producción: salud, CORS (tres orígenes 204, ajeno 403), liga intacta (9 jugadores), usuario `qa_invita_1014`, vista previa de la sala `3R4766` (parejas), entrada por invitación con `friendWith`, amistad visible, 409 por usuario repetido, 404 por sala inexistente; página `https://domino-3d.orpira.es/invitar/3R4766?de=qa_invita_1014` sin errores y sin desbordamiento.
+- Web `index-CjUDjJld.js`; APK 1.9-rc1 (`versionCode` 12, SHA `a9a18cd5…a4c1`) instalada en el Samsung: Cuenta muestra «Perfil y amigos», ancho 384/384 px.
+- Rastro de QA: identidades «QA invita» (`@qa_invita_1014`) y «QA invitado», amigas entre sí, y la sala `3R4766` esperando jugadores.
 
 ## Despliegue v1.8-rc1 — modalidades Latino y Con robo (14 oct 2026, ~02:15 en el VPS)
 
