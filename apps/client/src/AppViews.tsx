@@ -10,7 +10,7 @@ import { useSocialState } from "./social-context.tsx";
 import { FriendsPanel } from "./friends-ui.tsx";
 import { CompetitionApiError, socialApi } from "./competition-api.ts";
 
-export const APP_VERSION = "1.11-rc1";
+export const APP_VERSION = "1.12-rc1";
 
 interface HomeProps { readonly account: TestAccount; readonly conditions: Conditions; readonly onQuickPlay: () => void; readonly onPractice: () => void; readonly onOnline: () => void; readonly onTables: () => void }
 export function HomeView({ account, conditions, onQuickPlay, onPractice, onOnline, onTables }: HomeProps) {
