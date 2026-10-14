@@ -276,3 +276,23 @@ input:focus-visible { box-shadow: var(--focus); }
 @media (prefers-reduced-motion: reduce) { .score-pop { animation: none; } }
 .fives-strip { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; margin-top: 4px; color: var(--c-muted); font-size: .85rem; }
 .fives-strip strong { color: var(--c-gold); }
+/* Amigos: panel, aviso de invitación e insignia. */
+.friends-panel { display: grid; gap: var(--space-3); min-width: 0; }
+.friends-panel input[type=search] { width: 100%; min-height: var(--tap); padding: 0 var(--space-3); border: 1px solid var(--c-line-strong); border-radius: var(--radius-s); background: var(--c-surface-sunk); color: var(--c-text); font: inherit; }
+.friends-panel h3 { margin: var(--space-3) 0 0; }
+.friend-list li { justify-content: space-between; align-items: center; }
+.friend-list li > div:first-child { display: grid; gap: 2px; min-width: 0; }
+.friend-list li strong { display: inline-flex; align-items: center; gap: 6px; }
+.friend-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.primary.small, .secondary.small, .ghost.small { min-height: 40px; padding: 6px 14px; font-size: .9rem; }
+.danger-text { color: var(--c-danger) !important; }
+.relation { color: var(--c-muted); font-size: .9rem; }
+.blocked-list summary { cursor: pointer; color: var(--c-muted); min-height: var(--tap); display: flex; align-items: center; }
+.invitation-banner { position: sticky; top: max(8px, var(--safe-t)); z-index: 40; display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; justify-content: space-between;
+  margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid #eac56a88; border-radius: var(--radius-m); background: linear-gradient(180deg, var(--c-surface-2), var(--c-bg-1)); box-shadow: 0 10px 30px #0008; }
+.invitation-banner > div:first-child { display: grid; gap: 2px; min-width: 0; }
+.invitation-banner span { color: var(--c-muted); font-size: .9rem; }
+.nav-badge { position: absolute; top: 4px; right: calc(50% - 22px); min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--c-danger-bg); color: #fff; font-size: .75rem; font-weight: 800; display: grid; place-items: center; }
+.app-nav li button { position: relative; }
+.invite-friends { display: grid; gap: var(--space-2); }
+.invite-friends h4 { margin: var(--space-2) 0 0; }

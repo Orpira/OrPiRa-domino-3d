@@ -6,7 +6,8 @@ import { competitionErrorMessage, competitionRecords, formatCop, formatDateTime,
 import type { Conditions, TestAccount } from "./use-test-account.ts";
 import { BalanceSummary, DominoArt, IdentityForm, RankTile, SimulatedNotice, StateCard } from "./ui.tsx";
 import { useConfirm } from "./confirm-dialog.tsx";
-import { useSocial } from "./invite-ui.tsx";
+import { useSocialState } from "./social-context.tsx";
+import { FriendsPanel } from "./friends-ui.tsx";
 import { CompetitionApiError, socialApi } from "./competition-api.ts";
 
 export const APP_VERSION = "1.10-rc1";
@@ -103,22 +104,20 @@ function LeagueHistory({ token }: { token: string }) {
     </>}</section>;
 }
 
-/** Nombre de usuario (se elige una vez) y amigos aceptados. */
+/** Nombre de usuario (se elige una vez) y amigos. */
 function ProfileSection({ token }: { token: string }) {
-  const { social, error, setSocial } = useSocial(token); const [username, setUsername] = useState(""); const [saving, setSaving] = useState(false); const [claimError, setClaimError] = useState(""); const inputId = useId();
+  const { social, error, apply } = useSocialState(); const [username, setUsername] = useState(""); const [saving, setSaving] = useState(false); const [claimError, setClaimError] = useState(""); const inputId = useId();
   const claim = async () => {
     if (saving || !username.trim()) return; setSaving(true); setClaimError("");
-    try { setSocial(await socialApi.claimUsername(token, username)); }
+    try { apply(await socialApi.claimUsername(token, username)); }
     catch (failure) { setClaimError(competitionErrorMessage(failure instanceof CompetitionApiError ? failure.code : "NETWORK")); } finally { setSaving(false); }
   };
   if (!social) return error ? <section className="panel"><h2>Perfil y amigos</h2><p className="muted">{error}</p></section> : null;
   return <section className="panel profile-social"><h2>Perfil y amigos</h2>
     {social.username ? <p>Tu nombre de usuario: <strong>@{social.username}</strong></p>
-      : <form className="identity-form" onSubmit={(event) => { event.preventDefault(); void claim(); }}><p>Elige un nombre de usuario único. Va en tus enlaces de invitación para que quien entre quede como tu amigo. No se puede cambiar.</p>
+      : <form className="identity-form" onSubmit={(event) => { event.preventDefault(); void claim(); }}><p>Elige un nombre de usuario único: con él te encuentran tus amigos y va en tus enlaces de invitación. No se puede cambiar.</p>
           <label htmlFor={inputId}>Nombre de usuario</label><div className="inline-field"><input id={inputId} maxLength={21} autoCapitalize="none" autoComplete="username" spellCheck={false} placeholder="ej. ana_92" value={username} onChange={(event) => setUsername(event.target.value)}/>
           <button className="primary" disabled={!username.trim() || saving}>{saving ? "Guardando…" : "Guardar"}</button></div>{claimError && <p className="field-error" role="alert">{claimError}</p>}</form>}
-    <h3>Amigos {social.friends.length > 0 && <small>({social.friends.length})</small>}</h3>
-    {social.friends.length ? <ul className="friend-list">{social.friends.map((friend) => <li key={`${friend.username}-${friend.displayName}-${friend.since}`}><strong>{friend.displayName}</strong>{friend.username && <span>@{friend.username}</span>}</li>)}</ul>
-      : <p className="muted">Todavía no tienes amigos. Invita a alguien a una sala con código: al entrar con su cuenta quedaréis como amigos.</p>}
+    <FriendsPanel/>
   </section>;
 }

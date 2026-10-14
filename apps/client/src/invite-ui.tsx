@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { TargetScore } from "../../../packages/rules/src/index.ts";
-import type { LobbyPreview, SocialView } from "../../../packages/protocol/src/index.ts";
-import { CompetitionApiError, lobbyApi, socialApi } from "./competition-api.ts";
+import type { LobbyPreview } from "../../../packages/protocol/src/index.ts";
+import { CompetitionApiError, lobbyApi } from "./competition-api.ts";
 import { competitionErrorMessage } from "./competition-presentation.ts";
 import { deviceStorage, readJson, writeJson } from "./device-storage.ts";
 import { inviteMessage, inviteUrl, shareInvite, shareOrigin, whatsappUrl, type Invitation } from "./invite-link.ts";
@@ -13,18 +13,6 @@ import type { SessionGrant } from "../../../packages/protocol/src/index.ts";
 import { ONLINE_SESSION_KEY } from "./online-session.ts";
 
 const codeOf = (error: unknown) => error instanceof CompetitionApiError ? error.code : "NETWORK";
-
-/** Perfil social de la cuenta de prueba (nombre de usuario y amigos); `null` sin cuenta o si el servidor no lo ofrece. */
-export function useSocial(token: string | null) {
-  const [social, setSocial] = useState<SocialView | null>(null); const [error, setError] = useState("");
-  const refresh = useCallback(async (signal?: AbortSignal) => {
-    if (!token) { setSocial(null); return; }
-    try { setSocial(await socialApi.view(token, signal)); setError(""); }
-    catch (failure) { if ((failure as Error).name !== "AbortError") { setSocial(null); setError(competitionErrorMessage(codeOf(failure))); } }
-  }, [token]);
-  useEffect(() => { const controller = new AbortController(); void refresh(controller.signal); return () => controller.abort(); }, [refresh]);
-  return { social, error, refresh, setSocial };
-}
 
 /** Botones para invitar a una sala con código: menú de compartir del sistema (o copiar), WhatsApp y el enlace a la vista. */
 export function InvitePanel({ code, choice, username }: { code: string; choice: TableChoice; username: string | null }) {

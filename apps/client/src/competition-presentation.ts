@@ -59,6 +59,8 @@ export function competitionRecords(movements: readonly SimulatedMovement[]): rea
 }
 
 const ERRORS: Readonly<Record<string, string>> = {
+  USER_NOT_FOUND: "No hay nadie con ese nombre de usuario.", CANNOT_FRIEND_SELF: "No puedes enviarte una solicitud a ti mismo.",
+  BLOCKED_BY_YOU: "Tienes bloqueada a esa persona. Desbloquéala primero.", FRIENDSHIP_NOT_FOUND: "Esa solicitud o amistad ya no existe.",
   USERNAME_TAKEN: "Ese nombre de usuario ya está en uso. Prueba con otro.", USERNAME_ALREADY_SET: "Tu cuenta ya tiene nombre de usuario.",
   INVALID_USERNAME: "Usa de 3 a 20 letras minúsculas sin tilde, números, punto o guion bajo.", ALREADY_IN_ROOM: "Tu cuenta ya está en esta sala.",
   ROOM_NOT_FOUND: "Esa sala no existe o el enlace está mal copiado.", ROOM_FULL: "La sala ya está completa o la partida empezó.",

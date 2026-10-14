@@ -1,5 +1,5 @@
 import type { GameMode, RulesId } from "../../../packages/rules/src/index.ts";
-import type { CompetitionView, LobbyPreview, SessionGrant, SocialView, LeagueHistoryView, LeagueView, QuickPlayHistoryEntry, QuickPlayView, SimulatedConditions, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
+import type { CompetitionView, LobbyPreview, SessionGrant, SocialSearchResult, SocialView, LeagueHistoryView, LeagueView, QuickPlayHistoryEntry, QuickPlayView, SimulatedConditions, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
 import { apiUrl } from "./api.ts";
 
 export class CompetitionApiError extends Error {
@@ -15,7 +15,8 @@ async function request<T>(path: string, init: { method?: "GET" | "POST"; token?:
   } catch (error) { if ((error as Error).name === "AbortError") throw error; throw new CompetitionApiError("NETWORK", 0); }
   const value = await response.json().catch(() => null) as (T & { code?: string }) | null;
   // Ninguna ruta de competición responde 404: un 404 indica un servidor sin estas capacidades.
-  if (response.status === 404 && value?.code !== "ROOM_NOT_FOUND") throw new CompetitionApiError("NOT_AVAILABLE", 404);
+  // Un 404 sin código propio (o el genérico de rutas desconocidas) indica un servidor sin esa función.
+  if (response.status === 404 && (!value?.code || value.code === "MATCH_NOT_FOUND" || value.code === "NOT_FOUND")) throw new CompetitionApiError("NOT_AVAILABLE", 404);
   if (!response.ok || !value) throw new CompetitionApiError(value?.code ?? `HTTP_${response.status}`, response.status);
   return value;
 }
@@ -52,6 +53,13 @@ export const leagueApi = {
 export const socialApi = {
   view: (token: string, signal?: AbortSignal) => request<SocialView>("/api/social", { token, ...(signal ? { signal } : {}) }),
   claimUsername: (token: string, username: string) => request<SocialView>("/api/social/username", { method: "POST", token, body: { username } }),
+  search: (token: string, query: string, signal?: AbortSignal) => request<readonly SocialSearchResult[]>(`/api/social/search?q=${encodeURIComponent(query)}`, { token, ...(signal ? { signal } : {}) }),
+  request: (token: string, username: string) => request<SocialView>("/api/social/requests", { method: "POST", token, body: { username } }),
+  block: (token: string, username: string) => request<SocialView>("/api/social/block", { method: "POST", token, body: { username } }),
+  act: (token: string, friendshipId: string, action: "accept" | "decline" | "remove" | "block" | "unblock") =>
+    request<SocialView>(`/api/social/friendships/${encodeURIComponent(friendshipId)}/${action}`, { method: "POST", token, body: {} }),
+  invite: (token: string, friendshipId: string, code: string) => request<SocialView>("/api/social/invitations", { method: "POST", token, body: { friendshipId, code } }),
+  dismissInvitation: (token: string, invitationId: string) => request<SocialView>(`/api/social/invitations/${encodeURIComponent(invitationId)}/dismiss`, { method: "POST", token, body: {} }),
 };
 export const lobbyApi = {
   preview: (code: string, inviter: string | null, signal?: AbortSignal) =>

@@ -7,6 +7,8 @@ import { LeagueApp } from "./LeagueApp.tsx";
 import { AccountView, HistoryView, HomeView } from "./AppViews.tsx";
 import { useConditions, useTestAccount } from "./use-test-account.ts";
 import { InviteView } from "./invite-ui.tsx";
+import { SocialProvider, useSocialState } from "./social-context.tsx";
+import { InvitationBanner } from "./friends-ui.tsx";
 import { parseInvitation, type Invitation } from "./invite-link.ts";
 
 type View = "HOME" | "QUICK" | "PRACTICE" | "ONLINE" | "TABLES" | "LEAGUE" | "HISTORY" | "ACCOUNT" | "INVITE";
@@ -40,14 +42,15 @@ export default function App() {
     if (view === "HISTORY" || view === "ACCOUNT" || view === "HOME") void account.refresh();
   }, [view]);
   const active = tabOf(view);
-  return <div className="app-shell">
+  return <SocialProvider token={account.identity?.identityToken ?? null}><div className="app-shell">
     <a className="skip-link" href="#contenido">Saltar al contenido</a>
     <nav className="app-nav" aria-label="Navegación principal">
       <div className="nav-brand"><img src="/icons/icon-192.png" width="40" height="40" alt=""/><span>Domino3D-<b>OrPiRa</b></span></div>
-      <ul>{TABS.map((item) => <li key={item.tab}><button className={active === item.tab ? "current" : ""} aria-current={active === item.tab ? "page" : undefined} onClick={() => invitation ? leaveInvitation(item.tab) : go(item.tab)}>{item.icon}<span>{item.label}</span></button></li>)}</ul>
+      <ul>{TABS.map((item) => <li key={item.tab}><button className={active === item.tab ? "current" : ""} aria-current={active === item.tab ? "page" : undefined} onClick={() => invitation ? leaveInvitation(item.tab) : go(item.tab)}>{item.icon}<span>{item.label}</span>{item.tab === "ACCOUNT" && <SocialBadge/>}</button></li>)}</ul>
       <p className="nav-note">COP simulados · sin valor monetario</p>
     </nav>
     <div className="app-content" id="contenido" ref={content} tabIndex={-1}>
+      {view !== "INVITE" && <InvitationBanner onJoin={(next) => { setInvitation({ code: next.code, inviter: next.fromUsername }); go("INVITE"); }}/>}
       {(view === "PRACTICE" || view === "ONLINE" || view === "QUICK") && <div className="subnav"><button className="ghost back" onClick={() => go("HOME")}>← Inicio</button><span>{view === "PRACTICE" ? "Práctica sin conexión" : view === "QUICK" ? "Jugar ahora · práctica gratuita" : "Partida online · sin saldo"}</span></div>}
       {view === "HOME" && <HomeView account={account} conditions={conditions} onQuickPlay={() => go("QUICK")} onPractice={() => go("PRACTICE")} onOnline={() => go("ONLINE")} onTables={() => go("TABLES")}/>}
       {view === "QUICK" && <QuickPlayApp account={account} onHome={() => go("HOME")}/>}
@@ -60,5 +63,11 @@ export default function App() {
       {view === "HISTORY" && <HistoryView account={account} onAccount={() => go("ACCOUNT")}/>}
       {view === "ACCOUNT" && <AccountView account={account}/>}
     </div>
-  </div>;
+  </div></SocialProvider>;
+}
+
+/** Solicitudes de amistad e invitaciones pendientes, sobre la pestaña Cuenta. */
+function SocialBadge() {
+  const { social } = useSocialState(); const count = (social?.incoming.length ?? 0) + (social?.invitations.length ?? 0);
+  return count > 0 ? <span className="nav-badge" aria-label={`${count} pendientes`}>{count}</span> : null;
 }

@@ -50,5 +50,34 @@ create unique index friendships_pair_key on friendships (least(requester_id, add
 | `GET /api/lobbies/:code/preview?de=usuario` | Vista pública de la sala (modalidad, nombres, plazas libres, quien invita); 404 `ROOM_NOT_FOUND` |
 | `POST /api/lobbies` y `/:code/join` con Bearer de la cuenta (opcional) | La plaza queda enlazada a la cuenta; `join` con `{ invitation: { inviter? } }` crea la amistad y responde `friendWith` |
 
-Pendiente (fase 3): buscar por usuario, solicitudes, aceptar o rechazar, bloquear, avatar,
-presencia en línea e invitar a un amigo conectado.
+## Amigos (fase 3)
+
+- **Buscar** por el principio del nombre de usuario (mínimo 2 caracteres, hasta 10 resultados).
+  Quien me bloqueó no aparece.
+- **Solicitudes:** enviar, aceptar o rechazar (solo quien la recibe), cancelar la enviada. Si
+  los dos se envían solicitud, quedan amigos. Eliminar un amigo borra la relación.
+- **Bloquear:** relación `BLOCKED` con `requesterId` = quien bloquea. Deshace la amistad, borra las
+  invitaciones pendientes entre ambos, oculta a quien bloquea de las búsquedas del otro e impide
+  solicitudes e invitaciones en los dos sentidos (al bloqueado se le responde `USER_NOT_FOUND`).
+  Solo quien bloqueó puede desbloquear.
+- **Presencia (decisión del propietario, opción A, sin tiempo real):** la app consulta
+  `GET /api/social` cada 25 s mientras está visible (y al volver a ella). «En línea» = visto en el
+  último minuto. Solo los amigos ven la presencia. Vive en memoria: un reinicio la vacía.
+- **Invitar a un amigo a la sala:** solo a amigos aceptados y a salas con plazas libres en las que
+  quien invita está con su cuenta. El aviso llega en la siguiente consulta (≤ 25 s), dura 10 min,
+  no se duplica (mismo remitente y sala), como mucho 20 por persona, y vive en memoria. «Unirme»
+  abre la misma página que el enlace de invitación.
+
+| Ruta (Bearer cuenta) | Uso |
+| --- | --- |
+| `GET /api/social/search?q=` | Buscar usuarios con su relación (`NONE`, `PENDING_OUT`, `PENDING_IN`, `FRIEND`, `BLOCKED`) |
+| `POST /api/social/requests` `{ username }` | Enviar solicitud |
+| `POST /api/social/friendships/:id/{accept,decline,remove,block,unblock}` | Gestionar una relación |
+| `POST /api/social/block` `{ username }` | Bloquear desde la búsqueda |
+| `POST /api/social/invitations` `{ friendshipId, code }` | Invitar a un amigo a mi sala |
+| `POST /api/social/invitations/:id/dismiss` | Descartar el aviso |
+
+Errores: `USER_NOT_FOUND` y `FRIENDSHIP_NOT_FOUND` (404), `BLOCKED_BY_YOU` (409), `CANNOT_FRIEND_SELF`,
+`ROOM_NOT_FOUND` (sala inexistente o en la que no estoy), `ROOM_FULL` (400).
+
+Pendiente: avatar y notificaciones push fuera de la app.

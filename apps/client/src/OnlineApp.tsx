@@ -10,7 +10,9 @@ import { useReducedMotion } from "./use-reduced-motion.ts";
 import { apiUrl } from "./api.ts";
 
 import { ONLINE_SESSION_KEY } from "./online-session.ts";
-import { InvitePanel, useSocial } from "./invite-ui.tsx";
+import { InvitePanel } from "./invite-ui.tsx";
+import { useSocialState } from "./social-context.tsx";
+import { InviteFriends } from "./friends-ui.tsx";
 import { competitionErrorMessage } from "./competition-presentation.ts";
 import type { TestAccount } from "./use-test-account.ts";
 const PENDING_KEY = `${ONLINE_SESSION_KEY}:pending`;
@@ -18,7 +20,7 @@ type Connection = "CONNECTING" | "CONNECTED" | "DISCONNECTED";
 function auth(grant: SessionGrant) { return { authorization: `Bearer ${grant.sessionId}`, "content-type": "application/json" }; }
 
 export function OnlineApp({ account, notice }: { account?: TestAccount; notice?: string } = {}) {
-  const identity = account?.identity ?? null; const { social } = useSocial(identity?.identityToken ?? null);
+  const identity = account?.identity ?? null; const { social } = useSocialState();
   const [grant, setGrant] = useState<SessionGrant | null>(() => readJson<SessionGrant>(deviceStorage(), ONLINE_SESSION_KEY));
   const [lobby, setLobby] = useState<LobbyView | null>(null);
   const [connection, setConnection] = useState<Connection>("CONNECTING");
@@ -63,7 +65,7 @@ export function OnlineApp({ account, notice }: { account?: TestAccount; notice?:
     <div className={`connection ${connection.toLowerCase()}`} role="status">{connection === "CONNECTED" ? "Conectado" : connection === "CONNECTING" ? "Conectando…" : "Sin conexión · reintentando"}</div>
     {notice && <p className="invite-notice" role="status">{notice}</p>}
     <section className="online-seats">{[0,1,2,3].map((seat) => { const player = lobby.players.find((candidate) => candidate.seat === seat); return <div key={seat} className={player?.playerId === lobby.viewerPlayerId ? "me" : ""}><strong>{player?.name ?? "Esperando…"}</strong><span>{player ? `Asiento P${seat}` : "Libre"}{pairs ? ` · pareja ${seat % 2 === 0 ? "A" : "B"}` : ""}</span>{player && <small>{player.connected ? "Conectado" : "Desconectado"}</small>}</div>; })}</section>
-    {lobby.status === "WAITING" && <><section className="victory-rules compact" aria-label="Condiciones de victoria">{pairs ? <><strong>Objetivo: {lobbyTarget} puntos por pareja</strong><span>Pareja A: asientos P0 y P2 · Pareja B: P1 y P3</span></> : <><strong>{choiceLabel(lobbyChoice)}</strong><span>{rulesSummary(lobbyChoice)}</span></>}</section><section className="waiting"><p className="eyebrow">Código de invitación</p><strong>{lobby.code}</strong><p>{lobby.players.length}/4 jugadores. La partida comienza al ocupar los cuatro asientos.</p></section><InvitePanel code={lobby.code} choice={lobbyChoice} username={social?.username ?? null}/></>}
+    {lobby.status === "WAITING" && <><section className="victory-rules compact" aria-label="Condiciones de victoria">{pairs ? <><strong>Objetivo: {lobbyTarget} puntos por pareja</strong><span>Pareja A: asientos P0 y P2 · Pareja B: P1 y P3</span></> : <><strong>{choiceLabel(lobbyChoice)}</strong><span>{rulesSummary(lobbyChoice)}</span></>}</section><section className="waiting"><p className="eyebrow">Código de invitación</p><strong>{lobby.code}</strong><p>{lobby.players.length}/4 jugadores. La partida comienza al ocupar los cuatro asientos.</p></section><InvitePanel code={lobby.code} choice={lobbyChoice} username={social?.username ?? null}/>{identity && <InviteFriends code={lobby.code}/>}</>}
     {game && <GameBoard game={game} actions={lobby.legalActions} names={names} viewerId={lobby.viewerPlayerId} sending={channel.sending} message={channel.message} reducedMotion={reducedMotion}
       celebrationStorage={deviceStorage()} onCommand={(command) => void channel.send(command)} onLeave={leave} clock={lobby.clock}/>}
   </main>;
