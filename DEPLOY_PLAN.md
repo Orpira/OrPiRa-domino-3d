@@ -1,3 +1,19 @@
+# Plan de despliegue — Domino3D-OrPiRa v1.10-rc1 (All Fives)
+
+Mismo procedimiento que la 1.9-rc1; directorio nuevo `/opt/domino-3d-v1.10-rc1`, vuelta atrás a `/opt/domino-3d-v1.9-rc1`.
+
+| Archivo | SHA-256 |
+| --- | --- |
+| `domino-api-1.10-rc1.tar.gz` (imagen `sha256:d2c1f657af7e3505255f26226eb144c7f295e59511952ae976863076220904ad`) | `a2e80ae53218e47bc100a014766abe41eb830f6f0302a2850d16e996e5f5b920` |
+| `domino-3d-src-v1.10-rc1.tar.gz` (`v1.10-rc1`; `compose.yaml` sin cambios) | `e924fb6087d9874e585b349dc51aaf8c54f70faa26b3a2bbdff8ba82b2f2121c` |
+| `domino3d-orpira-1.10-rc1-debug.apk` (`versionCode` 13) | `070c025adad34297ad475607e8eeb99d7e9142d6757e797f8fb018aa5d0c1b89` |
+
+- Comprobación: `production-smoke.mjs --fives` (probado en local: partida completa, sin liga).
+- Vuelta atrás con partidas All Fives en curso: la 1.9 no conoce el spinner ni los brazos; esas
+  partidas pueden quedar sin jugadas válidas. Latino y con robo no se ven afectados.
+
+---
+
 # Plan de despliegue — Domino3D-OrPiRa v1.9-rc1 (invitaciones, nombre de usuario y amigos)
 
 Aprobado por el propietario («ve desplegando tan pronto vamos confirmando»). Mismo procedimiento
