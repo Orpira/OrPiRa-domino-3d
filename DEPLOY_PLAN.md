@@ -1,3 +1,22 @@
+# Plan de despliegue — Domino3D-OrPiRa v1.8-rc1 (modalidades: Latino y Con robo)
+
+Estado: **aprobado por el propietario el 14 oct 2026** («ve desplegando tan pronto vamos
+confirmando»). Mismo procedimiento que la 1.7-rc1 (abajo), cambiando versión y sumas:
+
+| Archivo | SHA-256 |
+| --- | --- |
+| `domino-api-1.8-rc1.tar.gz` (imagen `sha256:16bda43d7b50e7b5daac4a4b46ceffaeb5b7f9cfe9d7eb9a54cd3e6b1fcb9dce`) | `efa311554e4eb8b37702612a3f3feae0b8046f76bf0479197a0b05d73fdfd243` |
+| `domino-3d-src-v1.8-rc1.tar.gz` (`v1.8-rc1`, `1bcbbfc`; `compose.yaml` sin cambios, `9030814824…e441`) | `a9e13f09a111924a0580b78bce3cee1652b69f41ff641a12bdf829b9a0a84619` |
+| `domino3d-orpira-1.8-rc1-debug.apk` (`versionCode` 11) | `01ccf5fffc3179f7d78bccb0268b0bfc2f66c2f3f1771b78803104a59390a493` |
+
+- Directorio nuevo `/opt/domino-3d-v1.8-rc1`; vuelta atrás a `/opt/domino-3d-v1.7-rc1`.
+- Comprobación: `production-smoke.mjs --draw` (probado en local: 257 s, sin puntos de liga) y `--pairs`.
+- Vuelta atrás con partidas «con robo» en curso: la 1.7 no conoce el robo; esas partidas
+  terminan con reglas Latino y una mano sin el 6–6 repartido puede quedarse sin salida.
+  Las de Latino no se ven afectadas.
+
+---
+
 # Plan de despliegue — Domino3D-OrPiRa v1.7-rc1 (parejas online)
 
 Estado: **preparado; pendiente de aprobación**. Nada de este documento se ha ejecutado aún
