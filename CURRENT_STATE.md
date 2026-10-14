@@ -1,6 +1,14 @@
 # Estado actual
 
-Fecha: 14 de octubre de 2026. **Versión en producción: API 1.7-rc1, web `main` (`e9d08e3`, `v1.7-rc1`) y APK 1.7-rc1.**
+Fecha: 14 de octubre de 2026. **Versión en producción: API 1.8-rc1, web `main` (`v1.8-rc1`) y APK 1.8-rc1.**
+
+## Despliegue v1.8-rc1 — modalidades Latino y Con robo (14 oct 2026, ~02:15 en el VPS)
+
+- Motor con `RuleSet` (`LATINO_RULES` congelado por golden master, `DRAW_RULES`), objetivo 100/150/200, comando `DRAW`; liga solo Latino. Ver `RULES_CONTRACT.md`.
+- API desde `/opt/domino-3d-v1.8-rc1`, imagen `orpira/domino-api:1.8-rc1` (`sha256:16bda43d…9dce`), `healthy`; mismas variables. Copia previa de datos: `domino-data-pre-1.8-rc1-20261014-0014.tar.gz` (70 KB, SHA `2281e545…df83`). Vuelta atrás: `cd /opt/domino-3d-v1.7-rc1 && sudo docker compose up -d --no-deps --no-build domino-api`.
+- Comprobado en producción: salud, CORS (204 en los tres orígenes, 403 ajeno), liga conservada (8 jugadores), `INVALID_TARGET` para objetivo 99, `production-smoke.mjs --draw` (449 s, sin puntos de liga, historial con `rules`) y `--pairs` (463 s, +2).
+- Web `domino-3d.orpira.es` con `index-DOIWCnYi.js` (1.8-rc1). APK 1.8-rc1 (`versionCode` 11, SHA `01ccf5ff…a493`) instalada en el Samsung: práctica «Con robo» con pozo 8, botón Robar, ancho 384/384 px.
+- Rastro de QA: identidad «QA 10-14 00:17» (dos, una por prueba) y +2 en la liga de octubre.
 
 ## Despliegue v1.7-rc1 — parejas online (14 oct 2026, ~01:00 hora de Colombia)
 
