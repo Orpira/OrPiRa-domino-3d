@@ -9,6 +9,7 @@ Fecha: 14 de octubre de 2026. **Versión en producción: API 1.11-rc1, web `main
 - Comprobado en producción: salud, CORS (tres orígenes 204, ajeno 403), liga intacta (9 jugadores), sala `3R4766` intacta; búsqueda, solicitud y aceptación entre «QA amigos A» (`@qa_amigos_a`) y «QA amigos B» (`@qa_amigos_b`), «en línea», invitación a la sala All Fives `Q9YAXE` recibida por B.
 - Web `index-IPxUrxoh.js`. APK 1.11-rc1 (`versionCode` 14, SHA `d3757f61…662a`) instalada en el Samsung: Cuenta con búsqueda de amigos, ancho 384/384 px.
 - Rastro de QA: identidades «QA amigos A» y «QA amigos B» (amigos) y la sala `Q9YAXE` esperando jugadores.
+- Prueba iPhone (14 oct 2026): el iPhone 16 Pro del propietario (iOS 27.0.1) está conectado por USB, pero controlar Safari en él requiere el modo desarrollador y un túnel con `sudo`, así que se probó producción con WebKit (motor de Safari, Playwright 1.63) en la pantalla del iPhone 16 Pro (402×874, densidad 3, táctil): Inicio, práctica Latino/Con robo/All Fives con toques, arrastre táctil, sala con código por parejas e «Invitar» (copia el enlace), página `/invitar/Q9YAXE`, Cuenta y el diálogo propio. Sin errores y sin desbordamiento; All Fives con 7 fichas en un brazo cabe en la mesa. Rastro: sala `Q67U9Y` (el creador salió de la sesión). Falta la comprobación manual en el teléfono: sonido, menú de compartir nativo, zonas seguras y barras de Safari.
 
 ## Despliegue v1.10-rc1 — All Fives (14 oct 2026, ~03:10 en el VPS)
 
