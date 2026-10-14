@@ -1,6 +1,14 @@
 # Estado actual
 
-Fecha: 14 de octubre de 2026. **Versión en producción: API 1.11-rc1, web `main` (`v1.11-rc1`) y APK 1.11-rc1.**
+Fecha: 14 de octubre de 2026. **Versión en producción: API 1.12-rc1 y web `main` (`v1.12-rc1`); APK 1.12-rc1 compilada, pendiente de instalar (el Samsung no estaba conectado; el teléfono tiene la 1.11-rc1).**
+
+## Despliegue v1.12-rc1 — chat de mesa y del vestíbulo (14 oct 2026, ~10:25 en el VPS)
+
+- Ver `CHAT.md`. Parte de una implementación sin commit encontrada en la copia de trabajo (autor desconocido), revisada y completada: el servidor no arrancaba (propiedades de parámetro), los errores del chat cambiaban los estados HTTP de la Competición, el filtro dejaba pasar «H1JU3PUT4!», y el vestíbulo consultaba cada segundo y tapaba contenido en móvil.
+- API desde `/opt/domino-3d-v1.12-rc1`, imagen `sha256:366680e2…0a43`, `healthy`. Copia previa: `domino-data-pre-1.12-rc1-20261014-0822.tar.gz` (90 KB, SHA `65bb0c7e…b938`). Vuelta atrás: `cd /opt/domino-3d-v1.11-rc1 && sudo docker compose up -d --no-deps --no-build domino-api`.
+- Comprobado en producción: salud, CORS (tres orígenes 204, ajeno 403), liga intacta (9 jugadores), vestíbulo sin partida terminada → 403, sala `UY2LVU` en juego: texto → `CHAT_QUICK_ONLY`, frase → 201 y visible para otro jugador, segundo mensaje inmediato → `CHAT_RATE_LIMITED`.
+- Web `index-C7RFdI6m.js`. APK 1.12-rc1 (`versionCode` 15, SHA `123f10ac…c3cf`) en `artifacts/`, sin instalar.
+- Rastro de QA: identidad «QA chat» y la sala `UY2LVU` con cuatro invitados «QA chat 1–4» (la partida termina sola en modo automático).
 
 ## Despliegue v1.11-rc1 — amigos completos (14 oct 2026, ~03:40 en el VPS)
 
