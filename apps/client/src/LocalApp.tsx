@@ -1,7 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { freeOpening, legalActions, targetScore, TILE_BY_ID, type GameState, type Side, type TileId } from "../../../packages/rules/src/index.ts";
+import { armsOpen, endValue, freeOpening, legalActions, openEndsTotal, targetScore, TILE_BY_ID, type GameState, type Side, type TileId } from "../../../packages/rules/src/index.ts";
 import { choiceLabel, individualRoundText, rulesSummary, type TableChoice } from "./modes-presentation.ts";
 import { TableSetup } from "./ui.tsx";
+import { ScorePops, useScorePops } from "./score-pop.tsx";
 import { championTeamText, openerText, pairsRoundText, teamStandings } from "./pairs-presentation.ts";
 import { HUMAN_ID, LocalGame, playerName, randomDeal, type LocalMode } from "./local-game.ts";
 import { loadSession, saveSession } from "./session-storage.ts";
@@ -73,7 +74,7 @@ export default function App() {
   const placeAt = (id: TileId, side: DropSide) => playTile(id, side === "CENTER" ? undefined : side);
   const drag = useHandDrag({ enabled: canPlace, sidesOf, onDrop: placeAt, handIds, reducedMotion });
   const focusId = drag.draggingId ?? selected;
-  const targets = focusId && canPlace ? placementTargets(sidesOf(focusId), { left: state.leftEnd, right: state.rightEnd }, (side) => placeAt(focusId, side), drag.hot) : undefined;
+  const targets = focusId && canPlace ? placementTargets(sidesOf(focusId), { left: state.leftEnd, right: state.rightEnd, up: endValue(state, "UP"), down: endValue(state, "DOWN") }, (side) => placeAt(focusId, side), drag.hot) : undefined;
   const canPass = !handoff && actions.length === 1 && actions[0]?.type === "PASS";
   const roundResult = state.roundResult;
   const winnerName = roundResult?.winnerId ? playerName(roundResult.winnerId, mode) : null;
@@ -105,7 +106,8 @@ export default function App() {
       update(nextGame.state, `Nueva partida: ${choiceLabel(next)}`, mode === "PASS_AND_PLAY");
     });
   };
-  const drawing = game.rules === "DRAW"; const boneyard = state.boneyard?.length ?? 0;
+  const drawing = game.rules !== "LATINO"; const fivesMode = game.rules === "ALL_FIVES";
+  const pops = useScorePops(state.players, state.matchId, fivesMode); const boneyard = state.boneyard?.length ?? 0;
   const canDraw = !handoff && actions.length === 1 && actions[0]?.type === "DRAW";
   const openingTile = state.phase === "ROUND_ACTIVE" && state.chain.length === 0 && drawing && activeId ? legalActions(state, activeId)[0]?.tileId : undefined;
   const individualRound = !pairs && roundResult ? individualRoundText(roundResult, names, game.rules) : null;
@@ -125,7 +127,7 @@ export default function App() {
 
   return <main>
     <header className="hero">
-      <div><p className="eyebrow">OrPiRa · partida local 3D</p><h1>Dominó <em>{drawing ? "con robo" : "Latino"}</em></h1></div>
+      <div><p className="eyebrow">OrPiRa · partida local 3D</p><h1>Dominó <em>{game.rules === "ALL_FIVES" ? "All Fives" : drawing ? "con robo" : "Latino"}</em></h1></div>
       <div className="target"><span>Objetivo</span><strong>{targetScore(state)}</strong></div>
     </header>
     <nav className="mode-switch" aria-label="Modalidad local">
@@ -147,7 +149,9 @@ export default function App() {
     </section>}
     <section className="table" aria-label="Mesa de dominó">
       <div className="table-status"><span>Ronda {state.roundNumber}</span><strong>{state.phase === "ROUND_ACTIVE" ? `Turno: ${playerName(activeId!, mode)}` : "Ronda terminada"}</strong><span>{state.leftEnd === null ? "Apertura pendiente" : `Extremos ${state.leftEnd} · ${state.rightEnd}`}{drawing ? ` · Pozo: ${boneyard}` : ""}</span></div>
-      <Suspense fallback={<div className="three-stage"><p>Preparando mesa 3D…</p></div>}><Table3D chain={state.chain} reducedMotion={reducedMotion} players={state.players} viewerId={mode === "BOTS" ? HUMAN_ID : undefined} targets={targets} locatorRef={drag.locatorRef} dropOrigin={drag.dropOrigin} openingId={state.openingTileId} openingHint={freeOpening(state) && state.currentPlayerId ? `${openerText(names[state.currentPlayerId]!)} con la ficha que quiera` : openingTile && activeId ? `${openerText(names[activeId]!)} con el ${openingTile.replace("-", "–")}` : undefined} /></Suspense>
+      {fivesMode && <p className="fives-strip"><span>Suma de extremos: <strong>{openEndsTotal(state)}</strong></span>{state.players.map((player) => <span key={player.playerId}>{names[player.playerId]} <strong>{player.score}</strong></span>)}</p>}
+      <ScorePops pops={pops} names={names}/>
+      <Suspense fallback={<div className="three-stage"><p>Preparando mesa 3D…</p></div>}><Table3D chain={state.chain} spinnerId={state.spinnerId} up={state.up} down={state.down} armsOpen={armsOpen(state)} reducedMotion={reducedMotion} players={state.players} viewerId={mode === "BOTS" ? HUMAN_ID : undefined} targets={targets} locatorRef={drag.locatorRef} dropOrigin={drag.dropOrigin} openingId={state.openingTileId} openingHint={freeOpening(state) && state.currentPlayerId ? `${openerText(names[state.currentPlayerId]!)} con la ficha que quiera` : openingTile && activeId ? `${openerText(names[activeId]!)} con el ${openingTile.replace("-", "–")}` : undefined} /></Suspense>
     </section>
     <p className="message" role="status">{botsBusy ? "El bot está pensando…" : message} <span className="saved">Guardado local automático</span></p>
     {state.phase === "ROUND_ACTIVE" && !handoff && visibleHandId && <section className="controls">
@@ -163,7 +167,7 @@ export default function App() {
     {drag.ghost}
     {state.phase === "MATCH_ENDED" && <MatchCelebration matchId={state.matchId} phase={state.phase} result={state.matchResult} reducedMotion={reducedMotion} storage={window.localStorage}/>}
     {state.phase !== "ROUND_ACTIVE" && roundResult && <section className={`result ${state.phase === "MATCH_ENDED" ? "match-finale" : ""}`} role="dialog" aria-label={state.phase === "MATCH_ENDED" ? "Resultado final de la partida" : "Resultado de ronda"}>
-      <p className="eyebrow">{roundResult.reason === "DOMINO" ? "Dominada" : pairs || drawing ? "Tranque" : "Cierre"}</p><h2>{pairsRound ? pairsRound.headline : drawing ? individualRound!.headline : winnerName ? `${winnerName} gana la ronda` : "Empate en el mínimo"}</h2>
+      <p className="eyebrow">{roundResult.reason === "DOMINO" ? "Dominada" : roundResult.reason === "TARGET" ? "Objetivo alcanzado" : pairs || drawing ? "Tranque" : "Cierre"}</p><h2>{pairsRound ? pairsRound.headline : drawing ? individualRound!.headline : winnerName ? `${winnerName} gana la ronda` : "Empate en el mínimo"}</h2>
       <p>{pairsRound ? pairsRound.detail : drawing ? individualRound!.detail : roundResult.reason === "DOMINO" ? `${winnerName} suma 20 puntos.` : "El cierre no concede puntos."}</p>
       <div className="totals">{state.players.map((player) => <span key={player.playerId}>{playerName(player.playerId, mode)}: {roundResult.handPipTotals[player.playerId]}</span>)}</div>
       {state.phase === "ROUND_ENDED" ? <button className="primary" onClick={() => { const next = game.startNextRound(); update(next, pairs ? `Nueva mano: ${openerText(names[next.currentPlayerId!]!).toLowerCase()}` : "Nueva ronda: busca el 6–6", mode === "PASS_AND_PLAY"); }}>{pairs ? "Siguiente mano" : "Siguiente ronda"}</button> : <><div className="champion-callout"><span className="champion-trophy" aria-hidden="true">🏆</span><strong>{champions ? `¡${champions.label} ganan la partida!` : `¡${championName} ganó la partida!`}</strong><span>{champions ? champions.score : state.matchResult!.finalScores[state.matchResult!.championId]} puntos</span></div><p>Clasificación final</p><ol className="final-ranking">{pairs

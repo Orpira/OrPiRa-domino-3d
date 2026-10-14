@@ -1,7 +1,7 @@
 import { DOUBLE_SIX_SET, TILE_BY_ID, pipTotal } from "./tiles.ts";
 import {
   RULES_VERSION, TARGET_OPTIONS,
-  type Command, type DomainEvent, type GameMode, type GameState, type LegalAction, type Player,
+  type Command, type DomainEvent, type GameMode, type GameState, type LegalAction, type OrientedTile, type Player,
   type PlayerView, type RuleError, type RulesId, type Seat, type Side, type TargetScore, type TileId, type Transition,
 } from "./types.ts";
 
@@ -73,6 +73,53 @@ export function validateDeal(players: readonly { playerId: string }[], deal: Dea
 }
 
 function matches(id: TileId, end: number): boolean { const tile = TILE_BY_ID.get(id)!; return tile.a === end || tile.b === end; }
+
+/** Tablero: la cadena (izquierda–derecha) y, en All Fives, el spinner con sus brazos UP y DOWN. */
+export type Board = Pick<GameState, "chain" | "leftEnd" | "rightEnd" | "spinnerId" | "up" | "down">;
+const isDoubleTile = (tile: OrientedTile) => tile.left === tile.right;
+/** Los brazos del spinner se abren cuando ya tiene fichas a izquierda y derecha. */
+export function armsOpen(board: Pick<Board, "chain" | "spinnerId">): boolean {
+  if (!board.spinnerId) return false; const index = board.chain.findIndex((tile) => tile.id === board.spinnerId); return index > 0 && index < board.chain.length - 1;
+}
+/** Valor del extremo abierto por ese lado; `null` si ese extremo no existe (brazos cerrados o cadena vacía). */
+export function endValue(board: Board, side: Side): number | null {
+  if (side === "LEFT") return board.leftEnd; if (side === "RIGHT") return board.rightEnd;
+  if (!armsOpen(board)) return null;
+  const arm = (side === "UP" ? board.up : board.down) ?? []; return arm.length ? arm.at(-1)!.right : TILE_BY_ID.get(board.spinnerId!)!.a;
+}
+/**
+ * Suma de los extremos abiertos (All Fives). Un doble en un extremo cuenta sus dos mitades; un brazo vacío no cuenta.
+ * Con una sola ficha en la mesa se suman sus dos mitades (5–5 suma 10; 6–4, también 10).
+ */
+export function openEndsTotal(board: Board): number {
+  const { chain } = board; if (chain.length === 0) return 0;
+  if (chain.length === 1) return chain[0]!.left + chain[0]!.right;
+  const outer = (tile: OrientedTile, value: number) => isDoubleTile(tile) ? value * 2 : value;
+  let total = outer(chain[0]!, chain[0]!.left) + outer(chain.at(-1)!, chain.at(-1)!.right);
+  if (armsOpen(board)) for (const arm of [board.up ?? [], board.down ?? []]) if (arm.length) total += outer(arm.at(-1)!, arm.at(-1)!.right);
+  return total;
+}
+/** Puntos de All Fives que da el tablero: la suma de extremos si es múltiplo de 5 (y mayor que 0). */
+export function fivesPoints(board: Board): number { const total = openEndsTotal(board); return total > 0 && total % 5 === 0 ? total : 0; }
+/**
+ * Coloca una ficha ya validada y devuelve solo los campos del tablero que cambian (para combinarlos con el estado).
+ * En Latino y con robo son `chain`, `leftEnd` y `rightEnd`, en el mismo orden de siempre. Con `spinners`, el primer doble
+ * jugado pasa a ser el spinner.
+ */
+export function placeOnBoard(board: Board, tileId: TileId, side: Side | undefined, actorId: string, spinners: boolean): { readonly board: Partial<Board>; readonly tile: OrientedTile } {
+  const tile = TILE_BY_ID.get(tileId)!; let left = tile.a; let right = tile.b;
+  if (board.chain.length > 0 && side === "LEFT") { right = board.leftEnd!; left = tile.a === right ? tile.b : tile.a; }
+  if (board.chain.length > 0 && side === "RIGHT") { left = board.rightEnd!; right = tile.a === left ? tile.b : tile.a; }
+  if (side === "UP" || side === "DOWN") { left = endValue(board, side)!; right = tile.a === left ? tile.b : tile.a; }
+  const oriented = { id: tileId, left, right, playedBy: actorId };
+  if (side === "UP" || side === "DOWN") {
+    const key = side === "UP" ? "up" : "down";
+    return { board: { [key]: [...(board[key] ?? []), oriented] }, tile: oriented };
+  }
+  const chain = side === "LEFT" ? [oriented, ...board.chain] : [...board.chain, oriented];
+  const spinner = spinners && !board.spinnerId && tile.a === tile.b ? { spinnerId: tileId, up: [], down: [] } : {};
+  return { board: { chain, leftEnd: chain[0]!.left, rightEnd: chain[chain.length - 1]!.right, ...spinner }, tile: oriented };
+}
 function placementsAtEnds(state: GameState, actorId: string): LegalAction[] {
   const actions: LegalAction[] = [];
   for (const id of state.hands[actorId] ?? []) {
@@ -205,7 +252,43 @@ export const DRAW_RULES: RuleSet = {
   openEnds: twoEnds,
 };
 
-const RULE_SETS: Readonly<Record<RulesId, RuleSet>> = { LATINO: LATINO_RULES, DRAW: DRAW_RULES };
+/** Redondeo al múltiplo de 5 más cercano; a mitad de camino, hacia arriba (12 → 10, 13 → 15). */
+export function roundToFive(points: number): number { return Math.floor((points + 2.5) / 5) * 5; }
+
+/**
+ * All Fives (solo individual, 4 jugadores). Reparto, salida, robo y pase como «con robo». El primer doble jugado es el
+ * spinner: cuando tiene fichas a ambos lados abre los brazos UP y DOWN. Tras cada colocación, si la suma de los extremos
+ * abiertos es múltiplo de 5, quien colocó suma esos puntos; quien alcanza el objetivo gana en el acto. Al cerrar la mano
+ * (dominada, o tranque con el menor total en mano) el ganador suma los puntos en mano de los rivales redondeados a 5.
+ */
+export const ALL_FIVES_RULES: RuleSet = {
+  ...DRAW_RULES,
+  id: "ALL_FIVES",
+  canPlay(state, actorId) {
+    const actions = placementsAtEnds(state, actorId); if (!armsOpen(state)) return actions;
+    for (const id of state.hands[actorId] ?? []) for (const side of ["UP", "DOWN"] as const) if (matches(id, endValue(state, side)!)) actions.push({ type: "PLACE", tileId: id, side });
+    return actions;
+  },
+  scoreDuringHand(state, actorId) { const points = fivesPoints(state); return points ? { [actorId]: points } : null; },
+  scoreEndOfHand(state, reason, actorId) {
+    const { winnerId, tied } = reason === "DOMINO" ? { winnerId: actorId, tied: [] } : blockedWinner(state);
+    const rivals = winnerId ? state.players.filter((p) => p.playerId !== winnerId).reduce((sum, p) => sum + pipTotal(state.hands[p.playerId]!), 0) : 0;
+    return endIndividualRound(state, reason, winnerId, tied, roundToFive(rivals));
+  },
+  openEnds(state) { return (["LEFT", "RIGHT", "UP", "DOWN"] as const).map((side) => endValue(state, side)).filter((value): value is number => value !== null); },
+};
+
+/** All Fives: alguien alcanzó el objetivo con los puntos de una jugada; la partida termina sin cerrar la mano. */
+function endByTarget(state: GameState, actorId: string, gained: Readonly<Record<string, number>>): HandEnd {
+  const totals = Object.fromEntries(state.players.map((p) => [p.playerId, pipTotal(state.hands[p.playerId]!)]));
+  const deltas = Object.fromEntries(state.players.map((p) => [p.playerId, gained[p.playerId] ?? 0]));
+  const finalScores = Object.fromEntries(state.players.map((p) => [p.playerId, p.score]));
+  const roundResult = { reason: "TARGET" as const, winnerId: actorId, tiedPlayerIds: [], handPipTotals: totals, scoreDeltas: deltas };
+  return { state: { ...state, phase: "MATCH_ENDED", currentPlayerId: null, roundResult, matchResult: { championId: actorId, finalScores } },
+    events: [{ type: "ROUND_ENDED", roundId: state.roundId, reason: "TARGET", winnerId: actorId, tiedPlayerIds: [] }, { type: "MATCH_ENDED", championId: actorId, finalScores }] };
+}
+
+const RULE_SETS: Readonly<Record<RulesId, RuleSet>> = { LATINO: LATINO_RULES, DRAW: DRAW_RULES, ALL_FIVES: ALL_FIVES_RULES };
 export function ruleSetOf(state: Pick<GameState, "rules">): RuleSet { return RULE_SETS[rulesId(state)]; }
 
 function makeRound(base: { matchId: string; roundNumber: number; revision: number; players: readonly Player[]; mode: GameMode; rules: RulesId; targetScore?: TargetScore | undefined; openerId?: string | undefined }, deal: Deal): GameState {
@@ -303,27 +386,26 @@ export function transition(state: GameState, command: Command): Transition {
     if (command.side !== undefined) return fail(state, "INVALID_SIDE", "The opening tile takes no side");
   } else if (state.chain.length === 0) {
     if (command.tileId !== required || command.side !== undefined) return fail(state, command.side !== undefined ? "INVALID_SIDE" : "INVALID_OPENING", `Opening must be ${required} without a side`);
+  } else if (command.side === "UP" || command.side === "DOWN") {
+    const end = rules.id === "ALL_FIVES" ? endValue(state, command.side) : null;
+    if (end === null) return fail(state, "INVALID_SIDE", "The spinner arms are not open");
+    if (!matches(command.tileId, end)) return fail(state, "TILE_DOES_NOT_MATCH", "Tile does not match selected end");
   } else {
     if (command.side !== "LEFT" && command.side !== "RIGHT") return fail(state, "INVALID_SIDE", "LEFT or RIGHT is required");
     const end = command.side === "LEFT" ? state.leftEnd! : state.rightEnd!;
     if (!matches(command.tileId, end)) return fail(state, "TILE_DOES_NOT_MATCH", "Tile does not match selected end");
   }
-  const tile = TILE_BY_ID.get(command.tileId)!;
-  let left = tile.a; let right = tile.b;
-  if (state.chain.length > 0 && command.side === "LEFT") { right = state.leftEnd!; left = tile.a === right ? tile.b : tile.a; }
-  if (state.chain.length > 0 && command.side === "RIGHT") { left = state.rightEnd!; right = tile.a === left ? tile.b : tile.a; }
-  const oriented = { id: command.tileId, left, right, playedBy: command.actorId };
-  const chain = command.side === "LEFT" ? [oriented, ...state.chain] : [...state.chain, oriented];
+  const placement = placeOnBoard(state, command.tileId, command.side, command.actorId, rules.id === "ALL_FIVES"); const oriented = placement.tile;
   const hands = { ...state.hands, [command.actorId]: hand.filter((id) => id !== command.tileId) };
   // La mesa centra la cadena en la ficha de salida; solo se guarda cuando no es el 6–6 obligatorio de Latino.
   const opening = state.chain.length === 0 && (required === null || rules.id !== "LATINO") ? { openingTileId: command.tileId } : {};
-  let placed: GameState = { ...state, ...opening, hands, chain, leftEnd: chain[0]!.left, rightEnd: chain[chain.length - 1]!.right,
-    consecutivePasses: 0, revision: state.revision + 1 };
+  let placed: GameState = { ...state, ...opening, hands, ...placement.board, consecutivePasses: 0, revision: state.revision + 1 };
   const events: DomainEvent[] = [{ type: "TILE_PLACED", actorId: command.actorId, tile: oriented, side: command.side ?? null }];
   const gained = rules.scoreDuringHand(placed, command.actorId);
   if (gained && Object.values(gained).some((points) => points !== 0)) {
     placed = { ...placed, players: placed.players.map((p) => ({ ...p, score: p.score + (gained[p.playerId] ?? 0) })) };
-    events.push({ type: "SCORE_APPLIED", roundId: state.roundId, scoreDeltas: gained });
+    events.push({ type: "SCORE_APPLIED", roundId: state.roundId, scoreDeltas: gained, reason: "FIVES", openEndsTotal: openEndsTotal(placed) });
+    if (placed.players.some((p) => p.score >= targetScore(placed))) { const ended = endByTarget(placed, command.actorId, gained); return { ok: true, state: ended.state, events: [...events, ...ended.events] }; }
   }
   const ended = endIfOver(placed, command.actorId, events); if (ended) return ended;
   const currentPlayerId = nextPlayer(state, command.actorId);

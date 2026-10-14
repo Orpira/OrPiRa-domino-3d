@@ -10,7 +10,7 @@ export interface QuickPlayConfig { readonly fillAfterMs: number }
 // Espera provisional antes de completar la mesa con bots del servidor.
 export const DEFAULT_QUICK_PLAY: QuickPlayConfig = Object.freeze({ fillAfterMs: 45_000 });
 // Mesas públicas que se forman: cada una con su propia cola. El objetivo es siempre el de la modalidad.
-const TABLES: readonly { readonly mode: GameMode; readonly rules: RulesId }[] = [{ mode: "INDIVIDUAL", rules: "LATINO" }, { mode: "PAIRS", rules: "LATINO" }, { mode: "INDIVIDUAL", rules: "DRAW" }];
+const TABLES: readonly { readonly mode: GameMode; readonly rules: RulesId }[] = [{ mode: "INDIVIDUAL", rules: "LATINO" }, { mode: "PAIRS", rules: "LATINO" }, { mode: "INDIVIDUAL", rules: "DRAW" }, { mode: "INDIVIDUAL", rules: "ALL_FIVES" }];
 const sameTable = (left: { mode: GameMode; rules: RulesId }) => (right: { mode: GameMode; rules: RulesId }) => left.mode === right.mode && left.rules === right.rules;
 export interface PlayerIdentity { readonly identityId: string; readonly displayName: string }
 type Identify = (token: string) => PlayerIdentity | null;

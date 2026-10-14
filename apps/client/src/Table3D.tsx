@@ -4,18 +4,20 @@ import type { OrientedTile, Player, TileId } from "../../../packages/rules/src/i
 import type { DropSide, ScreenXY } from "./drop-target.ts";
 import { HAND_VIEWBOX, handMarkup } from "./hand-art.ts";
 import type { DropLocator, DropOrigin } from "./hand-drag.tsx";
-import { endGlows, frameBounds, layoutDominoChain, seatSide, TILE_LENGTH, TILE_WIDTH, type SeatSide, type TableBounds, type TablePoint } from "./table-layout.ts";
+import { boardFrameBounds, endGlows, layoutBoard, seatSide, TILE_LENGTH, TILE_WIDTH, type SeatSide, type TableBounds, type TablePoint } from "./table-layout.ts";
 
 /** Un destino donde colocar la ficha elegida. El texto accesible es completo (p. ej. «Izquierda · 3»); en pantalla solo se ve el valor. */
 export interface PlacementTarget { readonly label: string; readonly value: string | number; readonly onPlace: () => void }
 export interface PlacementTargets {
   readonly left?: PlacementTarget | undefined; readonly right?: PlacementTarget | undefined; readonly center?: PlacementTarget | undefined;
+  /** Brazos del spinner (All Fives). */
+  readonly up?: PlacementTarget | undefined; readonly down?: PlacementTarget | undefined;
   readonly disabled?: boolean;
   /** Destino sobre el que está la ficha arrastrada: se resalta para indicar dónde caerá. */
   readonly hot?: DropSide | null;
 }
 interface ScreenPoint { readonly left: number; readonly top: number }
-interface ScreenEnds { readonly left: ScreenPoint; readonly right: ScreenPoint }
+interface ScreenEnds { readonly left: ScreenPoint; readonly right: ScreenPoint; readonly up?: ScreenPoint | undefined; readonly down?: ScreenPoint | undefined }
 interface Visual { readonly mesh: THREE.Mesh; readonly texture: THREE.Texture }
 interface Motion {
   readonly mesh: THREE.Mesh; readonly from: THREE.Vector3; readonly to: THREE.Vector3;
@@ -38,6 +40,8 @@ interface SceneContext {
   readonly glows: Record<DropSide, THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>>;
   /** Ficha de salida: centro de la cadena (el 6–6 salvo salida libre en parejas). */
   openingId: TileId;
+  /** All Fives: spinner, brazos y si admiten fichas. */
+  arms: { spinnerId?: TileId | undefined; up: readonly OrientedTile[]; down: readonly OrientedTile[]; open: boolean };
   glowState: { readonly active: readonly DropSide[]; readonly hot: DropSide | null; readonly reduced: boolean };
 }
 
@@ -167,7 +171,7 @@ function createGlow(texture: THREE.Texture) {
 /** Intensidad de cada brillo: late suavemente; el destino bajo la ficha arrastrada brilla más. Devuelve si hay que seguir animando. */
 function updateGlows(context: SceneContext, now: number) {
   const { active, hot, reduced } = context.glowState; const pulse = reduced ? .5 : .5 + .5 * Math.sin(now / 1400 * Math.PI * 2);
-  for (const side of ["LEFT", "RIGHT", "CENTER"] as const) {
+  for (const side of ["LEFT", "RIGHT", "CENTER", "UP", "DOWN"] as const) {
     const mesh = context.glows[side]; const on = active.includes(side); mesh.visible = on; if (!on) continue;
     const isHot = hot === side; mesh.material.opacity = isHot ? 1 : .42 + .3 * pulse;
     const base = mesh.userData.baseScale as { x: number; y: number } | undefined;
@@ -243,11 +247,12 @@ function dropMotion(context: SceneContext, id: TileId) { context.motions.get(id)
 
 function syncChain(context: SceneContext, chain: readonly OrientedTile[], reducedMotion: boolean, animateChange: boolean, setEnds: (ends: ScreenEnds | null) => void,
   originOf: (playedBy: string) => SeatSide = () => "BOTTOM", dropNdcOf: (tileId: TileId) => THREE.Vector2 | null = () => null) {
-  const placements = layoutDominoChain(chain, context.width, context.height, context.openingId); const ids = new Set(chain.map((tile) => tile.id));
+  const layout = layoutBoard({ chain, spinnerId: context.arms.spinnerId, up: context.arms.up, down: context.arms.down }, context.width, context.height, context.openingId, context.arms.open);
+  const placements = layout.placements; const tiles = [...chain, ...context.arms.up, ...context.arms.down]; const ids = new Set(tiles.map((tile) => tile.id));
   for (const [id, visual] of context.visuals) if (!ids.has(id)) {
     context.scene.remove(visual.mesh); context.visuals.delete(id); dropMotion(context, id); disposeVisual(visual);
   }
-  const newIds = chain.filter((tile) => !context.visuals.has(tile.id));
+  const newIds = tiles.filter((tile) => !context.visuals.has(tile.id));
   const animateArrival = context.initialized && animateChange && !reducedMotion && newIds.length === 1;
   // La cámara se calcula primero: la ficha nueva entra por el borde del encuadre final, desde el lado de quien la jugó.
   const animateCamera = context.initialized && animateChange && !reducedMotion;
@@ -256,9 +261,9 @@ function syncChain(context: SceneContext, chain: readonly OrientedTile[], reduce
   if (animateArrival) for (const tile of newIds) {
     const ndc = dropNdcOf(tile.id); const point = ndc && heldPoint(context.camera, ndc); if (point) dropped.set(tile.id, point);
   }
-  const previous = context.view; const next = fitPose(context.camera, frameBounds(placements)); applyPose(context.camera, next);
+  const previous = context.view; const next = fitPose(context.camera, boardFrameBounds(layout)); applyPose(context.camera, next);
   placements.forEach((placement, index) => {
-    const tile = chain[index]!; let visual = context.visuals.get(tile.id); const isNew = !visual;
+    const tile = tiles[index]!; let visual = context.visuals.get(tile.id); const isNew = !visual;
     if (!visual) { visual = createDomino(tile); context.visuals.set(tile.id, visual); context.scene.add(visual.mesh); }
     const target = new THREE.Vector3(placement.x, .02, placement.z); visual.mesh.scale.setScalar(placement.scale);
     if (!context.initialized || reducedMotion || !animateChange) {
@@ -288,21 +293,23 @@ function syncChain(context: SceneContext, chain: readonly OrientedTile[], reduce
   });
   context.initialized = true;
   // Los brillos (y su zona táctil) se colocan con la cámara ya en su posición final.
-  const glows = endGlows(placements);
+  const glows = endGlows(layout.chain);
   const lay = (side: DropSide, spot: { x: number; z: number; rotation: number; scale: number }, along: number, across: number) => {
     const mesh = context.glows[side]; mesh.position.set(spot.x, .16, spot.z); mesh.rotation.set(-Math.PI / 2, 0, spot.rotation);
     mesh.userData.baseScale = { x: along * spot.scale, y: across * spot.scale }; mesh.scale.set(along * spot.scale, across * spot.scale, 1);
   };
   if (glows) { lay("LEFT", glows.left, TILE_WIDTH * 1.5, TILE_WIDTH * 2); lay("RIGHT", glows.right, TILE_WIDTH * 1.5, TILE_WIDTH * 2); }
   lay("CENTER", { x: 0, z: 0, rotation: 0, scale: placements[0]?.scale ?? .7 }, TILE_LENGTH * 2.2, TILE_LENGTH * 2.2);
-  setEnds(glows ? separateEnds(context, projectAnchor(context, glows.left), projectAnchor(context, glows.right)) : null);
+  for (const side of ["UP", "DOWN"] as const) { const arm = layout.armGlows[side]; if (arm) lay(side, arm, TILE_WIDTH * 1.5, TILE_WIDTH * 2); }
+  const armPoint = (side: "UP" | "DOWN") => { const arm = layout.armGlows[side]; return arm ? projectAnchor(context, arm) : undefined; };
+  setEnds(glows ? { ...separateEnds(context, projectAnchor(context, glows.left), projectAnchor(context, glows.right)), up: armPoint("UP"), down: armPoint("DOWN") } : null);
   const moved = previous.target.distanceTo(next.target) > 1e-3 || Math.abs(previous.distance - next.distance) > 1e-3;
   if (animateCamera && moved) { context.cameraMotion = { from: previous, to: next, started: performance.now(), duration: 520 }; applyPose(context.camera, previous); }
   else { context.cameraMotion = null; context.view = next; }
   if (context.motions.size || context.cameraMotion || context.glowState.active.length) renderMotion(context); else context.renderer.render(context.scene, context.camera);
 }
 
-export function Table3D({ chain, reducedMotion, targets, players, viewerId, locatorRef, dropOrigin, openingHint, openingId }: {
+export function Table3D({ chain, reducedMotion, targets, players, viewerId, locatorRef, dropOrigin, openingHint, openingId, spinnerId, up, down, armsOpen = false }: {
   chain: readonly OrientedTile[]; reducedMotion: boolean; targets?: PlacementTargets | undefined;
   /** Jugadores con su asiento y jugador local: deciden desde qué lado llega cada ficha. */
   players?: readonly Player[] | undefined; viewerId?: string | undefined;
@@ -314,7 +321,11 @@ export function Table3D({ chain, reducedMotion, targets, players, viewerId, loca
   openingHint?: string | undefined;
   /** Ficha con la que se salió si no fue el 6–6 (parejas desde la segunda mano). */
   openingId?: TileId | undefined;
+  /** All Fives: spinner y sus brazos, y si admiten fichas. */
+  spinnerId?: TileId | undefined; up?: readonly OrientedTile[] | undefined; down?: readonly OrientedTile[] | undefined; armsOpen?: boolean | undefined;
 }) {
+  const armsRef = useRef<SceneContext["arms"]>({ up: [], down: [], open: false });
+  armsRef.current = { spinnerId, up: up ?? [], down: down ?? [], open: armsOpen };
   const openingRef = useRef<TileId>("6-6"); openingRef.current = openingId ?? "6-6";
   const host = useRef<HTMLDivElement>(null); const sceneRef = useRef<SceneContext | null>(null);
   const originRef = useRef<(playedBy: string) => SeatSide>(() => "BOTTOM");
@@ -336,7 +347,8 @@ export function Table3D({ chain, reducedMotion, targets, players, viewerId, loca
       const toClient = (point: ScreenPoint): ScreenXY => ({ x: rect.left + point.left / 100 * rect.width, y: rect.top + point.top / 100 * rect.height });
       const inside = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
       const local = { x: (clientX - rect.left) / Math.max(rect.width, 1), y: (clientY - rect.top) / Math.max(rect.height, 1) };
-      return { inside, local, anchors: { CENTER: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }, ...(current ? { LEFT: toClient(current.left), RIGHT: toClient(current.right) } : {}) } };
+      return { inside, local, anchors: { CENTER: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }, ...(current ? { LEFT: toClient(current.left), RIGHT: toClient(current.right),
+        ...(current.up ? { UP: toClient(current.up) } : {}), ...(current.down ? { DOWN: toClient(current.down) } : {}) } : {}) } };
     };
     return () => { locatorRef.current = null; };
   }, [locatorRef]);
@@ -353,14 +365,14 @@ export function Table3D({ chain, reducedMotion, targets, players, viewerId, loca
     const rim = new THREE.Mesh(new THREE.TorusGeometry(5.72, .16, 12, 64), new THREE.MeshStandardMaterial({ color: 0x8e582e, roughness: .55 }));
     rim.rotation.x = Math.PI / 2; rim.position.y = -.05; scene.add(rim);
     const overlay = document.createElement("div"); overlay.className = "table-hands"; element.appendChild(overlay);
-    const halo = glowTexture(); const glows = { LEFT: createGlow(halo), RIGHT: createGlow(halo), CENTER: createGlow(halo) };
+    const halo = glowTexture(); const glows = { LEFT: createGlow(halo), RIGHT: createGlow(halo), CENTER: createGlow(halo), UP: createGlow(halo), DOWN: createGlow(halo) };
     Object.values(glows).forEach((mesh) => scene.add(mesh));
-    const context: SceneContext = { scene, camera, renderer, visuals: new Map(), motions: new Map(), overlay, frame: 0, glows, glowState: { active: [], hot: null, reduced: false }, openingId: openingRef.current, width: 1, height: 1, initialized: false, view: OVERVIEW, cameraMotion: null };
+    const context: SceneContext = { scene, camera, renderer, visuals: new Map(), motions: new Map(), overlay, frame: 0, glows, glowState: { active: [], hot: null, reduced: false }, openingId: openingRef.current, arms: armsRef.current, width: 1, height: 1, initialized: false, view: OVERVIEW, cameraMotion: null };
     sceneRef.current = context;
     const resize = () => {
       context.width = Math.max(element.clientWidth, 1); context.height = Math.max(element.clientHeight, 1); renderer.setSize(context.width, context.height, false);
       camera.aspect = context.width / context.height; camera.fov = camera.aspect < 1.25 ? 46 : camera.aspect < 1.65 ? 42 : 36; camera.updateProjectionMatrix();
-      context.openingId = openingRef.current; syncChain(context, chainRef.current, reducedRef.current, false, setEnds);
+      context.openingId = openingRef.current; context.arms = armsRef.current; syncChain(context, chainRef.current, reducedRef.current, false, setEnds);
     };
     const observer = new ResizeObserver(resize); observer.observe(element); resize();
     return () => {
@@ -370,8 +382,9 @@ export function Table3D({ chain, reducedMotion, targets, players, viewerId, loca
       renderer.dispose(); renderer.domElement.remove(); overlay.remove(); sceneRef.current = null;
     };
   }, []);
-  useEffect(() => { const context = sceneRef.current; if (!context) return; context.openingId = openingRef.current; syncChain(context, chain, reducedMotion, true, setEnds, originRef.current, dropNdcRef.current); }, [chain, reducedMotion]);
-  const activeSides = (["LEFT", "RIGHT", "CENTER"] as const).filter((side) => targets?.[side === "LEFT" ? "left" : side === "RIGHT" ? "right" : "center"]);
+  useEffect(() => { const context = sceneRef.current; if (!context) return; context.openingId = openingRef.current; context.arms = armsRef.current; syncChain(context, chain, reducedMotion, true, setEnds, originRef.current, dropNdcRef.current); }, [chain, up, down, armsOpen, reducedMotion]);
+  const key = { LEFT: "left", RIGHT: "right", CENTER: "center", UP: "up", DOWN: "down" } as const;
+  const activeSides = (["LEFT", "RIGHT", "CENTER", "UP", "DOWN"] as const).filter((side) => targets?.[key[side]]);
   const activeKey = activeSides.join(","); const hot = targets?.hot ?? null;
   useEffect(() => {
     const context = sceneRef.current; if (!context) return;
@@ -384,9 +397,11 @@ export function Table3D({ chain, reducedMotion, targets, players, viewerId, loca
   return <div className="three-stage" ref={host} aria-label={`Mesa 3D con ${chain.length} fichas`}>
     {chain.length === 0 && !targets?.center && <p>{openingHint ?? "El poseedor de 6–6 abre la ronda"}</p>}
     {unsupported && <p>WebGL no disponible. Usa la descripción accesible de la cadena.</p>}
-    {targets && (targets.left || targets.right || targets.center) && <div className="spatial-end-targets" aria-label="Elige dónde colocar la ficha">
+    {targets && (targets.left || targets.right || targets.center || targets.up || targets.down) && <div className="spatial-end-targets" aria-label="Elige dónde colocar la ficha">
       {targetButton("LEFT", targets.left, ends?.left)}{targetButton("RIGHT", targets.right, ends?.right)}{targetButton("CENTER", targets.center, { left: 50, top: 50 })}
+      {targetButton("UP", targets.up, ends?.up)}{targetButton("DOWN", targets.down, ends?.down)}
     </div>}
-    <ol className="sr-only">{chain.map((tile, index) => <li key={`${tile.id}-${index}`}>{tile.left}–{tile.right}</li>)}</ol>
+    <ol className="sr-only">{chain.map((tile, index) => <li key={`${tile.id}-${index}`}>{tile.left}–{tile.right}{tile.id === spinnerId ? " (spinner)" : ""}</li>)}</ol>
+    {(up?.length || down?.length) ? <p className="sr-only">Brazo superior: {(up ?? []).map((tile) => `${tile.left}–${tile.right}`).join(", ") || "vacío"}. Brazo inferior: {(down ?? []).map((tile) => `${tile.left}–${tile.right}`).join(", ") || "vacío"}.</p> : null}
   </div>;
 }

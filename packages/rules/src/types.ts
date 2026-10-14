@@ -5,11 +5,13 @@ export type Seat = 0 | 1 | 2 | 3;
 /** Individual: cada uno para sí, a 100. Parejas: asientos 0–2 contra 1–3, a 200, se cuentan las cuatro manos. */
 export type GameMode = "INDIVIDUAL" | "PAIRS";
 /** Reglas de la mano. Latino: sin pozo, todo repartido. Con robo: 5 fichas por jugador, 8 al pozo, solo individual. */
-export type RulesId = "LATINO" | "DRAW";
+/** All Fives: como con robo, más el spinner (primer doble jugado, abre cuatro brazos) y puntos por extremos múltiplos de 5. */
+export type RulesId = "LATINO" | "DRAW" | "ALL_FIVES";
 /** Objetivos de partida que se pueden elegir al configurar una mesa. */
 export const TARGET_OPTIONS = [100, 150, 200] as const;
 export type TargetScore = typeof TARGET_OPTIONS[number];
-export type Side = "LEFT" | "RIGHT";
+/** LEFT y RIGHT: los extremos de la cadena. UP y DOWN: los brazos del spinner (solo en All Fives, cuando están abiertos). */
+export type Side = "LEFT" | "RIGHT" | "UP" | "DOWN";
 export type Phase = "ROUND_ACTIVE" | "ROUND_ENDED" | "MATCH_ENDED";
 export type TileId = `${number}-${number}`;
 
@@ -17,7 +19,8 @@ export interface Tile { readonly a: number; readonly b: number; readonly id: Til
 export interface OrientedTile { readonly id: TileId; readonly left: number; readonly right: number; readonly playedBy: string }
 export interface Player { readonly playerId: string; readonly seat: Seat; readonly score: number }
 export interface RoundResult {
-  readonly reason: "DOMINO" | "BLOCKED";
+  /** TARGET: en All Fives, alguien alcanzó el objetivo con los puntos de una jugada y la partida termina en el acto. */
+  readonly reason: "DOMINO" | "BLOCKED" | "TARGET";
   readonly winnerId: string | null;
   readonly tiedPlayerIds: readonly string[];
   readonly handPipTotals: Readonly<Record<string, number>>;
@@ -48,6 +51,10 @@ export interface GameState {
   readonly chain: readonly OrientedTile[];
   readonly leftEnd: number | null;
   readonly rightEnd: number | null;
+  /** Solo en All Fives: el spinner (primer doble jugado) y sus brazos perpendiculares, desde el spinner hacia fuera. */
+  readonly spinnerId?: TileId;
+  readonly up?: readonly OrientedTile[];
+  readonly down?: readonly OrientedTile[];
   readonly openingPlayerId: string;
   /** Ficha con la que se salió cuando no es el 6–6 obligatorio (salida libre en parejas, o con robo): centro de la cadena en la mesa. */
   readonly openingTileId?: TileId;

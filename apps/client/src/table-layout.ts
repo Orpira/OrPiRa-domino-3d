@@ -162,3 +162,67 @@ export function seatSide(players: readonly { readonly playerId: string; readonly
   const turnsAfterViewer = ((viewer.seat - actor.seat) % 4 + 4) % 4;
   return (["BOTTOM", "RIGHT", "TOP", "LEFT"] as const)[turnsAfterViewer]!;
 }
+
+/** Tablero que dibuja la mesa: la cadena y, en All Fives, el spinner con sus brazos. */
+export interface BoardTiles { readonly chain: readonly OrientedTile[]; readonly spinnerId?: TileId | undefined; readonly up?: readonly OrientedTile[] | undefined; readonly down?: readonly OrientedTile[] | undefined }
+export type ArmSide = "UP" | "DOWN";
+export interface BoardLayout {
+  /** Todas las fichas (cadena y brazos) con su sitio. */
+  readonly placements: readonly ChainPlacement[];
+  /** Fichas de la cadena, en orden (izquierda → derecha), para los extremos LEFT y RIGHT. */
+  readonly chain: readonly ChainPlacement[];
+  /** Brillo de cada brazo del spinner, si el brazo admite fichas ahora. */
+  readonly armGlows: Partial<Record<ArmSide, EndGlow>>;
+}
+/** Separación entre centros de fichas consecutivas de un brazo, y desde el spinner (cruzado) a la primera. */
+const ARM_STEP = 1.14;
+
+/**
+ * Con spinner, la mesa se centra en él (aunque no fuese la salida): la cadena crece a izquierda y derecha y los brazos
+ * UP (hacia el fondo) y DOWN (hacia el jugador) salen en vertical por el carril central, que los dos trazados dejan libre.
+ * `armsOpen` decide si se muestran los brillos de los brazos (el spinner necesita fichas a ambos lados).
+ */
+export function layoutBoard(board: BoardTiles, width: number, height: number, openingId: TileId = "6-6", armsOpen = false): BoardLayout {
+  const spinnerInChain = board.spinnerId && board.chain.some((tile) => tile.id === board.spinnerId);
+  const chain = layoutDominoChain(board.chain, width, height, spinnerInChain ? board.spinnerId : openingId);
+  const center = chain.find((placement) => placement.distanceFromOpening === 0);
+  if (!spinnerInChain || !center) return { placements: chain, chain, armGlows: {} };
+  const scale = center.scale; const placements: ChainPlacement[] = [...chain]; const armGlows: Partial<Record<ArmSide, EndGlow>> = {};
+  for (const side of ["UP", "DOWN"] as const) {
+    const arm = (side === "UP" ? board.up : board.down) ?? []; const direction = side === "UP" ? -1 : 1; const tangent = side === "UP" ? Math.PI / 2 : -Math.PI / 2;
+    arm.forEach((tile, index) => placements.push({ id: tile.id, x: center.x, z: center.z + direction * ARM_STEP * (index + 1) * scale, tangent,
+      rotation: tangent + (tile.left === tile.right ? Math.PI / 2 : 0), scale, distanceFromOpening: index + 1 }));
+    if (!armsOpen) continue;
+    // Brillo en el borde abierto: el largo del spinner si el brazo está vacío, o el extremo de la última ficha del brazo.
+    const last = arm.length ? placements.at(-1)! : null;
+    const reach = last ? (last.rotation !== last.tangent ? TILE_WIDTH : TILE_LENGTH) / 2 : TILE_LENGTH / 2;
+    const from = last ?? center;
+    armGlows[side] = { x: from.x, z: from.z + direction * reach * scale, rotation: tangent, scale };
+  }
+  return fitOnTable({ placements, chain: placements.slice(0, chain.length), armGlows });
+}
+
+/** Radio útil del tablero (el borde de madera está en 5,72): ninguna esquina de ficha ni brillo debe pasar de aquí. */
+export const TABLE_SAFE_RADIUS = 5.1;
+/** Si unos brazos largos se salen del tablero, encoge todo por igual (posiciones y tamaño): nada se solapa y todo cabe. */
+function fitOnTable(layout: BoardLayout): BoardLayout {
+  let reach = 0;
+  for (const placement of layout.placements) {
+    const half = Math.hypot(TILE_LENGTH, TILE_WIDTH) / 2 * placement.scale; reach = Math.max(reach, Math.hypot(placement.x, placement.z) + half);
+  }
+  for (const glow of Object.values(layout.armGlows)) reach = Math.max(reach, Math.hypot(glow.x, glow.z) + TILE_WIDTH * glow.scale);
+  if (reach <= TABLE_SAFE_RADIUS) return layout;
+  const factor = TABLE_SAFE_RADIUS / reach;
+  const shrink = <T extends TablePoint & { scale: number }>(item: T): T => ({ ...item, x: item.x * factor, z: item.z * factor, scale: item.scale * factor });
+  const placements = layout.placements.map(shrink);
+  return { placements, chain: placements.slice(0, layout.chain.length), armGlows: Object.fromEntries(Object.entries(layout.armGlows).map(([side, glow]) => [side, shrink(glow)])) };
+}
+
+/** Zona que debe encuadrar la cámara con brazos: la cadena con sus huecos, las fichas de los brazos y sus brillos. */
+export function boardFrameBounds(layout: BoardLayout): TableBounds | null {
+  const base = frameBounds(layout.chain); if (!base) return null;
+  const extra = chainBounds(layout.placements.slice(layout.chain.length)); const glows = Object.values(layout.armGlows);
+  const reach = TILE_LENGTH * FRAME_END_REACH * (layout.chain[0]?.scale ?? 1);
+  return { minX: Math.min(base.minX, extra?.minX ?? Infinity), maxX: Math.max(base.maxX, extra?.maxX ?? -Infinity),
+    minZ: Math.min(base.minZ, extra?.minZ ?? Infinity, ...glows.map((glow) => glow.z - reach)), maxZ: Math.max(base.maxZ, extra?.maxZ ?? -Infinity, ...glows.map((glow) => glow.z + reach)) };
+}

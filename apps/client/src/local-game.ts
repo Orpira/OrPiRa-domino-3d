@@ -103,16 +103,16 @@ export function isRestorableState(state: GameState): boolean {
   if (new Set(state.players.map((p) => p.playerId)).size !== 4 ||
       !LOCAL_PLAYERS.every((p) => state.players.some((candidate) => candidate.playerId === p.playerId && candidate.seat === p.seat))) return false;
   if (state.mode !== undefined && state.mode !== "PAIRS") return false;
-  if (state.rules !== undefined && (state.rules !== "DRAW" || state.mode !== undefined)) return false;
+  if (state.rules !== undefined && ((state.rules !== "DRAW" && state.rules !== "ALL_FIVES") || state.mode !== undefined)) return false;
   if (state.targetScore !== undefined && !TARGET_OPTIONS.includes(state.targetScore)) return false;
-  // Con robo hay pozo; en Latino, nunca.
-  if ((state.rules === "DRAW") !== Array.isArray(state.boneyard)) return false;
+  // Con robo y en All Fives hay pozo; en Latino, nunca.
+  if ((state.rules !== undefined) !== Array.isArray(state.boneyard)) return false;
   const target = targetScore(state); const badScore = (score: number) => !Number.isSafeInteger(score) || score < 0;
   if (state.mode === "PAIRS") {
     // En parejas los compañeros (asientos 0–2 y 1–3) comparten marcador; una mano reparte como mucho los 168 puntos del juego.
     const scoreOf = (seat: number) => state.players.find((p) => p.seat === seat)?.score ?? -1;
     if (state.players.some((p) => badScore(p.score) || p.score > target + 168) || scoreOf(0) !== scoreOf(2) || scoreOf(1) !== scoreOf(3)) return false;
-  } else if (state.rules === "DRAW") { if (state.players.some((p) => badScore(p.score) || p.score > target + 168)) return false; }
+  } else if (state.rules !== undefined) { if (state.players.some((p) => badScore(p.score) || p.score > target + 168)) return false; }
   else if (state.players.some((p) => badScore(p.score) || p.score > target + 19 || p.score % 20 !== 0)) return false;
   if (!["ROUND_ACTIVE", "ROUND_ENDED", "MATCH_ENDED"].includes(state.phase) || state.consecutivePasses < 0 || state.consecutivePasses > 4) return false;
   const playerIds = new Set(state.players.map((player) => player.playerId));
@@ -127,6 +127,6 @@ export function isRestorableState(state: GameState): boolean {
     if (index > 0 && state.chain[index - 1]!.right !== oriented.left) return false;
   }
   const known = new Set(DOUBLE_SIX_SET.map((tile) => tile.id));
-  const ids = [...Object.values(state.hands).flat(), ...state.chain.map((tile) => tile.id), ...(state.boneyard ?? [])];
+  const ids = [...Object.values(state.hands).flat(), ...state.chain.map((tile) => tile.id), ...(state.up ?? []).map((tile) => tile.id), ...(state.down ?? []).map((tile) => tile.id), ...(state.boneyard ?? [])];
   return ids.length === 28 && new Set(ids).size === 28 && ids.every((id) => known.has(id));
 }

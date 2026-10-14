@@ -80,7 +80,7 @@ export function TableSetup({ choice, onChange, label, showTarget = true }: { cho
   const target = effectiveTarget(choice);
   const option = (current: boolean, text: string, onClick: () => void) => <button type="button" className={current ? "current" : ""} aria-pressed={current} onClick={onClick}>{text}</button>;
   return <fieldset className="table-setup"><legend>{label}</legend>
-    <div className="setup-row"><span>Reglas</span><div className="mode-switch">{(["LATINO", "DRAW"] as const).map((rules) => <Fragment key={rules}>{option(choice.rules === rules, RULES_LABELS[rules], () => set({ rules }))}</Fragment>)}</div></div>
+    <div className="setup-row"><span>Reglas</span><div className="mode-switch">{(["LATINO", "DRAW", "ALL_FIVES"] as const).map((rules) => <Fragment key={rules}>{option(choice.rules === rules, RULES_LABELS[rules], () => set({ rules }))}</Fragment>)}</div></div>
     {choice.rules === "LATINO" && <div className="setup-row"><span>Formato</span><div className="mode-switch">{option(choice.mode === "INDIVIDUAL", "Individual", () => set({ mode: "INDIVIDUAL" }))}{option(choice.mode === "PAIRS", "Parejas", () => set({ mode: "PAIRS" }))}</div></div>}
     {showTarget && <div className="setup-row"><span>Objetivo</span><div className="mode-switch">{TARGET_OPTIONS.map((value) => <Fragment key={value}>{option(target === value, String(value), () => set({ targetScore: value }))}</Fragment>)}</div></div>}
   </fieldset>;

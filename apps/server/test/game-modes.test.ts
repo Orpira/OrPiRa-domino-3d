@@ -45,7 +45,7 @@ describe("Modalidades en el servidor", () => {
     assert.deepEqual(tableConfig({}), { mode: "INDIVIDUAL", rules: "LATINO" });
     assert.deepEqual(tableConfig({ rules: "DRAW", targetScore: 150 }), { mode: "INDIVIDUAL", rules: "DRAW", targetScore: 150 });
     assert.throws(() => tableConfig({ rules: "DRAW", mode: "PAIRS" }), /INVALID_MODE/);
-    assert.throws(() => tableConfig({ rules: "ALL_FIVES" }), /INVALID_RULES/);
+    assert.throws(() => tableConfig({ rules: "BLOCK" }), /INVALID_RULES/);
     assert.throws(() => tableConfig({ targetScore: 120 }), /INVALID_TARGET/);
   });
 
@@ -122,5 +122,21 @@ describe("Modalidades en el servidor", () => {
     const store = new MemoryMatchStore(); const room = await AuthoritativeRoom.create("antigua", SESSIONS, factory(), store);
     const restored = (await AuthoritativeRoom.restore("antigua", factory(), store))!; const state: GameState = restored.state;
     assert.equal(state.rules, undefined); assert.equal(state.boneyard, undefined); assert.equal(room.state.matchId, "antigua");
+  });
+});
+
+describe("All Fives en el servidor", () => {
+  test("mesa All Fives en Jugar ahora: cola propia, partida completa con bots, puntos múltiplos de 5 y sin liga", async () => {
+    const state = await setup(); try {
+      assert.deepEqual(tableConfig({ rules: "ALL_FIVES", targetScore: 150 }), { mode: "INDIVIDUAL", rules: "ALL_FIVES", targetScore: 150 });
+      assert.throws(() => tableConfig({ rules: "ALL_FIVES", mode: "PAIRS" }), /INVALID_MODE/);
+      const [ana] = await state.people("Ana"); const start = state.clock.t;
+      const waiting = await state.quick.join(ana!.identityToken, { rules: "ALL_FIVES" }); assert.equal(waiting.ticket!.rules, "ALL_FIVES");
+      state.clock.t = start + DEFAULT_QUICK_PLAY.fillAfterMs; await state.quick.tick();
+      let view: QuickPlayView = await state.quick.view(ana!.identityToken); assert.equal(view.match!.rules, "ALL_FIVES");
+      for (let guard = 0; guard < 50_000 && view.match!.status !== "ENDED"; guard++) { state.clock.t = Math.max(state.clock.t + 100, view.match!.clock.turnDeadline ?? state.clock.t); await state.quick.tick(); view = await state.quick.view(ana!.identityToken); }
+      assert.equal(view.match!.status, "ENDED"); assert.ok(view.match!.game.players.every((player) => player.score % 5 === 0));
+      assert.equal((await state.quick.historyFor(ana!.identityToken))[0]!.rules, "ALL_FIVES"); assert.equal(view.match!.league, null);
+    } finally { await state.close(); }
   });
 });

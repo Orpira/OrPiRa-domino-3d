@@ -53,3 +53,20 @@ Reglas interpretadas para «con robo» (pendientes de confirmar por el propietar
 5. **Campeón:** el primero que alcanza el objetivo (solo puede puntuar el ganador de la mano).
 6. **Tiempo agotado:** la jugada automática completa el turno (roba hasta poder y después
    coloca o pasa) y cuenta como un solo tiempo agotado.
+
+## All Fives (`ALL_FIVES_RULES`, desde el 14 oct 2026; reglas confirmadas por el propietario)
+
+- Solo individual, 4 jugadores. Reparto, salida (doble más alto), robo y pase como «con robo».
+- **Spinner:** el primer doble jugado en la mano, sea o no la salida. Cuando tiene fichas a
+  izquierda y derecha se abren los brazos `UP` y `DOWN` (lados nuevos de `PLACE`; en otras
+  modalidades o con los brazos cerrados, `INVALID_SIDE`). Solo hay un spinner por mano.
+- **Puntos al colocar:** se suman los extremos abiertos (un doble en un extremo cuenta sus dos
+  mitades; con una sola ficha en mesa, sus dos mitades; un brazo vacío no cuenta). Si la suma es
+  múltiplo de 5, quien colocó suma esos puntos (evento `SCORE_APPLIED` con `reason: "FIVES"`).
+- **Objetivo en el acto:** quien alcanza el objetivo con esos puntos gana sin cerrar la mano
+  (`roundResult.reason = "TARGET"`).
+- **Fin de mano:** al dominar, o en tranque quien menos puntos tenga en mano (empate en el mínimo:
+  nadie), el ganador suma los puntos en mano de los rivales redondeados al múltiplo de 5 más
+  cercano, a mitad hacia arriba (12 → 10, 13 → 15).
+- No puntúa en la liga. La mesa 3D se centra en el spinner; si los brazos no caben, todo el
+  tablero se encoge por igual para quedar dentro de la mesa.

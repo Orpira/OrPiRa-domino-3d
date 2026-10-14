@@ -25,11 +25,12 @@ type Phase = "DRAGGING" | "PLACING" | "RETURNING";
 interface GhostState { readonly tileId: TileId; readonly width: number; readonly height: number; readonly phase: Phase }
 
 /** Destinos que la mesa muestra para la ficha elegida o arrastrada: solo los legales. */
-export function placementTargets(sides: readonly DropSide[], ends: { readonly left: number | null; readonly right: number | null },
+export function placementTargets(sides: readonly DropSide[], ends: { readonly left: number | null; readonly right: number | null; readonly up?: number | null; readonly down?: number | null },
   onPlace: (side: DropSide) => void, hot: DropSide | null, disabled = false): PlacementTargets | undefined {
   if (sides.length === 0) return undefined;
   const target = (side: DropSide, label: string, value: string | number) => sides.includes(side) ? { label, value, onPlace: () => onPlace(side) } : undefined;
   return { left: target("LEFT", `Colocar a la izquierda · ${ends.left}`, ends.left ?? ""), right: target("RIGHT", `Colocar a la derecha · ${ends.right}`, ends.right ?? ""),
+    up: target("UP", `Colocar en el brazo de arriba · ${ends.up ?? ""}`, ends.up ?? ""), down: target("DOWN", `Colocar en el brazo de abajo · ${ends.down ?? ""}`, ends.down ?? ""),
     center: target("CENTER", "Abrir la ronda con 6–6", "6·6"), hot, disabled };
 }
 

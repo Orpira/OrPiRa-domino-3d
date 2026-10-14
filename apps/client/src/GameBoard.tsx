@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
-import { freeOpening, isPairs, rulesId, targetScore, TILE_BY_ID, type LegalAction, type PlayerView, type TileId } from "../../../packages/rules/src/index.ts";
+import { armsOpen, endValue, freeOpening, isPairs, openEndsTotal, rulesId, targetScore, TILE_BY_ID, type LegalAction, type PlayerView, type TileId } from "../../../packages/rules/src/index.ts";
 import type { ClientCommand, TurnClockView } from "../../../packages/protocol/src/index.ts";
 import { dominationsRemaining, finalRanking, shouldShowMatchFinale } from "./online-presentation.ts";
 import { choiceLabel, individualRoundText, rulesSummary } from "./modes-presentation.ts";
+import { ScorePops, useScorePops } from "./score-pop.tsx";
 import { currentSelection, type PlacementSelection } from "./placement-interaction.ts";
 import { MatchCelebration } from "./MatchCelebration.tsx";
 import { DominoFace } from "./DominoFace.tsx";
@@ -48,13 +49,13 @@ export function GameBoard({ game, actions, names, viewerId, sending, message, re
   const placeAt = (tileId: TileId, side: DropSide) => { if (!sending) onCommand({ type: "PLACE", tileId, ...(side === "CENTER" ? {} : { side }) }); };
   const drag = useHandDrag({ enabled: canPlace, sidesOf, onDrop: placeAt, handIds: game.ownHand ?? [], reducedMotion });
   const focusId = drag.draggingId ?? selected;
-  const targets = focusId && canPlace ? placementTargets(sidesOf(focusId), { left: game.leftEnd, right: game.rightEnd }, (side) => placeAt(focusId, side), drag.hot, sending) : undefined;
+  const targets = focusId && canPlace ? placementTargets(sidesOf(focusId), { left: game.leftEnd, right: game.rightEnd, up: endValue(game, "UP"), down: endValue(game, "DOWN") }, (side) => placeAt(focusId, side), drag.hot, sending) : undefined;
   // Tocar una ficha solo la levanta: el jugador la coloca arrastrándola a la mesa o eligiendo un destino.
   const selectTile = (tileId: TileId) => {
     if (drag.consumeClick() || sending || sidesOf(tileId).length === 0) return;
     setSelection(selected === tileId ? null : { tileId, revision: game.revision });
   };
-  useGameSounds(game, viewerId);
+  useGameSounds(game, viewerId); const pops = useScorePops(game.players, game.matchId, rulesId(game) === "ALL_FIVES");
   const pairs = isPairs(game); const teams = pairs ? teamStandings(game, names, viewerId) : []; const rules = rulesId(game); const target = targetScore(game);
   const latinoIndividual = rules === "LATINO" && !pairs; const individualRound = !pairs && game.roundResult ? individualRoundText(game.roundResult, names, rules) : null;
   const choice = { rules, mode: game.mode ?? "INDIVIDUAL", ...(game.targetScore ? { targetScore: game.targetScore } : {}) } as const;
@@ -68,10 +69,10 @@ export function GameBoard({ game, actions, names, viewerId, sending, message, re
       {!mySeat.resumeRequested && <button className="primary" disabled={sending} onClick={() => onCommand({ type: "RESUME_CONTROL" })}>Retomar el control</button>}</div>}
     {pairs ? <section className="scoreboard pairs online-scoreboard" aria-label="Marcador por parejas">{teams.map((team, index) => <div key={team.label} className={team.active ? "active-player" : ""}><span className="seat-name">{index === 0 ? "Tu pareja" : "Rivales"}</span><strong>{team.score}<small> / {target}</small></strong><progress max={target} value={Math.min(team.score, target)} aria-label={`Progreso de ${team.label} hacia ${target} puntos`}/>{team.ids.map((id) => <small key={id} className="seat-name">{nameDecorations?.[id]}{names[id]}{id === viewerId ? " (tú)" : ""}{badges(id)} · {game.handCounts[id]} fichas</small>)}</div>)}</section>
     : <section className="scoreboard online-scoreboard" aria-label="Marcador">{game.players.map((player) => <div key={player.playerId} className={game.currentPlayerId === player.playerId ? "active-player" : ""}><span className="seat-name">{nameDecorations?.[player.playerId]}{names[player.playerId]}{player.playerId === viewerId ? " (tú)" : ""}{seatBadges(seatOf(player.playerId)).map((badge) => <em key={badge} className={`seat-badge ${badge === "Bot" ? "bot" : badge === "Automático" ? "auto" : "offline"}`}>{badge}</em>)}</span><strong>{player.score}<small> / {target}</small></strong><progress max={target} value={Math.min(player.score, target)} aria-label={`Progreso de ${names[player.playerId]} hacia ${target} puntos`}/><small>{latinoIndividual ? `${dominationsRemaining(player.score, target)} ${dominationsRemaining(player.score, target) === 1 ? "dominada" : "dominadas"} para ganar · ` : ""}{game.handCounts[player.playerId]} fichas</small></div>)}</section>}
-    <section className="table" aria-label="Mesa de dominó"><div className="table-status"><span>Ronda {game.roundNumber}</span><strong>{myTurn ? "Tu turno" : game.currentPlayerId ? `Turno de ${names[game.currentPlayerId]}` : "Ronda terminada"}</strong><span>{game.leftEnd === null ? "Apertura" : `Extremos ${game.leftEnd} · ${game.rightEnd}`}{game.boneyardCount !== undefined ? ` · Pozo: ${game.boneyardCount}` : ""}</span></div>
+    <section className="table" aria-label="Mesa de dominó"><div className="table-status"><span>Ronda {game.roundNumber}</span><strong>{myTurn ? "Tu turno" : game.currentPlayerId ? `Turno de ${names[game.currentPlayerId]}` : "Ronda terminada"}</strong><span>{game.leftEnd === null ? "Apertura" : `Extremos ${game.leftEnd} · ${game.rightEnd}`}{game.boneyardCount !== undefined ? ` · Pozo: ${game.boneyardCount}` : ""}</span></div>{rules === "ALL_FIVES" && <p className="fives-strip"><span>Suma de extremos: <strong>{openEndsTotal(game)}</strong></span>{game.players.map((player) => <span key={player.playerId}>{names[player.playerId]} <strong>{player.score}</strong></span>)}</p>}<ScorePops pops={pops} names={names}/>
       {clock && remaining !== null && <div className={`turn-clock ${urgent ? "urgent" : ""} ${myTurn ? "mine" : ""}`} role="timer" aria-label={clock.deadlineKind === "ROUND_BREAK" ? `Siguiente ronda en ${formatCountdown(remaining)}` : `${myTurn ? "Tu tiempo" : "Tiempo del turno"}: ${formatCountdown(remaining)}`}>
         <span>{clock.deadlineKind === "ROUND_BREAK" ? "Siguiente ronda en" : myTurn ? "Tu tiempo" : `Tiempo de ${names[game.currentPlayerId ?? ""] ?? "turno"}`}</span><strong>{formatCountdown(remaining)}</strong>
-        {clock.deadlineKind === "TURN" && <progress max={clock.turnSeconds * 1000} value={Math.min(remaining, clock.turnSeconds * 1000)} aria-hidden="true"/>}</div>}<Suspense fallback={<div className="three-stage"><p>Preparando mesa…</p></div>}><Table3D chain={game.chain} reducedMotion={reducedMotion} players={game.players} viewerId={viewerId} targets={targets} locatorRef={drag.locatorRef} dropOrigin={drag.dropOrigin}
+        {clock.deadlineKind === "TURN" && <progress max={clock.turnSeconds * 1000} value={Math.min(remaining, clock.turnSeconds * 1000)} aria-hidden="true"/>}</div>}<Suspense fallback={<div className="three-stage"><p>Preparando mesa…</p></div>}><Table3D chain={game.chain} spinnerId={game.spinnerId} up={game.up} down={game.down} armsOpen={armsOpen(game)} reducedMotion={reducedMotion} players={game.players} viewerId={viewerId} targets={targets} locatorRef={drag.locatorRef} dropOrigin={drag.dropOrigin}
       openingId={game.openingTileId} openingHint={freeOpening(game) && game.chain.length === 0 && game.currentPlayerId ? `${myTurn ? "Sales tú" : `Sale ${names[game.currentPlayerId]}`} con la ficha que quiera` : rules !== "LATINO" && game.chain.length === 0 && game.currentPlayerId ? (openingTile ? `Sales tú con el ${openingTile.replace("-", "–")}` : `Sale ${names[game.currentPlayerId]} con la ficha más alta`) : undefined}/></Suspense></section>
     {drag.ghost}
     {notice && <p className="auto-notice" role="status" key={notice.revision}><span aria-hidden="true">⏱</span>{automaticMoveText(notice, names, viewerId)}</p>}
