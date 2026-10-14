@@ -2,10 +2,12 @@ import { useEffect, useId, useState } from "react";
 import type { LeagueHistoryView, QuickPlayHistoryEntry } from "../../../packages/protocol/src/index.ts";
 import { leagueApi, quickPlayApi } from "./competition-api.ts";
 import { RANK_NAMES } from "./league-presentation.ts";
-import { competitionRecords, formatCop, formatDateTime, formatSignedCop, MOVEMENT_LABELS, RECORD_LABELS } from "./competition-presentation.ts";
+import { competitionErrorMessage, competitionRecords, formatCop, formatDateTime, formatSignedCop, MOVEMENT_LABELS, RECORD_LABELS } from "./competition-presentation.ts";
 import type { Conditions, TestAccount } from "./use-test-account.ts";
 import { BalanceSummary, DominoArt, IdentityForm, RankTile, SimulatedNotice, StateCard } from "./ui.tsx";
 import { useConfirm } from "./confirm-dialog.tsx";
+import { useSocial } from "./invite-ui.tsx";
+import { CompetitionApiError, socialApi } from "./competition-api.ts";
 
 export const APP_VERSION = "1.8-rc1";
 
@@ -68,6 +70,7 @@ export function AccountView({ account }: { account: TestAccount }) {
     <BalanceSummary account={account.account} compact/>
     {data && <dl className="panel amounts"><div className="amount-row"><dt>Disponible</dt><dd>{formatCop(data.available)}</dd></div><div className="amount-row"><dt>Reservado en salas</dt><dd>{formatCop(data.reserved)}</dd></div><div className="amount-row strong"><dt>Total simulado</dt><dd>{formatCop(data.available + data.reserved)}</dd></div></dl>}
     {explainer}
+    <ProfileSection token={account.identity.identityToken}/>
     <section className="panel"><h2>Acceso en otros dispositivos</h2><p className="muted">Guarda este código para recuperar la cuenta si borras los datos del navegador. Quien lo tenga puede usar tu cuenta de prueba.</p>
       {showCode ? <code className="recovery-code">{account.identity.identityToken}</code> : <button className="secondary" onClick={() => setShowCode(true)}>Mostrar código de recuperación</button>}
       <button className="danger" onClick={() => confirm({ title: "¿Olvidar la cuenta en este dispositivo?", message: "Sin el código de recuperación no podrás volver a ella.", confirmLabel: "Olvidar cuenta", tone: "danger", onConfirm: account.forget })}>Olvidar cuenta en este dispositivo</button></section>
@@ -98,4 +101,24 @@ function LeagueHistory({ token }: { token: string }) {
       {history.awards.length === 0 ? <p className="muted">Aún no has puntuado en la liga.</p> :
         <ul className="record-list">{history.awards.map((award) => <li key={award.matchId}><div><strong>{award.position}.º puesto · {award.humans} de 4 humanos{award.automatic ? " · modo automático" : ""}</strong><small>{formatDateTime(award.awardedAt)} · temporada {award.seasonId}{award.promoted ? ` · ascenso a ${RANK_NAMES[award.newRank]}` : ""}</small></div><span className={`amount ${award.points > 0 ? "positive" : ""}`}>+{award.points} pts</span></li>)}</ul>}
     </>}</section>;
+}
+
+/** Nombre de usuario (se elige una vez) y amigos aceptados. */
+function ProfileSection({ token }: { token: string }) {
+  const { social, error, setSocial } = useSocial(token); const [username, setUsername] = useState(""); const [saving, setSaving] = useState(false); const [claimError, setClaimError] = useState(""); const inputId = useId();
+  const claim = async () => {
+    if (saving || !username.trim()) return; setSaving(true); setClaimError("");
+    try { setSocial(await socialApi.claimUsername(token, username)); }
+    catch (failure) { setClaimError(competitionErrorMessage(failure instanceof CompetitionApiError ? failure.code : "NETWORK")); } finally { setSaving(false); }
+  };
+  if (!social) return error ? <section className="panel"><h2>Perfil y amigos</h2><p className="muted">{error}</p></section> : null;
+  return <section className="panel profile-social"><h2>Perfil y amigos</h2>
+    {social.username ? <p>Tu nombre de usuario: <strong>@{social.username}</strong></p>
+      : <form className="identity-form" onSubmit={(event) => { event.preventDefault(); void claim(); }}><p>Elige un nombre de usuario único. Va en tus enlaces de invitación para que quien entre quede como tu amigo. No se puede cambiar.</p>
+          <label htmlFor={inputId}>Nombre de usuario</label><div className="inline-field"><input id={inputId} maxLength={21} autoCapitalize="none" autoComplete="username" spellCheck={false} placeholder="ej. ana_92" value={username} onChange={(event) => setUsername(event.target.value)}/>
+          <button className="primary" disabled={!username.trim() || saving}>{saving ? "Guardando…" : "Guardar"}</button></div>{claimError && <p className="field-error" role="alert">{claimError}</p>}</form>}
+    <h3>Amigos {social.friends.length > 0 && <small>({social.friends.length})</small>}</h3>
+    {social.friends.length ? <ul className="friend-list">{social.friends.map((friend) => <li key={`${friend.username}-${friend.displayName}-${friend.since}`}><strong>{friend.displayName}</strong>{friend.username && <span>@{friend.username}</span>}</li>)}</ul>
+      : <p className="muted">Todavía no tienes amigos. Invita a alguien a una sala con código: al entrar con su cuenta quedaréis como amigos.</p>}
+  </section>;
 }

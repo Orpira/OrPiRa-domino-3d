@@ -59,6 +59,9 @@ export function competitionRecords(movements: readonly SimulatedMovement[]): rea
 }
 
 const ERRORS: Readonly<Record<string, string>> = {
+  USERNAME_TAKEN: "Ese nombre de usuario ya está en uso. Prueba con otro.", USERNAME_ALREADY_SET: "Tu cuenta ya tiene nombre de usuario.",
+  INVALID_USERNAME: "Usa de 3 a 20 letras minúsculas sin tilde, números, punto o guion bajo.", ALREADY_IN_ROOM: "Tu cuenta ya está en esta sala.",
+  ROOM_NOT_FOUND: "Esa sala no existe o el enlace está mal copiado.", ROOM_FULL: "La sala ya está completa o la partida empezó.",
   NETWORK: "Sin conexión con el servidor. Comprueba la red y vuelve a intentarlo.",
   NOT_AVAILABLE: "El servidor conectado todavía no ofrece esta función.",
   UNAUTHENTICATED: "Esta cuenta de prueba no existe en el servidor actual. Crea una nueva.",

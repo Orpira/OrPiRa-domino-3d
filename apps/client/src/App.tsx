@@ -6,13 +6,16 @@ import { QuickPlayApp } from "./QuickPlayApp.tsx";
 import { LeagueApp } from "./LeagueApp.tsx";
 import { AccountView, HistoryView, HomeView } from "./AppViews.tsx";
 import { useConditions, useTestAccount } from "./use-test-account.ts";
+import { InviteView } from "./invite-ui.tsx";
+import { parseInvitation, type Invitation } from "./invite-link.ts";
 
-type View = "HOME" | "QUICK" | "PRACTICE" | "ONLINE" | "TABLES" | "LEAGUE" | "HISTORY" | "ACCOUNT";
+type View = "HOME" | "QUICK" | "PRACTICE" | "ONLINE" | "TABLES" | "LEAGUE" | "HISTORY" | "ACCOUNT" | "INVITE";
 type Tab = "HOME" | "TABLES" | "LEAGUE" | "HISTORY" | "ACCOUNT";
 const VIEW_KEY = "orpira-domino-3d:view:v1";
 const VIEWS: readonly View[] = ["HOME", "QUICK", "PRACTICE", "ONLINE", "TABLES", "LEAGUE", "HISTORY", "ACCOUNT"];
 function initialView(): View { try { const saved = window.sessionStorage.getItem(VIEW_KEY) as View | null; return saved && VIEWS.includes(saved) ? saved : "HOME"; } catch { return "HOME"; } }
-const tabOf = (view: View): Tab => view === "PRACTICE" || view === "ONLINE" || view === "QUICK" ? "HOME" : view;
+const tabOf = (view: View): Tab => view === "PRACTICE" || view === "ONLINE" || view === "QUICK" || view === "INVITE" ? "HOME" : view;
+function bootInvitation(): Invitation | null { try { return parseInvitation(window.location.pathname, window.location.search); } catch { return null; } }
 
 const icon = (path: ReactNode) => <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{path}</svg>;
 const TABS: ReadonlyArray<{ readonly tab: Tab; readonly label: string; readonly icon: ReactNode }> = [
@@ -24,10 +27,13 @@ const TABS: ReadonlyArray<{ readonly tab: Tab; readonly label: string; readonly 
 ];
 
 export default function App() {
-  const [view, setView] = useState<View>(initialView);
+  // Un enlace /invitar/:codigo abre la página de invitación; al salir de ella la dirección vuelve a «/».
+  const [invitation, setInvitation] = useState<Invitation | null>(bootInvitation); const [onlineNotice, setOnlineNotice] = useState<string | undefined>();
+  const [view, setView] = useState<View>(() => invitation ? "INVITE" : initialView());
+  const leaveInvitation = (next: View) => { setInvitation(null); try { window.history.replaceState(null, "", "/"); } catch { /* Sin historial. */ } go(next); };
   const account = useTestAccount(); const conditions = useConditions();
   const content = useRef<HTMLDivElement>(null); const firstRender = useRef(true);
-  const go = (next: View) => { setView(next); try { window.sessionStorage.setItem(VIEW_KEY, next); } catch { /* Navegación sin persistencia. */ } };
+  const go = (next: View) => { setView(next); if (next !== "ONLINE") setOnlineNotice(undefined); try { if (next !== "INVITE") window.sessionStorage.setItem(VIEW_KEY, next); } catch { /* Navegación sin persistencia. */ } };
   useEffect(() => {
     if (firstRender.current) { firstRender.current = false; return; }
     window.scrollTo({ top: 0 }); content.current?.focus({ preventScroll: true });
@@ -38,7 +44,7 @@ export default function App() {
     <a className="skip-link" href="#contenido">Saltar al contenido</a>
     <nav className="app-nav" aria-label="Navegación principal">
       <div className="nav-brand"><img src="/icons/icon-192.png" width="40" height="40" alt=""/><span>Domino3D-<b>OrPiRa</b></span></div>
-      <ul>{TABS.map((item) => <li key={item.tab}><button className={active === item.tab ? "current" : ""} aria-current={active === item.tab ? "page" : undefined} onClick={() => go(item.tab)}>{item.icon}<span>{item.label}</span></button></li>)}</ul>
+      <ul>{TABS.map((item) => <li key={item.tab}><button className={active === item.tab ? "current" : ""} aria-current={active === item.tab ? "page" : undefined} onClick={() => invitation ? leaveInvitation(item.tab) : go(item.tab)}>{item.icon}<span>{item.label}</span></button></li>)}</ul>
       <p className="nav-note">COP simulados · sin valor monetario</p>
     </nav>
     <div className="app-content" id="contenido" ref={content} tabIndex={-1}>
@@ -46,7 +52,9 @@ export default function App() {
       {view === "HOME" && <HomeView account={account} conditions={conditions} onQuickPlay={() => go("QUICK")} onPractice={() => go("PRACTICE")} onOnline={() => go("ONLINE")} onTables={() => go("TABLES")}/>}
       {view === "QUICK" && <QuickPlayApp account={account} onHome={() => go("HOME")}/>}
       {view === "PRACTICE" && <LocalApp/>}
-      {view === "ONLINE" && <OnlineApp/>}
+      {view === "ONLINE" && <OnlineApp account={account} {...(onlineNotice ? { notice: onlineNotice } : {})}/>}
+      {view === "INVITE" && invitation && <InviteView invitation={invitation} account={account} onCancel={() => leaveInvitation("HOME")}
+        onJoined={(friend) => { leaveInvitation("ONLINE"); setOnlineNotice(friend ? `Ya eres amigo de ${friend}.` : undefined); }}/>}
       {view === "TABLES" && <TablesView account={account} conditions={conditions} onOpenOnline={() => go("ONLINE")} onOpenPractice={() => go("PRACTICE")}/>}
       {view === "LEAGUE" && <LeagueApp account={account} onQuickPlay={() => go("QUICK")} onAccount={() => go("ACCOUNT")}/>}
       {view === "HISTORY" && <HistoryView account={account} onAccount={() => go("ACCOUNT")}/>}

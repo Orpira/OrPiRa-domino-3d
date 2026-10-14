@@ -1,5 +1,5 @@
 import type { GameMode, RulesId } from "../../../packages/rules/src/index.ts";
-import type { CompetitionView, LeagueHistoryView, LeagueView, QuickPlayHistoryEntry, QuickPlayView, SimulatedConditions, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
+import type { CompetitionView, LobbyPreview, SessionGrant, SocialView, LeagueHistoryView, LeagueView, QuickPlayHistoryEntry, QuickPlayView, SimulatedConditions, TestAccountView, TestIdentityGrant } from "../../../packages/protocol/src/index.ts";
 import { apiUrl } from "./api.ts";
 
 export class CompetitionApiError extends Error {
@@ -15,7 +15,7 @@ async function request<T>(path: string, init: { method?: "GET" | "POST"; token?:
   } catch (error) { if ((error as Error).name === "AbortError") throw error; throw new CompetitionApiError("NETWORK", 0); }
   const value = await response.json().catch(() => null) as (T & { code?: string }) | null;
   // Ninguna ruta de competición responde 404: un 404 indica un servidor sin estas capacidades.
-  if (response.status === 404) throw new CompetitionApiError("NOT_AVAILABLE", 404);
+  if (response.status === 404 && value?.code !== "ROOM_NOT_FOUND") throw new CompetitionApiError("NOT_AVAILABLE", 404);
   if (!response.ok || !value) throw new CompetitionApiError(value?.code ?? `HTTP_${response.status}`, response.status);
   return value;
 }
@@ -47,4 +47,16 @@ export const QUICK_PLAY_COMMANDS = "/api/quick-play/commands";
 export const leagueApi = {
   view: (token: string | null, signal?: AbortSignal) => request<LeagueView>("/api/league", { ...(token ? { token } : {}), ...(signal ? { signal } : {}) }),
   history: (token: string) => request<LeagueHistoryView>("/api/league/history", { token }),
+};
+
+export const socialApi = {
+  view: (token: string, signal?: AbortSignal) => request<SocialView>("/api/social", { token, ...(signal ? { signal } : {}) }),
+  claimUsername: (token: string, username: string) => request<SocialView>("/api/social/username", { method: "POST", token, body: { username } }),
+};
+export const lobbyApi = {
+  preview: (code: string, inviter: string | null, signal?: AbortSignal) =>
+    request<LobbyPreview>(`/api/lobbies/${encodeURIComponent(code)}/preview${inviter ? `?de=${encodeURIComponent(inviter)}` : ""}`, signal ? { signal } : {}),
+  /** Entrar por invitación con la cuenta de prueba: la plaza queda enlazada a la cuenta y se crea la amistad con quien invitó. */
+  joinByInvitation: (code: string, token: string, inviter: string | null) =>
+    request<SessionGrant>(`/api/lobbies/${encodeURIComponent(code)}/join`, { method: "POST", token, body: { invitation: inviter ? { inviter } : {} } }),
 };
