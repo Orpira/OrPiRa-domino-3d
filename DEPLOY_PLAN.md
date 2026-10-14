@@ -1,3 +1,18 @@
+# Plan de despliegue — Domino3D-OrPiRa v1.12-rc1 (chat de mesa y del vestíbulo)
+
+Mismo procedimiento que la 1.11-rc1; directorio nuevo `/opt/domino-3d-v1.12-rc1`, vuelta atrás a `/opt/domino-3d-v1.11-rc1`.
+
+| Archivo | SHA-256 |
+| --- | --- |
+| `domino-api-1.12-rc1.tar.gz` (imagen `sha256:366680e220fc424f30545646b173d10a32a24eee06800dd634d026e385370a43`) | `dd8b4d52cf58cf2934f1c4d152746a6500a2cb9ad2c021019cdf635992839cbb` |
+| `domino-3d-src-v1.12-rc1.tar.gz` (`v1.12-rc1`; `compose.yaml` sin cambios) | `f69addf3a2330493a58b36dd4f9be41e0bdfc0b67ebbe736d6920396c4cb2d96` |
+| `domino3d-orpira-1.12-rc1-debug.apk` (`versionCode` 15) | `123f10ac4116e9fe48a80c6370576873b09321f487d9ff1dbcc491eddfcec3cf` |
+
+- Datos nuevos: `chat-reports.json` y `mutedIdentityIds` opcional en identidades y plazas; la 1.11 los ignora.
+  Mensajes del chat solo en memoria (un reinicio los borra).
+
+---
+
 # Plan de despliegue — Domino3D-OrPiRa v1.11-rc1 (amigos completos)
 
 Mismo procedimiento que la 1.10-rc1; directorio nuevo `/opt/domino-3d-v1.11-rc1`, vuelta atrás a `/opt/domino-3d-v1.10-rc1`.
